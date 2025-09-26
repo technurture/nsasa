@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Users, BookOpen, Trophy } from "lucide-react";
-import backgroundUrl from "@assets/generated_images/University_campus_background_image_4f8bf8b1.png";
+import backgroundUrl from "@assets/WhatsApp Image 2025-09-24 at 15.45.38_1758874302022.jpeg";
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
