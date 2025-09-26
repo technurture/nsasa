@@ -7,7 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { LogIn, Eye, EyeOff, AlertCircle, Mail } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useLogin } from "@/hooks/useAuth";
 
 interface LoginFormProps {
   onLogin?: (credentials: { email: string; password: string; rememberMe: boolean }) => void;
@@ -24,7 +25,8 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
   
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setLocation] = useLocation();
+  const loginMutation = useLogin();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -48,20 +50,19 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
     
     if (!validateForm()) return;
 
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      onLogin?.(formData);
-      console.log("Login attempt:", { email: formData.email, rememberMe: formData.rememberMe });
-    } catch (error) {
-      console.error("Login error:", error);
-      setErrors({ form: "Invalid email or password. Please try again." });
-    } finally {
-      setIsLoading(false);
-    }
+    loginMutation.mutate(
+      { email: formData.email, password: formData.password },
+      {
+        onSuccess: () => {
+          // Redirect to dashboard on successful login
+          setLocation('/dashboard');
+          onLogin?.(formData);
+        },
+        onError: (error: any) => {
+          setErrors({ form: error.message || "Login failed. Please try again." });
+        }
+      }
+    );
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string | boolean) => {
@@ -189,10 +190,10 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading}
+            disabled={loginMutation.isPending}
             data-testid="button-login"
           >
-            {isLoading ? (
+            {loginMutation.isPending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                 Signing in...
@@ -219,15 +220,17 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
           <p className="text-sm text-muted-foreground">
             Don't have an account yet?
           </p>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onSignUpRedirect}
-            data-testid="button-sign-up"
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Create New Account
-          </Button>
+          <Link href="/register">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={onSignUpRedirect}
+              data-testid="button-sign-up"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Create New Account
+            </Button>
+          </Link>
         </div>
 
         {/* Student Notice */}

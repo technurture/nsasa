@@ -17,7 +17,8 @@ interface RegistrationFormProps {
 }
 
 interface RegistrationData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -32,7 +33,8 @@ interface RegistrationData {
 
 export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFormProps) {
   const [formData, setFormData] = useState<RegistrationData>({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -53,7 +55,8 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
     const newErrors: Record<string, string> = {};
 
     // Required field validation
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.email.trim()) newErrors.email = "Email is required";
     if (!formData.password) newErrors.password = "Password is required";
     if (!formData.confirmPassword) newErrors.confirmPassword = "Confirm password is required";

@@ -1,14 +1,109 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/user"],
     retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const isAuthenticated = !!user && !error;
 
   return {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated,
+    error
   };
+}
+
+// Hook for login functionality
+export function useLogin() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      const response = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      // Update the user data in cache
+      queryClient.setQueryData(["/api/auth/user"], data.user);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password",
+        variant: "destructive",
+      });
+    }
+  });
+}
+
+// Hook for registration functionality
+export function useRegister() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (userData: any) => {
+      const response = await apiRequest('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Registration Successful",
+        description: "Your account has been created and is pending approval",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Registration failed",
+        variant: "destructive",
+      });
+    }
+  });
+}
+
+// Hook for logout functionality
+export function useLogout() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      await apiRequest('/api/auth/logout', {
+        method: 'POST',
+      });
+    },
+    onSuccess: () => {
+      // Clear all cached data
+      queryClient.clear();
+      
+      toast({
+        title: "Logged Out",
+        description: "You have been logged out successfully",
+      });
+      
+      // Redirect to home page
+      window.location.href = '/';
+    },
+  });
 }

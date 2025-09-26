@@ -24,7 +24,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 // Main Pages
 function LandingPage() {
   const handleGetStarted = () => {
-    console.log('Get Started clicked - would navigate to registration');
+    window.location.href = '/register';
   };
 
   const handleLearnMore = () => {
@@ -356,12 +356,15 @@ function DashboardPage() {
 function RegisterPage() {
   const handleSubmit = (data: any) => {
     console.log('Registration submitted:', data);
-    alert('Registration submitted successfully! You will receive an email once approved.');
+  };
+
+  const handleCancel = () => {
+    window.location.href = '/';
   };
 
   return (
     <div className="min-h-screen bg-background p-4 flex items-center">
-      <RegistrationForm onSubmit={handleSubmit} />
+      <RegistrationForm onSubmit={handleSubmit} onCancel={handleCancel} />
     </div>
   );
 }
@@ -369,12 +372,15 @@ function RegisterPage() {
 function LoginPage() {
   const handleLogin = (credentials: any) => {
     console.log('Login attempt:', credentials);
-    alert(`Welcome back, ${credentials.email}!`);
+  };
+
+  const handleSignUpRedirect = () => {
+    window.location.href = '/register';
   };
 
   return (
     <div className="min-h-screen bg-background p-4 flex items-center">
-      <LoginForm onLogin={handleLogin} />
+      <LoginForm onLogin={handleLogin} onSignUpRedirect={handleSignUpRedirect} />
     </div>
   );
 }
@@ -451,11 +457,11 @@ function AppContent() {
 
   const handleAuthAction = () => {
     if (isAuthenticated) {
-      // Logout - redirect to Replit Auth logout endpoint
-      window.location.href = '/api/logout';
+      // Logout - call the logout endpoint
+      window.location.href = '/api/auth/logout';
     } else {
-      // Login - redirect to Replit Auth login endpoint
-      window.location.href = '/api/login';
+      // Login - redirect to login page
+      window.location.href = '/login';
     }
   };
 
