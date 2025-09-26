@@ -49,7 +49,8 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [, setLocation] = useLocation();
+  const registerMutation = useRegister();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -110,19 +111,19 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
     
     if (!validateForm()) return;
 
-    setIsSubmitting(true);
+    // Prepare registration data (exclude confirmPassword)
+    const { confirmPassword, ...registrationData } = formData;
     
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      onSubmit?.(formData);
-      console.log("Registration submitted:", formData);
-    } catch (error) {
-      console.error("Registration error:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    registerMutation.mutate(registrationData, {
+      onSuccess: () => {
+        // Redirect to login page on successful registration
+        setLocation('/login');
+        onSubmit?.(formData);
+      },
+      onError: (error: any) => {
+        setErrors({ form: error.message || "Registration failed. Please try again." });
+      }
+    });
   };
 
   // Calculate form completion percentage
@@ -163,21 +164,41 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Enter your full name"
-                  data-testid="input-name"
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  placeholder="Enter your first name"
+                  data-testid="input-first-name"
                 />
-                {errors.name && (
+                {errors.firstName && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    {errors.name}
+                    {errors.firstName}
                   </p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  placeholder="Enter your last name"
+                  data-testid="input-last-name"
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.lastName}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address *</Label>
@@ -437,11 +458,11 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={registerMutation.isPending}
               className="flex-1"
               data-testid="button-submit"
             >
-              {isSubmitting ? (
+              {registerMutation.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                   Submitting...

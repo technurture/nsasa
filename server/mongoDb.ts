@@ -7,6 +7,7 @@ let db: Db;
 // Try different common environment variable names for MongoDB URL
 const getMongoUrl = (): string => {
   const possibleUrls = [
+    process.env.DATABASE_URL,
     process.env.MONGODB_URL,
     process.env.MONGO_URL,
     process.env.MONGODB_URI,
@@ -18,23 +19,41 @@ const getMongoUrl = (): string => {
   const mongoUrl = possibleUrls.find(url => url);
   
   if (!mongoUrl) {
-    throw new Error('MongoDB connection URL not found. Please add one of these environment variables: MONGODB_URL, MONGO_URL, MONGODB_URI, MONGO_URI, MONGODB_CONNECTION_STRING, or MONGO_DATABASE_URL');
+    throw new Error('MongoDB connection URL not found. Please add DATABASE_URL or one of these environment variables: MONGODB_URL, MONGO_URL, MONGODB_URI, MONGO_URI, MONGODB_CONNECTION_STRING, or MONGO_DATABASE_URL');
   }
   
   return mongoUrl;
 };
 
 export async function connectToMongoDB(): Promise<Db> {
-  if (!client) {
-    const mongoUrl = getMongoUrl();
-    client = new MongoClient(mongoUrl);
-    await client.connect();
-    
-    // Get database name from URL or use default
-    const dbName = new URL(mongoUrl).pathname.slice(1) || 'nsasa_platform';
-    db = client.db(dbName);
-    
-    console.log(`Connected to MongoDB database: ${dbName}`);
+  if (!client || !db) {
+    try {
+      const mongoUrl = getMongoUrl();
+      console.log('Attempting to connect to MongoDB...');
+      
+      client = new MongoClient(mongoUrl);
+      await client.connect();
+      
+      // Get database name from URL or use default
+      let dbName;
+      try {
+        const url = new URL(mongoUrl);
+        dbName = url.pathname.slice(1) || 'nsasa_platform';
+      } catch (e) {
+        console.warn('Could not parse database name from URL, using default');
+        dbName = 'nsasa_platform';
+      }
+      
+      db = client.db(dbName);
+      
+      // Test the connection
+      await db.admin().ping();
+      
+      console.log(`Successfully connected to MongoDB database: ${dbName}`);
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      throw error;
+    }
   }
   
   return db;
@@ -69,18 +88,35 @@ export async function closeMongoDB(): Promise<void> {
 
 // Initialize database with indexes
 export async function initializeMongoDB(): Promise<void> {
-  const database = await connectToMongoDB();
-  
-  // Create indexes for better performance
-  await database.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
-  await database.collection(COLLECTIONS.USERS).createIndex({ matricNumber: 1 }, { unique: true, sparse: true });
-  await database.collection(COLLECTIONS.BLOG_POSTS).createIndex({ authorId: 1 });
-  await database.collection(COLLECTIONS.BLOG_POSTS).createIndex({ published: 1, createdAt: -1 });
-  await database.collection(COLLECTIONS.COMMENTS).createIndex({ blogPostId: 1 });
-  await database.collection(COLLECTIONS.EVENTS).createIndex({ date: 1 });
-  await database.collection(COLLECTIONS.EVENT_REGISTRATIONS).createIndex({ userId: 1, eventId: 1 }, { unique: true });
-  await database.collection(COLLECTIONS.LEARNING_RESOURCES).createIndex({ category: 1, createdAt: -1 });
-  await database.collection(COLLECTIONS.STAFF_PROFILES).createIndex({ userId: 1 }, { unique: true });
-  
-  console.log('MongoDB indexes created successfully');
+  try {
+    console.log('Initializing MongoDB...');
+    const database = await connectToMongoDB();
+    
+    if (!database) {
+      throw new Error('Failed to get database connection');
+    }
+    
+    console.log('Creating MongoDB indexes...');
+    
+    // Create indexes for better performance
+    try {
+      await database.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
+      await database.collection(COLLECTIONS.USERS).createIndex({ matricNumber: 1 }, { unique: true, sparse: true });
+      await database.collection(COLLECTIONS.BLOG_POSTS).createIndex({ authorId: 1 });
+      await database.collection(COLLECTIONS.BLOG_POSTS).createIndex({ published: 1, createdAt: -1 });
+      await database.collection(COLLECTIONS.COMMENTS).createIndex({ blogPostId: 1 });
+      await database.collection(COLLECTIONS.EVENTS).createIndex({ date: 1 });
+      await database.collection(COLLECTIONS.EVENT_REGISTRATIONS).createIndex({ userId: 1, eventId: 1 }, { unique: true });
+      await database.collection(COLLECTIONS.LEARNING_RESOURCES).createIndex({ category: 1, createdAt: -1 });
+      await database.collection(COLLECTIONS.STAFF_PROFILES).createIndex({ userId: 1 }, { unique: true });
+      
+      console.log('MongoDB indexes created successfully');
+    } catch (indexError) {
+      // Index creation failures should not stop the app from starting
+      console.warn('Some indexes failed to create:', indexError.message);
+    }
+  } catch (error) {
+    console.error('MongoDB initialization error:', error);
+    throw error;
+  }
 }
