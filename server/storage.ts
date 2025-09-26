@@ -167,7 +167,7 @@ export class DatabaseStorage implements IStorage {
   async createBlogPost(authorId: string, post: InsertBlogPost): Promise<BlogPost> {
     const [blogPost] = await db
       .insert(blogPosts)
-      .values({ ...post, authorId })
+      .values({ ...post, authorId, id: randomUUID() })
       .returning();
     return blogPost;
   }
@@ -219,7 +219,7 @@ export class DatabaseStorage implements IStorage {
   async createBlogComment(authorId: string, blogPostId: string, comment: InsertBlogComment): Promise<BlogComment> {
     const [blogComment] = await db
       .insert(blogComments)
-      .values({ ...comment, authorId, blogPostId })
+      .values({ ...comment, authorId, blogPostId, id: randomUUID() })
       .returning();
     return blogComment;
   }
@@ -240,7 +240,7 @@ export class DatabaseStorage implements IStorage {
   async createEvent(organizerId: string, event: InsertEvent): Promise<Event> {
     const [newEvent] = await db
       .insert(events)
-      .values({ ...event, organizerId })
+      .values({ ...event, organizerId, id: randomUUID() })
       .returning();
     return newEvent;
   }
@@ -260,9 +260,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event> {
+    const updateData = { ...event, updatedAt: new Date() };
+    // Remove any array fields that might cause type issues
+    const cleanUpdateData = Object.fromEntries(
+      Object.entries(updateData).filter(([key, value]) => value !== undefined)
+    );
     const [updatedEvent] = await db
       .update(events)
-      .set({ ...event, updatedAt: new Date() })
+      .set(cleanUpdateData)
       .where(eq(events.id, id))
       .returning();
     return updatedEvent;
@@ -298,7 +303,7 @@ export class DatabaseStorage implements IStorage {
   async createLearningResource(uploadedById: string, resource: InsertLearningResource & { fileUrl: string; fileName: string; fileSize: string }): Promise<LearningResource> {
     const [newResource] = await db
       .insert(learningResources)
-      .values({ ...resource, uploadedById })
+      .values({ ...resource, uploadedById, id: randomUUID() })
       .returning();
     return newResource;
   }
@@ -373,7 +378,7 @@ export class DatabaseStorage implements IStorage {
   async createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile> {
     const [staffProfile] = await db
       .insert(staffProfiles)
-      .values({ ...profile, userId })
+      .values({ ...profile, userId, id: randomUUID() })
       .returning();
     return staffProfile;
   }
@@ -394,9 +399,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile> {
+    const updateData = { ...profile, updatedAt: new Date() };
+    // Remove any array fields that might cause type issues
+    const cleanUpdateData = Object.fromEntries(
+      Object.entries(updateData).filter(([key, value]) => value !== undefined)
+    );
     const [updatedProfile] = await db
       .update(staffProfiles)
-      .set({ ...profile, updatedAt: new Date() })
+      .set(cleanUpdateData)
       .where(eq(staffProfiles.userId, userId))
       .returning();
     return updatedProfile;
