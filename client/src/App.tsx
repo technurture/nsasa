@@ -16,6 +16,7 @@ import StudentDashboard from "@/components/StudentDashboard";
 import RegistrationForm from "@/components/RegistrationForm";
 import LoginForm from "@/components/LoginForm";
 import ContactForm from "@/components/ContactForm";
+import AdminDashboard from "@/components/AdminDashboard";
 import LearningResourceCard from "@/components/LearningResourceCard";
 import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
@@ -385,6 +386,10 @@ function LoginPage() {
   );
 }
 
+function AdminPage() {
+  return <AdminDashboard />;
+}
+
 function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-12">
@@ -434,6 +439,7 @@ function Router() {
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
           <Route path="/dashboard" component={DashboardPage} />
+          <Route path="/admin" component={AdminPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/events" component={BlogsPage} />

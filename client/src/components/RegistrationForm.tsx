@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { UserPlus, AlertCircle, CheckCircle } from "lucide-react";
+import { useLocation } from "wouter";
+import { useRegister } from "@/hooks/useAuth";
 
 interface RegistrationFormProps {
   onSubmit?: (data: RegistrationData) => void;
