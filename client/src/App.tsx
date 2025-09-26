@@ -1,0 +1,477 @@
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Components
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import HeroSection from "@/components/HeroSection";
+import BlogCard from "@/components/BlogCard";
+import EventCard from "@/components/EventCard";
+import StaffProfileCard from "@/components/StaffProfileCard";
+import StudentDashboard from "@/components/StudentDashboard";
+import RegistrationForm from "@/components/RegistrationForm";
+import LoginForm from "@/components/LoginForm";
+import ContactForm from "@/components/ContactForm";
+import LearningResourceCard from "@/components/LearningResourceCard";
+import AboutSection from "@/components/AboutSection";
+import CommentsSection from "@/components/CommentsSection";
+import ThemeToggle from "@/components/ThemeToggle";
+
+// Mock user state
+import { useState } from "react";
+
+// Main Pages
+function LandingPage() {
+  const handleGetStarted = () => {
+    console.log('Get Started clicked - would navigate to registration');
+  };
+
+  const handleLearnMore = () => {
+    console.log('Learn More clicked - would scroll to about section');
+  };
+
+  // todo: remove mock functionality
+  const mockBlogs = [
+    {
+      id: "1",
+      title: "Understanding Social Psychology in Modern Society",
+      excerpt: "Explore the fascinating world of social psychology and how it shapes our daily interactions.",
+      content: "Full content...",
+      author: {
+        name: "Dr. Sarah Johnson",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
+        level: "Professor"
+      },
+      category: "Psychology",
+      publishedAt: "2024-01-15",
+      readTime: 8,
+      likes: 24,
+      comments: 12,
+      views: 156,
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
+      tags: ["psychology", "society", "behavior"]
+    },
+    {
+      id: "2",
+      title: "Research Methods in Social Science",
+      excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
+      content: "Full content...",
+      author: {
+        name: "Prof. Michael Chen",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
+        level: "Associate Professor"
+      },
+      category: "Research",
+      publishedAt: "2024-01-12",
+      readTime: 12,
+      likes: 18,
+      comments: 8,
+      views: 203,
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop",
+      tags: ["research", "methodology", "data"]
+    }
+  ];
+
+  const mockEvents = [
+    {
+      id: "1",
+      title: "Social Innovation Summit 2024",
+      description: "Join us for an inspiring day of presentations and networking.",
+      date: "2024-02-20",
+      time: "9:00 AM - 5:00 PM",
+      location: "Main Auditorium",
+      type: 'conference' as const,
+      capacity: 150,
+      registered: 127,
+      price: 25,
+      image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=300&fit=crop",
+      organizer: "Department of Social Science",
+      tags: ["innovation", "research", "networking"]
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <HeroSection onGetStarted={handleGetStarted} onLearnMore={handleLearnMore} />
+
+      {/* Content Sections */}
+      <div className="container mx-auto px-4 py-16 space-y-20">
+        {/* Recent Blogs */}
+        <section>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Latest from Our Community</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Discover insights, research, and perspectives from our faculty and students
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {mockBlogs.map((blog) => (
+              <BlogCard key={blog.id} blog={blog} />
+            ))}
+          </div>
+        </section>
+
+        {/* Upcoming Events */}
+        <section>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Upcoming Events</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Join us for workshops, seminars, and community gatherings
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {mockEvents.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </section>
+
+        {/* Call to Action */}
+        <section className="text-center">
+          <div className="bg-primary/5 rounded-xl p-12">
+            <h2 className="text-3xl font-bold mb-4">Ready to Join Our Community?</h2>
+            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Register today and become part of a vibrant academic community dedicated to social science excellence.
+            </p>
+            <button 
+              onClick={handleGetStarted}
+              className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Get Started Today
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function BlogsPage() {
+  // todo: remove mock functionality
+  const mockBlogs = [
+    {
+      id: "1",
+      title: "Understanding Social Psychology in Modern Society",
+      excerpt: "Explore the fascinating world of social psychology and how it shapes our daily interactions.",
+      content: "Full content...",
+      author: {
+        name: "Dr. Sarah Johnson",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
+        level: "Professor"
+      },
+      category: "Psychology",
+      publishedAt: "2024-01-15",
+      readTime: 8,
+      likes: 24,
+      comments: 12,
+      views: 156,
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
+      tags: ["psychology", "society", "behavior"]
+    },
+    {
+      id: "2",
+      title: "Research Methods in Social Science",
+      excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
+      content: "Full content...",
+      author: {
+        name: "Prof. Michael Chen",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
+        level: "Associate Professor"
+      },
+      category: "Research",
+      publishedAt: "2024-01-12",
+      readTime: 12,
+      likes: 18,
+      comments: 8,
+      views: 203,
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop",
+      tags: ["research", "methodology", "data"]
+    }
+  ];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">Blog Posts</h1>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Explore our collection of articles, research insights, and academic discussions
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {mockBlogs.map((blog) => (
+          <BlogCard key={blog.id} blog={blog} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StaffPage() {
+  // todo: remove mock functionality
+  const mockStaff = [
+    {
+      id: "1",
+      name: "Dr. Sarah Johnson",
+      title: "Professor of Social Psychology",
+      department: "Department of Social Science",
+      specializations: ["Social Psychology", "Behavioral Research", "Community Studies"],
+      email: "s.johnson@university.edu",
+      phone: "+1 (555) 123-4567",
+      office: "Room 305, Social Science Building",
+      bio: "Dr. Johnson is a renowned expert in social psychology with over 15 years of experience.",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-prof",
+      courses: ["Introduction to Social Psychology", "Research Methods"],
+      publications: 47,
+      experience: "15+ Years",
+      education: ["Ph.D. in Social Psychology, Harvard University"]
+    }
+  ];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">Our Faculty</h1>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Meet our dedicated faculty members who are experts in their fields
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {mockStaff.map((staff) => (
+          <StaffProfileCard key={staff.id} staff={staff} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ResourcesPage() {
+  // todo: remove mock functionality
+  const mockResources = [
+    {
+      id: "1",
+      title: "Advanced Statistical Methods for Social Research",
+      description: "Comprehensive guide covering advanced statistical techniques.",
+      type: 'pdf' as const,
+      category: "Research Methods",
+      size: "12.5 MB",
+      downloads: 234,
+      rating: 4.7,
+      uploadedBy: "Dr. Sarah Johnson",
+      uploadDate: "2024-01-15",
+      tags: ["statistics", "research", "SPSS"],
+      difficulty: 'advanced' as const,
+      thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop",
+      previewAvailable: true
+    }
+  ];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">Learning Resources</h1>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Access our comprehensive collection of educational materials
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {mockResources.map((resource) => (
+          <LearningResourceCard key={resource.id} resource={resource} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardPage() {
+  // todo: remove mock functionality
+  const mockStudent = {
+    name: "John Doe",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
+    level: "300 Level",
+    matricNumber: "soc/2021/001",
+    profileCompletion: 75,
+    approvalStatus: 'approved' as const
+  };
+
+  const mockStats = {
+    blogPosts: 8,
+    comments: 24,
+    downloads: 12,
+    badges: 5
+  };
+
+  const mockRecentActivity = [
+    {
+      id: "1",
+      type: 'blog' as const,
+      title: "Published: Understanding Social Psychology",
+      timestamp: "2024-01-15T10:30:00Z"
+    }
+  ];
+
+  const mockUpcomingEvents = [
+    {
+      id: "1",
+      title: "Social Innovation Summit 2024",
+      date: "Feb 20",
+      time: "9:00 AM"
+    }
+  ];
+
+  const mockRecommendedBlogs = [
+    {
+      id: "1",
+      title: "Advanced Statistical Methods for Social Research",
+      author: "Dr. Sarah Johnson",
+      readTime: 12
+    }
+  ];
+
+  const mockBadges = [
+    {
+      id: "1",
+      name: "First Blog",
+      icon: "📝",
+      description: "Published your first blog post",
+      earned: true
+    }
+  ];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <StudentDashboard 
+        student={mockStudent}
+        stats={mockStats}
+        recentActivity={mockRecentActivity}
+        upcomingEvents={mockUpcomingEvents}
+        recommendedBlogs={mockRecommendedBlogs}
+        badges={mockBadges}
+      />
+    </div>
+  );
+}
+
+function RegisterPage() {
+  const handleSubmit = (data: any) => {
+    console.log('Registration submitted:', data);
+    alert('Registration submitted successfully! You will receive an email once approved.');
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-4 flex items-center">
+      <RegistrationForm onSubmit={handleSubmit} />
+    </div>
+  );
+}
+
+function LoginPage() {
+  const handleLogin = (credentials: any) => {
+    console.log('Login attempt:', credentials);
+    alert(`Welcome back, ${credentials.email}!`);
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-4 flex items-center">
+      <LoginForm onLogin={handleLogin} />
+    </div>
+  );
+}
+
+function AboutPage() {
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <AboutSection />
+    </div>
+  );
+}
+
+function ContactPage() {
+  const handleSubmit = (data: any) => {
+    console.log('Contact form submitted:', data);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
+        <p className="text-muted-foreground">
+          Get in touch with the Department of Social Science
+        </p>
+      </div>
+      <ContactForm onSubmit={handleSubmit} />
+    </div>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={LandingPage} />
+      <Route path="/blogs" component={BlogsPage} />
+      <Route path="/staff" component={StaffPage} />
+      <Route path="/resources" component={ResourcesPage} />
+      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/register" component={RegisterPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/events" component={BlogsPage} />
+      <Route component={LandingPage} />
+    </Switch>
+  );
+}
+
+function App() {
+  // todo: remove mock functionality
+  const [user, setUser] = useState<any>(null);
+  
+  // Mock user for demo - can be toggled
+  const mockUser = {
+    name: "John Doe",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
+    role: 'student' as const
+  };
+
+  const handleAuthAction = () => {
+    if (user) {
+      setUser(null);
+      console.log('User logged out');
+    } else {
+      setUser(mockUser);
+      console.log('User logged in');
+    }
+  };
+
+  const handleNewsletterSignup = (email: string) => {
+    console.log('Newsletter signup:', email);
+    alert(`Thank you for subscribing with email: ${email}`);
+  };
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <div className="min-h-screen bg-background flex flex-col">
+          <Header user={user} onAuthAction={handleAuthAction} />
+          
+          <main className="flex-1">
+            <Router />
+          </main>
+          
+          <Footer onNewsletterSignup={handleNewsletterSignup} />
+          
+          {/* Theme Toggle - Fixed Position */}
+          <div className="fixed bottom-4 right-4 z-50">
+            <ThemeToggle />
+          </div>
+        </div>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
