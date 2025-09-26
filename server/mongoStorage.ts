@@ -86,7 +86,7 @@ export interface IMongoStorage {
 }
 
 export class MongoStorage implements IMongoStorage {
-  private jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key';
+  private jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
   
   // Auth operations
   async registerUser(userData: RegisterUser): Promise<User> {
