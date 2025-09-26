@@ -31,6 +31,7 @@ export function useLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include', // Important: include cookies
       });
       if (!response.ok) {
         throw new Error('Login failed');
@@ -67,6 +68,7 @@ export function useRegister() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
+        credentials: 'include', // Important: include cookies
       });
       if (!response.ok) {
         throw new Error('Registration failed');
@@ -98,6 +100,7 @@ export function useLogout() {
     mutationFn: async () => {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        credentials: 'include', // Important: include cookies
       });
       if (!response.ok) {
         throw new Error('Logout failed');
