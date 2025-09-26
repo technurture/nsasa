@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -416,7 +416,18 @@ function ContactPage() {
   );
 }
 
-function Router() {
+// Auth pages that should render without header/footer
+function AuthRouter() {
+  return (
+    <Switch>
+      <Route path="/register" component={RegisterPage} />
+      <Route path="/login" component={LoginPage} />
+    </Switch>
+  );
+}
+
+// Main app router for authenticated and public pages with layout
+function MainRouter() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
@@ -428,8 +439,6 @@ function Router() {
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
-          <Route path="/register" component={RegisterPage} />
-          <Route path="/login" component={LoginPage} />
           <Route component={LandingPage} />
         </>
       ) : (
@@ -450,6 +459,19 @@ function Router() {
   );
 }
 
+function Router() {
+  const [location] = useLocation();
+  
+  // Check if current path is an auth page
+  const isAuthPage = location === '/login' || location === '/register';
+  
+  if (isAuthPage) {
+    return <AuthRouter />;
+  }
+  
+  return <MainRouter />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -460,6 +482,7 @@ function App() {
 
 function AppContent() {
   const { user, isAuthenticated } = useAuth();
+  const [location] = useLocation();
 
   const handleAuthAction = () => {
     if (isAuthenticated) {
@@ -476,20 +499,29 @@ function AppContent() {
     alert(`Thank you for subscribing with email: ${email}`);
   };
 
+  // Check if current path is an auth page
+  const isAuthPage = location === '/login' || location === '/register';
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background flex flex-col">
-        <Header user={isAuthenticated ? {
-          name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || 'User',
-          avatar: user?.profileImageUrl,
-          role: user?.role || 'student'
-        } : undefined} onAuthAction={handleAuthAction} />
+        {/* Only render Header for non-auth pages */}
+        {!isAuthPage && (
+          <Header user={isAuthenticated && user ? {
+            name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || 'User',
+            avatar: user.profileImageUrl || undefined,
+            role: (user.role as 'student' | 'admin' | 'guest') || 'student'
+          } : undefined} onAuthAction={handleAuthAction} />
+        )}
         
         <main className="flex-1">
           <Router />
         </main>
         
-        <Footer onNewsletterSignup={handleNewsletterSignup} />
+        {/* Only render Footer for non-auth pages */}
+        {!isAuthPage && (
+          <Footer onNewsletterSignup={handleNewsletterSignup} />
+        )}
         
         {/* Theme Toggle - Fixed Position */}
         <div className="fixed bottom-4 right-4 z-50">

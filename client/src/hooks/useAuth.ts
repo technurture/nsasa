@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { User } from "@shared/schema";
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery({
+  const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -26,12 +27,15 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const response = await apiRequest('/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      return response;
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+      return response.json();
     },
     onSuccess: (data) => {
       // Update the user data in cache
@@ -59,12 +63,15 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: async (userData: any) => {
-      const response = await apiRequest('/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      return response;
+      if (!response.ok) {
+        throw new Error('Registration failed');
+      }
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -89,9 +96,12 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      await apiRequest('/api/auth/logout', {
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
       });
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
     },
     onSuccess: () => {
       // Clear all cached data
