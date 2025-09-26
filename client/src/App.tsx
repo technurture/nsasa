@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
 
 // Components
 import Header from "@/components/Header";
@@ -19,9 +20,6 @@ import LearningResourceCard from "@/components/LearningResourceCard";
 import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
-
-// Mock user state
-import { useState } from "react";
 
 // Main Pages
 function LandingPage() {
@@ -408,41 +406,56 @@ function ContactPage() {
 }
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <Switch>
-      <Route path="/" component={LandingPage} />
-      <Route path="/blogs" component={BlogsPage} />
-      <Route path="/staff" component={StaffPage} />
-      <Route path="/resources" component={ResourcesPage} />
-      <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/register" component={RegisterPage} />
-      <Route path="/login" component={LoginPage} />
-      <Route path="/about" component={AboutPage} />
-      <Route path="/contact" component={ContactPage} />
-      <Route path="/events" component={BlogsPage} />
-      <Route component={LandingPage} />
+      {isLoading || !isAuthenticated ? (
+        <>
+          <Route path="/" component={LandingPage} />
+          <Route path="/blogs" component={BlogsPage} />
+          <Route path="/staff" component={StaffPage} />
+          <Route path="/about" component={AboutPage} />
+          <Route path="/contact" component={ContactPage} />
+          <Route path="/register" component={RegisterPage} />
+          <Route path="/login" component={LoginPage} />
+          <Route component={LandingPage} />
+        </>
+      ) : (
+        <>
+          <Route path="/" component={DashboardPage} />
+          <Route path="/blogs" component={BlogsPage} />
+          <Route path="/staff" component={StaffPage} />
+          <Route path="/resources" component={ResourcesPage} />
+          <Route path="/dashboard" component={DashboardPage} />
+          <Route path="/about" component={AboutPage} />
+          <Route path="/contact" component={ContactPage} />
+          <Route path="/events" component={BlogsPage} />
+          <Route component={DashboardPage} />
+        </>
+      )}
     </Switch>
   );
 }
 
 function App() {
-  // todo: remove mock functionality
-  const [user, setUser] = useState<any>(null);
-  
-  // Mock user for demo - can be toggled
-  const mockUser = {
-    name: "John Doe",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
-    role: 'student' as const
-  };
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
+  );
+}
+
+function AppContent() {
+  const { user, isAuthenticated } = useAuth();
 
   const handleAuthAction = () => {
-    if (user) {
-      setUser(null);
-      console.log('User logged out');
+    if (isAuthenticated) {
+      // Logout - redirect to Replit Auth logout endpoint
+      window.location.href = '/api/logout';
     } else {
-      setUser(mockUser);
-      console.log('User logged in');
+      // Login - redirect to Replit Auth login endpoint
+      window.location.href = '/api/login';
     }
   };
 
@@ -452,25 +465,27 @@ function App() {
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen bg-background flex flex-col">
-          <Header user={user} onAuthAction={handleAuthAction} />
-          
-          <main className="flex-1">
-            <Router />
-          </main>
-          
-          <Footer onNewsletterSignup={handleNewsletterSignup} />
-          
-          {/* Theme Toggle - Fixed Position */}
-          <div className="fixed bottom-4 right-4 z-50">
-            <ThemeToggle />
-          </div>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header user={isAuthenticated ? {
+          name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || 'User',
+          avatar: user?.profileImageUrl,
+          role: user?.role || 'student'
+        } : undefined} onAuthAction={handleAuthAction} />
+        
+        <main className="flex-1">
+          <Router />
+        </main>
+        
+        <Footer onNewsletterSignup={handleNewsletterSignup} />
+        
+        {/* Theme Toggle - Fixed Position */}
+        <div className="fixed bottom-4 right-4 z-50">
+          <ThemeToggle />
         </div>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+      </div>
+      <Toaster />
+    </TooltipProvider>
   );
 }
 
