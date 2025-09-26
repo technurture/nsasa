@@ -12,7 +12,7 @@ export const userSchema = z.object({
   passwordHash: z.string(),
   
   // Nsasa-specific fields
-  matricNumber: z.string(),
+  matricNumber: z.string().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
   location: z.enum(['OnCampus', 'OffCampus']).optional(),
   address: z.string().optional(),
