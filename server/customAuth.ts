@@ -91,6 +91,21 @@ export const requireSuperAdmin = (req: Request, res: Response, next: NextFunctio
   next();
 };
 
+// Middleware to check if user has any of the specified roles
+export const requireRole = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: `Access denied. Required roles: ${roles.join(', ')}` });
+    }
+
+    next();
+  };
+};
+
 // Generate JWT token
 export function generateToken(userId: string, email: string, role: string): string {
   return jwt.sign(

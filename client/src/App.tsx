@@ -21,6 +21,16 @@ import LearningResourceCard from "@/components/LearningResourceCard";
 import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
+import ModernDashboard from "@/components/ModernDashboard";
+import MainDashboardView, {
+  UserManagementView,
+  StudentGamificationView,
+  AnalyticsView,
+  BlogManagementView,
+  EventManagementView,
+  ResourceManagementView,
+  SettingsView
+} from "@/components/MainDashboardView";
 
 // Main Pages
 function LandingPage() {
@@ -426,9 +436,32 @@ function AuthRouter() {
   );
 }
 
+// Dashboard router for authenticated dashboard pages
+function DashboardRouter() {
+  return (
+    <ModernDashboard>
+      <Switch>
+        <Route path="/dashboard" component={MainDashboardView} />
+        <Route path="/dashboard/users" component={UserManagementView} />
+        <Route path="/dashboard/blogs" component={BlogManagementView} />
+        <Route path="/dashboard/events" component={EventManagementView} />
+        <Route path="/dashboard/resources" component={ResourceManagementView} />
+        <Route path="/dashboard/analytics" component={AnalyticsView} />
+        <Route path="/dashboard/gamification" component={StudentGamificationView} />
+        <Route path="/dashboard/settings" component={SettingsView} />
+        <Route component={MainDashboardView} />
+      </Switch>
+    </ModernDashboard>
+  );
+}
+
 // Main app router for authenticated and public pages with layout
 function MainRouter() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
+
+  // Check if current path is a dashboard route
+  const isDashboardRoute = location.startsWith('/dashboard');
 
   return (
     <Switch>
@@ -443,16 +476,20 @@ function MainRouter() {
         </>
       ) : (
         <>
-          <Route path="/" component={DashboardPage} />
+          {/* Dashboard routes use ModernDashboard layout */}
+          <Route path="/dashboard" component={DashboardRouter} nest />
+          <Route path="/" component={DashboardRouter} />
+          
+          {/* Public pages with regular layout */}
           <Route path="/blogs" component={BlogsPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
-          <Route path="/dashboard" component={DashboardPage} />
-          <Route path="/admin" component={AdminPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/events" component={BlogsPage} />
-          <Route component={DashboardPage} />
+          
+          {/* Fallback to dashboard */}
+          <Route component={DashboardRouter} />
         </>
       )}
     </Switch>
@@ -501,12 +538,15 @@ function AppContent() {
 
   // Check if current path is an auth page
   const isAuthPage = location === '/login' || location === '/register';
+  
+  // Check if current path is a dashboard page (should not have header/footer)
+  const isDashboardPage = isAuthenticated && (location === '/' || location.startsWith('/dashboard'));
 
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background flex flex-col">
-        {/* Only render Header for non-auth pages */}
-        {!isAuthPage && (
+        {/* Only render Header for non-auth and non-dashboard pages */}
+        {!isAuthPage && !isDashboardPage && (
           <Header user={isAuthenticated && user ? {
             name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || 'User',
             avatar: user.profileImageUrl || undefined,
@@ -514,19 +554,21 @@ function AppContent() {
           } : undefined} onAuthAction={handleAuthAction} />
         )}
         
-        <main className="flex-1">
+        <main className={isDashboardPage ? "flex-1" : "flex-1"}>
           <Router />
         </main>
         
-        {/* Only render Footer for non-auth pages */}
-        {!isAuthPage && (
+        {/* Only render Footer for non-auth and non-dashboard pages */}
+        {!isAuthPage && !isDashboardPage && (
           <Footer onNewsletterSignup={handleNewsletterSignup} />
         )}
         
-        {/* Theme Toggle - Fixed Position */}
-        <div className="fixed bottom-4 right-4 z-50">
-          <ThemeToggle />
-        </div>
+        {/* Theme Toggle - Fixed Position (only for non-dashboard pages) */}
+        {!isDashboardPage && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <ThemeToggle />
+          </div>
+        )}
       </div>
       <Toaster />
     </TooltipProvider>

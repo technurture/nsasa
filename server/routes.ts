@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from 'cookie-parser';
 import { mongoStorage } from "./mongoStorage";
-import { authenticateToken, requireAdmin, optionalAuth } from "./customAuth";
+import { authenticateToken, requireAdmin, requireSuperAdmin, requireRole, optionalAuth } from "./customAuth";
 import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
 
@@ -15,6 +15,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Mount auth routes
   app.use('/api/auth', authRoutes);
+
+  // Analytics routes (Admin and Super Admin only)
+  app.get('/api/analytics/overview', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const analytics = await mongoStorage.getAnalyticsOverview();
+      res.json(analytics);
+    } catch (error: any) {
+      console.error('Get analytics error:', error);
+      res.status(500).json({ message: 'Failed to get analytics', error: error.message });
+    }
+  });
+
+  app.get('/api/analytics/recent-activity', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const activities = await mongoStorage.getRecentActivity();
+      res.json(activities);
+    } catch (error: any) {
+      console.error('Get recent activity error:', error);
+      res.status(500).json({ message: 'Failed to get recent activity', error: error.message });
+    }
+  });
+
+  app.get('/api/analytics/top-blogs', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const topBlogs = await mongoStorage.getTopBlogs();
+      res.json(topBlogs);
+    } catch (error: any) {
+      console.error('Get top blogs error:', error);
+      res.status(500).json({ message: 'Failed to get top blogs', error: error.message });
+    }
+  });
+
+  // Gamification routes (Students only)
+  app.get('/api/gamification/user-stats/:userId', authenticateToken, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Users can only access their own stats unless they're admin
+      if (req.user?.userId !== userId && req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const userStats = await mongoStorage.getUserGamificationStats(userId);
+      res.json(userStats);
+    } catch (error: any) {
+      console.error('Get user stats error:', error);
+      res.status(500).json({ message: 'Failed to get user stats', error: error.message });
+    }
+  });
+
+  app.get('/api/gamification/leaderboard', authenticateToken, async (req, res) => {
+    try {
+      const leaderboard = await mongoStorage.getLeaderboard();
+      res.json(leaderboard);
+    } catch (error: any) {
+      console.error('Get leaderboard error:', error);
+      res.status(500).json({ message: 'Failed to get leaderboard', error: error.message });
+    }
+  });
+
+  app.get('/api/gamification/badges/:userId', authenticateToken, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Users can only access their own badges unless they're admin
+      if (req.user?.userId !== userId && req.user?.role !== 'admin' && req.user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const badges = await mongoStorage.getUserBadges(userId);
+      res.json(badges);
+    } catch (error: any) {
+      console.error('Get user badges error:', error);
+      res.status(500).json({ message: 'Failed to get user badges', error: error.message });
+    }
+  });
 
   // Blog routes
   app.get('/api/blogs', optionalAuth, async (req, res) => {

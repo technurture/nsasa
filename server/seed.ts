@@ -44,7 +44,7 @@ class AdminSeeder {
       phoneNumber: undefined,
       level: undefined,
       occupation: 'Administrator',
-      role: 'admin',
+      role: 'super_admin',
       approvalStatus: 'approved', // Auto-approve admin
       profileCompletion: 80, // High completion for admin
       passwordHash,
