@@ -13,7 +13,9 @@ const blogRequestSchema = blogPostSchema.omit({
   _id: true,
   authorId: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
+  likes: true,
+  views: true
 }).extend({
   // Make some fields optional for updates
   likes: z.number().optional(),
