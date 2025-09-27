@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import React, { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -458,14 +459,26 @@ function DashboardRouter() {
 // Main app router for authenticated and public pages with layout
 function MainRouter() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
-  // Check if current path is a dashboard route
-  const isDashboardRoute = location.startsWith('/dashboard');
+  // Handle redirect to dashboard for authenticated users using useEffect
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && location === '/') {
+      setLocation('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, location, setLocation]);
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      {isLoading ? (
+        <Route component={() => (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold">Loading...</h2>
+            </div>
+          </div>
+        )} />
+      ) : !isAuthenticated ? (
         <>
           <Route path="/" component={LandingPage} />
           <Route path="/blogs" component={BlogsPage} />
@@ -479,15 +492,7 @@ function MainRouter() {
           {/* Dashboard routes use ModernDashboard layout */}
           <Route path="/dashboard" component={DashboardRouter} nest />
           
-          {/* Redirect root to dashboard for authenticated users */}
-          <Route path="/">
-            {() => {
-              window.location.replace('/dashboard');
-              return null;
-            }}
-          </Route>
-          
-          {/* Public pages with regular layout */}
+          {/* Public pages with regular layout for authenticated users */}
           <Route path="/blogs" component={BlogsPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
@@ -495,15 +500,23 @@ function MainRouter() {
           <Route path="/contact" component={ContactPage} />
           <Route path="/events" component={BlogsPage} />
           
-          {/* Fallback to dashboard */}
-          <Route component={() => {
-            window.location.href = '/dashboard';
-            return null;
-          }} />
+          {/* Default route for authenticated users */}
+          <Route path="/" component={DashboardRedirect} />
         </>
       )}
     </Switch>
   );
+}
+
+// Separate component for dashboard redirect
+function DashboardRedirect() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation('/dashboard');
+  }, [setLocation]);
+  
+  return null;
 }
 
 function Router() {
