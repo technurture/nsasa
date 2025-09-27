@@ -5,6 +5,21 @@ import { mongoStorage } from "./mongoStorage";
 import { authenticateToken, requireAdmin, requireSuperAdmin, requireRole, optionalAuth } from "./customAuth";
 import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
+import { blogPostSchema } from "../shared/mongoSchema";
+import { z } from "zod";
+
+// Create validation schema for blog requests (excluding server-managed fields)
+const blogRequestSchema = blogPostSchema.omit({
+  _id: true,
+  authorId: true,
+  createdAt: true,
+  updatedAt: true
+}).extend({
+  // Make some fields optional for updates
+  likes: z.number().optional(),
+  views: z.number().optional(),
+  readTime: z.number().optional()
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB
@@ -128,7 +143,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
       
-      const blog = await mongoStorage.createBlogPost(req.user.userId, req.body);
+      // Validate request body against schema
+      const validationResult = blogRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid blog data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
+      const blog = await mongoStorage.createBlogPost(req.user.userId, validationResult.data);
       res.status(201).json(blog);
     } catch (error: any) {
       console.error('Create blog error:', error);
@@ -142,6 +166,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
       
+      // Validate request body against schema (partial update)
+      const updateSchema = blogRequestSchema.partial();
+      const validationResult = updateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid blog update data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
       // Check if user owns the blog or is admin
       const existingBlog = await mongoStorage.getBlogPost(req.params.id);
       if (!existingBlog) {
@@ -152,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Permission denied' });
       }
       
-      const blog = await mongoStorage.updateBlogPost(req.params.id, req.body);
+      const blog = await mongoStorage.updateBlogPost(req.params.id, validationResult.data);
       res.json(blog);
     } catch (error: any) {
       console.error('Update blog error:', error);

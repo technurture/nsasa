@@ -23,35 +23,23 @@ import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star } from "lucide
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { blogPostSchema } from "@shared/mongoSchema";
 
-// Types
-interface BlogPost {
-  _id?: string;
-  title: string;
-  excerpt?: string;
-  content: string;
-  category: string;
-  tags: string[];
-  imageUrl?: string;
-  published: boolean;
-  featured: boolean;
-  likes: number;
-  views: number;
-  readTime: number;
-  createdAt: string;
-  authorId: string;
-}
+// Use shared types
+type BlogPost = z.infer<typeof blogPostSchema>;
 
-// Form validation schema
-const blogFormSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title too long"),
-  excerpt: z.string().max(500, "Excerpt too long").optional(),
-  content: z.string().min(1, "Content is required"),
-  category: z.string().min(1, "Category is required"),
-  tags: z.string().optional(),
-  imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
-  published: z.boolean(),
-  featured: z.boolean()
+// Form validation schema based on shared schema
+const blogFormSchema = blogPostSchema.omit({ 
+  _id: true, 
+  authorId: true, 
+  createdAt: true, 
+  updatedAt: true, 
+  likes: true, 
+  views: true, 
+  readTime: true 
+}).extend({
+  tags: z.string().optional(), // Transform array to comma-separated string for form input
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
 });
 
 type BlogFormData = z.infer<typeof blogFormSchema>;
@@ -322,7 +310,13 @@ function BlogFormModal({
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-cancel-blog-form"
+              >
                 Cancel
               </Button>
               <Button 
@@ -466,7 +460,12 @@ export function BlogManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Create your first blog post to get started.
                 </p>
-                <Button onClick={() => setIsCreateModalOpen(true)} data-testid="button-create-first-blog">
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)} 
+                  data-testid="button-create-first-blog"
+                  className="px-6 py-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
                   Create First Blog
                 </Button>
               </CardContent>
@@ -520,17 +519,19 @@ export function BlogManagementView() {
                         data-testid={`button-edit-blog-${blog._id}`}
                       >
                         <Edit className="w-4 h-4 mr-2" />
-                        Edit
+                        <span className="hidden sm:inline">Edit</span>
+                        <span className="sm:hidden">Edit</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setDeletingBlog(blog)}
-                        className="flex-1 lg:flex-none text-red-600 hover:bg-red-50"
+                        className="flex-1 lg:flex-none text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                         data-testid={`button-delete-blog-${blog._id}`}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
+                        <span className="hidden sm:inline">Delete</span>
+                        <span className="sm:hidden">Del</span>
                       </Button>
                     </div>
                   </div>
