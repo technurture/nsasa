@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   BarChart3, 
   Users, 
@@ -22,7 +23,8 @@ import {
   Heart,
   Shield,
   Bell,
-  LogOut
+  LogOut,
+  UserCog
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +45,7 @@ interface ModernDashboardProps {
 }
 
 export default function ModernDashboard({ children }: ModernDashboardProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -178,11 +180,32 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
             </div>
             
             <div className="flex items-center space-x-4">
+              {user.role === 'super_admin' && (
+                <Select onValueChange={(value) => {
+                  if (value === 'user-management') {
+                    setLocation('/dashboard/users');
+                  } else if (value === 'analytics') {
+                    setLocation('/dashboard/analytics');
+                  } else if (value === 'permissions') {
+                    setLocation('/dashboard/settings');
+                  }
+                }}>
+                  <SelectTrigger className="w-[140px] h-8 bg-gray-50 dark:bg-gray-700" data-testid="select-role-management">
+                    <UserCog className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Manage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user-management">User Roles</SelectItem>
+                    <SelectItem value="permissions">Permissions</SelectItem>
+                    <SelectItem value="analytics">System Analytics</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <Button variant="ghost" size="sm" data-testid="button-notifications">
                 <Bell className="w-5 h-5" />
               </Button>
               {user.role !== 'student' && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
                   {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
                 </Badge>
               )}
