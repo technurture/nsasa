@@ -485,7 +485,6 @@ function MainRouter() {
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
-          <Route component={LandingPage} />
         </>
       ) : (
         <>
