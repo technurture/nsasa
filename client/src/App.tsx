@@ -478,7 +478,12 @@ function MainRouter() {
         <>
           {/* Dashboard routes use ModernDashboard layout */}
           <Route path="/dashboard" component={DashboardRouter} nest />
-          <Route path="/" component={DashboardRouter} />
+          
+          {/* Redirect root to dashboard for authenticated users */}
+          <Route path="/" component={() => {
+            window.location.href = '/dashboard';
+            return null;
+          }} />
           
           {/* Public pages with regular layout */}
           <Route path="/blogs" component={BlogsPage} />
@@ -489,7 +494,10 @@ function MainRouter() {
           <Route path="/events" component={BlogsPage} />
           
           {/* Fallback to dashboard */}
-          <Route component={DashboardRouter} />
+          <Route component={() => {
+            window.location.href = '/dashboard';
+            return null;
+          }} />
         </>
       )}
     </Switch>
@@ -540,7 +548,7 @@ function AppContent() {
   const isAuthPage = location === '/login' || location === '/register';
   
   // Check if current path is a dashboard page (should not have header/footer)
-  const isDashboardPage = isAuthenticated && (location === '/' || location.startsWith('/dashboard'));
+  const isDashboardPage = isAuthenticated && location.startsWith('/dashboard');
 
   return (
     <TooltipProvider>

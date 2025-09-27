@@ -136,6 +136,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/blogs/:id', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Check if user owns the blog or is admin
+      const existingBlog = await mongoStorage.getBlogPost(req.params.id);
+      if (!existingBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+      
+      if (existingBlog.authorId !== req.user.userId && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Permission denied' });
+      }
+      
+      const blog = await mongoStorage.updateBlogPost(req.params.id, req.body);
+      res.json(blog);
+    } catch (error: any) {
+      console.error('Update blog error:', error);
+      res.status(500).json({ message: 'Failed to update blog', error: error.message });
+    }
+  });
+
+  app.delete('/api/blogs/:id', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Check if user owns the blog or is admin
+      const existingBlog = await mongoStorage.getBlogPost(req.params.id);
+      if (!existingBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+      
+      if (existingBlog.authorId !== req.user.userId && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Permission denied' });
+      }
+      
+      await mongoStorage.deleteBlogPost(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete blog error:', error);
+      res.status(500).json({ message: 'Failed to delete blog', error: error.message });
+    }
+  });
+
   // Comments routes
   app.get('/api/blogs/:id/comments', optionalAuth, async (req, res) => {
     try {
@@ -192,6 +240,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/events/:id', optionalAuth, async (req, res) => {
+    try {
+      const event = await mongoStorage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      res.json(event);
+    } catch (error: any) {
+      console.error('Get event error:', error);
+      res.status(500).json({ message: 'Failed to get event', error: error.message });
+    }
+  });
+
+  app.put('/api/events/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const event = await mongoStorage.updateEvent(req.params.id, req.body);
+      res.json(event);
+    } catch (error: any) {
+      console.error('Update event error:', error);
+      res.status(500).json({ message: 'Failed to update event', error: error.message });
+    }
+  });
+
+  app.delete('/api/events/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.deleteEvent(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete event error:', error);
+      res.status(500).json({ message: 'Failed to delete event', error: error.message });
+    }
+  });
+
   // Learning resources routes
   app.get('/api/resources', authenticateToken, async (req, res) => {
     try {
@@ -202,6 +291,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Get resources error:', error);
       res.status(500).json({ message: 'Failed to get resources', error: error.message });
+    }
+  });
+
+  app.get('/api/resources/:id', authenticateToken, async (req, res) => {
+    try {
+      const resource = await mongoStorage.getLearningResource(req.params.id);
+      if (!resource) {
+        return res.status(404).json({ message: 'Resource not found' });
+      }
+      res.json(resource);
+    } catch (error: any) {
+      console.error('Get resource error:', error);
+      res.status(500).json({ message: 'Failed to get resource', error: error.message });
+    }
+  });
+
+  app.post('/api/resources', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const resource = await mongoStorage.createLearningResource(req.user.userId, req.body);
+      res.status(201).json(resource);
+    } catch (error: any) {
+      console.error('Create resource error:', error);
+      res.status(500).json({ message: 'Failed to create resource', error: error.message });
+    }
+  });
+
+  app.put('/api/resources/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const resource = await mongoStorage.updateLearningResource(req.params.id, req.body);
+      res.json(resource);
+    } catch (error: any) {
+      console.error('Update resource error:', error);
+      res.status(500).json({ message: 'Failed to update resource', error: error.message });
+    }
+  });
+
+  app.delete('/api/resources/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.deleteLearningResource(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete resource error:', error);
+      res.status(500).json({ message: 'Failed to delete resource', error: error.message });
     }
   });
 
