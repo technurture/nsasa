@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUpload } from "@/components/ui/image-upload";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import GamificationDashboard from "./GamificationDashboard";
 import AdminDashboard from "./AdminDashboard";
@@ -19,14 +20,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, MapPin, Clock, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { blogPostSchema } from "@shared/mongoSchema";
+import { blogPostSchema, eventSchema, learningResourceSchema } from "@shared/mongoSchema";
 
 // Use shared types
 type BlogPost = z.infer<typeof blogPostSchema>;
+type Event = z.infer<typeof eventSchema>;
+type LearningResource = z.infer<typeof learningResourceSchema>;
 
 // Form validation schema based on shared schema
 const blogFormSchema = blogPostSchema.omit({ 
@@ -43,6 +46,37 @@ const blogFormSchema = blogPostSchema.omit({
 });
 
 type BlogFormData = z.infer<typeof blogFormSchema>;
+
+// Event form validation schema
+const eventFormSchema = eventSchema.omit({ 
+  _id: true, 
+  organizerId: true, 
+  createdAt: true, 
+  updatedAt: true 
+}).extend({
+  date: z.string().min(1, "Date is required"), // Transform Date to string for form input
+  tags: z.string().optional(), // Transform array to comma-separated string for form input
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
+});
+
+type EventFormData = z.infer<typeof eventFormSchema>;
+
+// Learning Resource form validation schema
+const resourceFormSchema = learningResourceSchema.omit({ 
+  _id: true, 
+  uploadedById: true, 
+  createdAt: true, 
+  updatedAt: true,
+  downloads: true,
+  rating: true,
+  ratingCount: true
+}).extend({
+  tags: z.string().optional(), // Transform array to comma-separated string for form input
+  fileUrl: z.string().url("File URL is required").min(1, "File is required"),
+  thumbnailUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
+});
+
+type ResourceFormData = z.infer<typeof resourceFormSchema>;
 
 export default function MainDashboardView() {
   const { user } = useAuth();
@@ -335,6 +369,246 @@ function BlogFormModal({
   );
 }
 
+// Event Form Modal Component
+function EventFormModal({ 
+  isOpen, 
+  onClose, 
+  event, 
+  onSubmit, 
+  isLoading 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  event: Event | null; 
+  onSubmit: (data: any) => void; 
+  isLoading: boolean; 
+}) {
+  const form = useForm<EventFormData>({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues: {
+      title: event?.title || "",
+      description: event?.description || "",
+      date: event?.date ? new Date(event.date).toISOString().split('T')[0] : "",
+      time: event?.time || "",
+      location: event?.location || "",
+      type: event?.type || 'workshop',
+      capacity: event?.capacity || 50,
+      price: event?.price || 0,
+      tags: event?.tags?.join(", ") || "",
+      imageUrl: event?.imageUrl || ""
+    }
+  });
+
+  const handleSubmit = (data: EventFormData) => {
+    const submitData = {
+      ...data,
+      date: new Date(data.date),
+      tags: data.tags ? data.tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
+      imageUrl: data.imageUrl || undefined
+    };
+    onSubmit(submitData);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{event ? "Edit Event" : "Create New Event"}</DialogTitle>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <FormLabel>Title *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter event title..." {...field} data-testid="input-event-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Type *</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger data-testid="select-event-type">
+                          <SelectValue placeholder="Select event type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="workshop">Workshop</SelectItem>
+                          <SelectItem value="seminar">Seminar</SelectItem>
+                          <SelectItem value="conference">Conference</SelectItem>
+                          <SelectItem value="social">Social</SelectItem>
+                          <SelectItem value="academic">Academic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} data-testid="input-event-date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 9:00 AM - 5:00 PM" {...field} data-testid="input-event-time" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Event venue..." {...field} data-testid="input-event-location" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="capacity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Capacity *</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Maximum attendees" {...field} onChange={e => field.onChange(parseInt(e.target.value))} data-testid="input-event-capacity" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price (in cents, 0 for free)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value))} data-testid="input-event-price" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags (comma separated)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. workshop, academic, networking" {...field} data-testid="input-event-tags" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Image</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      acceptedFormats="image"
+                      folder="events"
+                      label="Upload Event Image"
+                      description="Upload an image for your event (optional)"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Event description..." 
+                      rows={6} 
+                      {...field} 
+                      data-testid="textarea-event-description"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-cancel-event-form"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isLoading} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-submit-event"
+              >
+                {isLoading ? "Saving..." : event ? "Update Event" : "Create Event"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Blog Management View with full CRUD functionality
 export function BlogManagementView() {
   const { user } = useAuth();
@@ -587,21 +861,771 @@ export function BlogManagementView() {
 }
 
 export function EventManagementView() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
+
+  // Fetch events query
+  const { data: events = [], isLoading, refetch } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
+  });
+
+  // Create event mutation
+  const createEventMutation = useMutation({
+    mutationFn: (eventData: any) => apiRequest('POST', '/api/events', eventData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setIsCreateModalOpen(false);
+      toast({
+        title: "Event created successfully",
+        description: "Your event has been published."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating event",
+        description: error.message || "Failed to create event",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update event mutation
+  const updateEventMutation = useMutation({
+    mutationFn: ({ id, eventData }: { id: string; eventData: any }) => apiRequest('PUT', `/api/events/${id}`, eventData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setEditingEvent(null);
+      toast({
+        title: "Event updated successfully",
+        description: "Your changes have been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating event",
+        description: error.message || "Failed to update event",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete event mutation
+  const deleteEventMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/events/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setDeletingEvent(null);
+      toast({
+        title: "Event deleted successfully",
+        description: "The event has been removed."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting event",
+        description: error.message || "Failed to delete event",
+        variant: "destructive"
+      });
+    }
+  });
+
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You need admin privileges to manage events.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Event Management</h2>
-      <p className="text-gray-600 dark:text-gray-400">Create and manage department events.</p>
-      {/* TODO: Implement event management interface */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Event Management</h2>
+          <p className="text-gray-600 dark:text-gray-400">Create, edit, and manage department events</p>
+        </div>
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-full sm:w-auto"
+          data-testid="button-create-event"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Create New Event
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full mb-4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {events.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No events yet</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Create your first event to get started.
+                </p>
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)} 
+                  data-testid="button-create-first-event"
+                  className="px-6 py-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create First Event
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            events.map((event: Event) => (
+              <Card key={event._id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold line-clamp-2">{event.title}</h3>
+                        <Badge variant="outline">{event.type}</Badge>
+                      </div>
+                      
+                      {event.description && (
+                        <p className="text-gray-600 dark:text-gray-400 line-clamp-2">{event.description}</p>
+                      )}
+                      
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(event.date).toLocaleDateString()}
+                        </span>
+                        <span>{event.time}</span>
+                        <span>{event.location}</span>
+                        <span>Capacity: {event.capacity}</span>
+                        {event.price > 0 && (
+                          <span className="text-green-600">${(event.price / 100).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex lg:flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingEvent(event)}
+                        className="flex-1 lg:flex-none"
+                        data-testid={`button-edit-event-${event._id}`}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Edit</span>
+                        <span className="sm:hidden">Edit</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingEvent(event)}
+                        className="flex-1 lg:flex-none text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        data-testid={`button-delete-event-${event._id}`}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Delete</span>
+                        <span className="sm:hidden">Del</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Create/Edit Event Modal */}
+      <EventFormModal
+        isOpen={isCreateModalOpen || !!editingEvent}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingEvent(null);
+        }}
+        event={editingEvent}
+        onSubmit={(eventData) => {
+          if (editingEvent) {
+            updateEventMutation.mutate({ id: editingEvent._id!, eventData });
+          } else {
+            createEventMutation.mutate(eventData);
+          }
+        }}
+        isLoading={createEventMutation.isPending || updateEventMutation.isPending}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deletingEvent} onOpenChange={() => setDeletingEvent(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the event "{deletingEvent?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingEvent && deleteEventMutation.mutate(deletingEvent._id!)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteEventMutation.isPending}
+              data-testid="button-confirm-delete-event"
+            >
+              {deleteEventMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
+// Resource Form Modal Component
+function ResourceFormModal({ 
+  isOpen, 
+  onClose, 
+  resource, 
+  onSubmit, 
+  isLoading 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  resource: LearningResource | null; 
+  onSubmit: (data: any) => void; 
+  isLoading: boolean; 
+}) {
+  const form = useForm<ResourceFormData>({
+    resolver: zodResolver(resourceFormSchema),
+    defaultValues: {
+      title: resource?.title || "",
+      description: resource?.description || "",
+      type: resource?.type || 'pdf',
+      category: resource?.category || "",
+      fileUrl: resource?.fileUrl || "",
+      fileName: resource?.fileName || "",
+      fileSize: resource?.fileSize || "",
+      difficulty: resource?.difficulty || 'beginner',
+      tags: resource?.tags?.join(", ") || "",
+      previewAvailable: resource?.previewAvailable || false,
+      thumbnailUrl: resource?.thumbnailUrl || ""
+    }
+  });
+
+  const handleSubmit = (data: ResourceFormData) => {
+    const submitData = {
+      ...data,
+      tags: data.tags ? data.tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
+      thumbnailUrl: data.thumbnailUrl || undefined
+    };
+    onSubmit(submitData);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{resource ? "Edit Learning Resource" : "Upload New Learning Resource"}</DialogTitle>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <FormLabel>Title *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter resource title..." {...field} data-testid="input-resource-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Resource Type *</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger data-testid="select-resource-type">
+                          <SelectValue placeholder="Select resource type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pdf">PDF Document</SelectItem>
+                          <SelectItem value="video">Video</SelectItem>
+                          <SelectItem value="image">Image</SelectItem>
+                          <SelectItem value="document">Document</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Research Methods, Psychology" {...field} data-testid="input-resource-category" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="difficulty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Difficulty Level *</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger data-testid="select-resource-difficulty">
+                          <SelectValue placeholder="Select difficulty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="fileName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>File Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., research_methods.pdf" {...field} data-testid="input-resource-filename" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="fileSize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>File Size *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 2.5 MB" {...field} data-testid="input-resource-filesize" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags (comma separated)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. research, methodology, statistics" {...field} data-testid="input-resource-tags" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="previewAvailable"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2">
+                    <FormControl>
+                      <Switch 
+                        checked={field.value} 
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-resource-preview"
+                      />
+                    </FormControl>
+                    <FormLabel>Preview Available</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="fileUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>File Upload *</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      acceptedFormats="all"
+                      folder="resources"
+                      label="Upload Learning Resource"
+                      description="Upload your learning resource file (PDFs, videos, documents, images)"
+                      maxSize={50 * 1024 * 1024} // 50MB for learning resources
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="thumbnailUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Thumbnail Image (Optional)</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      acceptedFormats="image"
+                      folder="resources/thumbnails"
+                      label="Upload Thumbnail"
+                      description="Upload a thumbnail image for your resource (optional)"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description *</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Describe the learning resource..." 
+                      rows={6} 
+                      {...field} 
+                      data-testid="textarea-resource-description"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-cancel-resource-form"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isLoading} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-submit-resource"
+              >
+                {isLoading ? "Saving..." : resource ? "Update Resource" : "Upload Resource"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ResourceManagementView() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<LearningResource | null>(null);
+  const [deletingResource, setDeletingResource] = useState<LearningResource | null>(null);
+
+  // Fetch resources query
+  const { data: resources = [], isLoading, refetch } = useQuery<LearningResource[]>({
+    queryKey: ['/api/resources'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
+  });
+
+  // Create resource mutation
+  const createResourceMutation = useMutation({
+    mutationFn: (resourceData: any) => apiRequest('POST', '/api/resources', resourceData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      setIsCreateModalOpen(false);
+      toast({
+        title: "Resource created successfully",
+        description: "Your learning resource has been uploaded."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating resource",
+        description: error.message || "Failed to create resource",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update resource mutation
+  const updateResourceMutation = useMutation({
+    mutationFn: ({ id, resourceData }: { id: string; resourceData: any }) => apiRequest('PUT', `/api/resources/${id}`, resourceData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      setEditingResource(null);
+      toast({
+        title: "Resource updated successfully",
+        description: "Your changes have been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating resource",
+        description: error.message || "Failed to update resource",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete resource mutation
+  const deleteResourceMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/resources/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      setDeletingResource(null);
+      toast({
+        title: "Resource deleted successfully",
+        description: "The resource has been removed."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting resource",
+        description: error.message || "Failed to delete resource",
+        variant: "destructive"
+      });
+    }
+  });
+
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You need admin privileges to manage learning resources.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getResourceIcon = (type: string) => {
+    switch (type) {
+      case 'pdf':
+        return <FileText className="w-8 h-8 text-red-500" />;
+      case 'video':
+        return <Eye className="w-8 h-8 text-purple-500" />;
+      case 'image':
+        return <FileText className="w-8 h-8 text-blue-500" />;
+      default:
+        return <FileText className="w-8 h-8 text-gray-500" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Learning Resources</h2>
-      <p className="text-gray-600 dark:text-gray-400">Access and manage educational resources.</p>
-      {/* TODO: Implement resource management interface */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Learning Resources</h2>
+          <p className="text-gray-600 dark:text-gray-400">Upload and manage educational materials</p>
+        </div>
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-full sm:w-auto"
+          data-testid="button-create-resource"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Upload New Resource
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full mb-4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {resources.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No resources yet</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Upload your first learning resource to get started.
+                </p>
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)} 
+                  data-testid="button-create-first-resource"
+                  className="px-6 py-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Upload First Resource
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            resources.map((resource: LearningResource) => (
+              <Card key={resource._id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                    <div className="flex items-center space-x-3">
+                      {getResourceIcon(resource.type)}
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold line-clamp-2">{resource.title}</h3>
+                          <Badge variant="outline">{resource.type.toUpperCase()}</Badge>
+                          <Badge variant={resource.difficulty === 'beginner' ? 'default' : resource.difficulty === 'intermediate' ? 'secondary' : 'destructive'}>
+                            {resource.difficulty}
+                          </Badge>
+                        </div>
+                        
+                        {resource.description && (
+                          <p className="text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{resource.description}</p>
+                        )}
+                        
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Download className="w-4 h-4" />
+                            {resource.downloads || 0} downloads
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Star className="w-4 h-4" />
+                            {((resource.rating || 0) / 10).toFixed(1)} rating
+                          </span>
+                          <span>{resource.fileSize}</span>
+                          <Badge variant="outline">{resource.category}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex lg:flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingResource(resource)}
+                        className="flex-1 lg:flex-none"
+                        data-testid={`button-edit-resource-${resource._id}`}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Edit</span>
+                        <span className="sm:hidden">Edit</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingResource(resource)}
+                        className="flex-1 lg:flex-none text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        data-testid={`button-delete-resource-${resource._id}`}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Delete</span>
+                        <span className="sm:hidden">Del</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Create/Edit Resource Modal */}
+      <ResourceFormModal
+        isOpen={isCreateModalOpen || !!editingResource}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingResource(null);
+        }}
+        resource={editingResource}
+        onSubmit={(resourceData) => {
+          if (editingResource) {
+            updateResourceMutation.mutate({ id: editingResource._id!, resourceData });
+          } else {
+            createResourceMutation.mutate(resourceData);
+          }
+        }}
+        isLoading={createResourceMutation.isPending || updateResourceMutation.isPending}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deletingResource} onOpenChange={() => setDeletingResource(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the resource "{deletingResource?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingResource && deleteResourceMutation.mutate(deletingResource._id!)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteResourceMutation.isPending}
+              data-testid="button-confirm-delete-resource"
+            >
+              {deleteResourceMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
