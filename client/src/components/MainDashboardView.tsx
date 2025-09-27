@@ -265,9 +265,16 @@ function BlogFormModal({
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>Featured Image</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.jpg" {...field} data-testid="input-blog-image" />
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      acceptedFormats="image"
+                      folder="blogs"
+                      label="Upload Featured Image"
+                      description="Upload a featured image for your blog post (optional)"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
