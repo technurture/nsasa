@@ -16,6 +16,11 @@ export default defineConfig({
         ]
       : []),
   ],
+  define: {
+    // Expose Cloudinary config to frontend (cloud name only for security)
+    'import.meta.env.VITE_CLOUDINARY_CLOUD_NAME': JSON.stringify(process.env.CLOUDINARY_CLOUD_NAME),
+    'import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET': JSON.stringify(process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default'),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
