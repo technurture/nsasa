@@ -8,7 +8,7 @@ import AnalyticsDashboard from "./AnalyticsDashboard";
 import GamificationDashboard from "./GamificationDashboard";
 import AdminDashboard from "./AdminDashboard";
 import StudentDashboard from "./StudentDashboard";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,8 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, MapPin, Clock, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1639,23 +1640,557 @@ export function ResourceManagementView() {
 
 export function SettingsView() {
   const { user } = useAuth();
-  
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("profile");
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
+
+  // Profile update form
+  const profileForm = useForm({
+    resolver: zodResolver(z.object({
+      firstName: z.string().min(1, "First name is required"),
+      lastName: z.string().min(1, "Last name is required"),
+      email: z.string().email("Invalid email address"),
+      profilePicture: z.string().url("Invalid URL").optional().or(z.literal(""))
+    })),
+    defaultValues: {
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      profilePicture: user?.profilePicture || ""
+    }
+  });
+
+  // Password change form
+  const passwordForm = useForm({
+    resolver: zodResolver(z.object({
+      currentPassword: z.string().min(1, "Current password is required"),
+      newPassword: z.string().min(6, "Password must be at least 6 characters"),
+      confirmPassword: z.string().min(1, "Please confirm your password")
+    }).refine((data) => data.newPassword === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ["confirmPassword"]
+    })),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
+    }
+  });
+
+  // Notification preferences form
+  const notificationForm = useForm({
+    resolver: zodResolver(z.object({
+      emailNotifications: z.boolean(),
+      pushNotifications: z.boolean(),
+      blogNotifications: z.boolean(),
+      eventNotifications: z.boolean(),
+      resourceNotifications: z.boolean()
+    })),
+    defaultValues: {
+      emailNotifications: true,
+      pushNotifications: true,
+      blogNotifications: true,
+      eventNotifications: true,
+      resourceNotifications: true
+    }
+  });
+
+  // Theme preferences
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: (profileData: any) => apiRequest('PUT', '/api/user/profile', profileData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      toast({
+        title: "Profile updated successfully",
+        description: "Your profile information has been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating profile",
+        description: error.message || "Failed to update profile",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: (passwordData: any) => apiRequest('PUT', '/api/user/password', passwordData),
+    onSuccess: () => {
+      setIsPasswordModalOpen(false);
+      passwordForm.reset();
+      toast({
+        title: "Password changed successfully",
+        description: "Your password has been updated."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error changing password",
+        description: error.message || "Failed to change password",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update notifications mutation
+  const updateNotificationsMutation = useMutation({
+    mutationFn: (notificationData: any) => apiRequest('PUT', '/api/user/notifications', notificationData),
+    onSuccess: () => {
+      toast({
+        title: "Notification preferences updated",
+        description: "Your notification settings have been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating notifications",
+        description: error.message || "Failed to update notification preferences",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleProfileUpdate = (data: any) => {
+    updateProfileMutation.mutate(data);
+  };
+
+  const handlePasswordChange = (data: any) => {
+    changePasswordMutation.mutate(data);
+  };
+
+  const handleNotificationUpdate = (data: any) => {
+    updateNotificationsMutation.mutate(data);
+  };
+
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    // Apply theme to document
+    const root = document.documentElement;
+    if (newTheme === "dark") {
+      root.classList.add("dark");
+    } else if (newTheme === "light") {
+      root.classList.remove("dark");
+    } else {
+      // System theme
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (systemPrefersDark) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+    }
+    localStorage.setItem("theme", newTheme);
+    toast({
+      title: "Theme updated",
+      description: `Theme changed to ${newTheme} mode.`
+    });
+  };
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Please log in</h2>
+          <p className="text-gray-600 dark:text-gray-400">You need to be logged in to access settings.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Settings</h2>
-      <p className="text-gray-600 dark:text-gray-400">Manage your account and preferences.</p>
-      {user && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-4">Profile Information</h3>
-          <div className="space-y-2">
-            <p><strong>Name:</strong> {user.firstName} {user.lastName}</p>
-            <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Role:</strong> {user.role}</p>
-            <p><strong>Status:</strong> {user.approvalStatus}</p>
-          </div>
-        </div>
-      )}
-      {/* TODO: Implement full settings interface */}
+      <div>
+        <h2 className="text-2xl font-bold">Settings</h2>
+        <p className="text-gray-600 dark:text-gray-400">Manage your account and preferences</p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="appearance" data-testid="tab-appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="account" data-testid="tab-account">Account</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>Update your personal information and profile picture</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-6">
+                  <FormField
+                    control={profileForm.control}
+                    name="profilePicture"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Profile Picture</FormLabel>
+                        <FormControl>
+                          <ImageUpload
+                            value={field.value}
+                            onChange={field.onChange}
+                            acceptedFormats="image"
+                            folder="profiles"
+                            label="Upload Profile Picture"
+                            description="Upload a profile picture (optional)"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={profileForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-first-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={profileForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-last-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={profileForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address *</FormLabel>
+                        <FormControl>
+                          <Input type="email" {...field} data-testid="input-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <p><strong>Role:</strong> {user.role}</p>
+                      <p><strong>Status:</strong> {user.approvalStatus}</p>
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={updateProfileMutation.isPending}
+                      data-testid="button-update-profile"
+                    >
+                      {updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>Choose what notifications you want to receive</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...notificationForm}>
+                <form onSubmit={notificationForm.handleSubmit(handleNotificationUpdate)} className="space-y-6">
+                  <div className="space-y-4">
+                    <FormField
+                      control={notificationForm.control}
+                      name="emailNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <div>
+                            <FormLabel>Email Notifications</FormLabel>
+                            <FormDescription>Receive notifications via email</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-email-notifications"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={notificationForm.control}
+                      name="blogNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <div>
+                            <FormLabel>Blog Updates</FormLabel>
+                            <FormDescription>Get notified about new blog posts</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-blog-notifications"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={notificationForm.control}
+                      name="eventNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <div>
+                            <FormLabel>Event Updates</FormLabel>
+                            <FormDescription>Get notified about upcoming events</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-event-notifications"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={notificationForm.control}
+                      name="resourceNotifications"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between">
+                          <div>
+                            <FormLabel>New Resources</FormLabel>
+                            <FormDescription>Get notified about new learning resources</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-resource-notifications"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    disabled={updateNotificationsMutation.isPending}
+                    data-testid="button-update-notifications"
+                  >
+                    {updateNotificationsMutation.isPending ? "Updating..." : "Save Preferences"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance Settings</CardTitle>
+              <CardDescription>Customize how the application looks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <Label className="text-base font-medium">Theme Preference</Label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Choose your preferred theme</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Button
+                      variant={theme === "light" ? "default" : "outline"}
+                      onClick={() => handleThemeChange("light")}
+                      className="flex flex-col items-center p-4 h-auto"
+                      data-testid="button-theme-light"
+                    >
+                      <Eye className="w-6 h-6 mb-2" />
+                      Light
+                    </Button>
+                    <Button
+                      variant={theme === "dark" ? "default" : "outline"}
+                      onClick={() => handleThemeChange("dark")}
+                      className="flex flex-col items-center p-4 h-auto"
+                      data-testid="button-theme-dark"
+                    >
+                      <Eye className="w-6 h-6 mb-2" />
+                      Dark
+                    </Button>
+                    <Button
+                      variant={theme === "system" ? "default" : "outline"}
+                      onClick={() => handleThemeChange("system")}
+                      className="flex flex-col items-center p-4 h-auto"
+                      data-testid="button-theme-system"
+                    >
+                      <Eye className="w-6 h-6 mb-2" />
+                      System
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="account" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Security</CardTitle>
+              <CardDescription>Manage your account security settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="w-full justify-start"
+                data-testid="button-change-password"
+              >
+                Change Password
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-200 dark:border-red-800">
+            <CardHeader>
+              <CardTitle className="text-red-600 dark:text-red-400">Danger Zone</CardTitle>
+              <CardDescription>Irreversible account actions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="destructive"
+                onClick={() => setIsDeleteAccountModalOpen(true)}
+                data-testid="button-delete-account"
+              >
+                Delete Account
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Change Password Modal */}
+      <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>Enter your current password and choose a new one</DialogDescription>
+          </DialogHeader>
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-4">
+              <FormField
+                control={passwordForm.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} data-testid="input-current-password" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={passwordForm.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} data-testid="input-new-password" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={passwordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} data-testid="input-confirm-password" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={changePasswordMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-submit-password-change"
+                >
+                  {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Confirmation Modal */}
+      <AlertDialog open={isDeleteAccountModalOpen} onOpenChange={setIsDeleteAccountModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete-account"
+            >
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
