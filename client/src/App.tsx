@@ -480,10 +480,12 @@ function MainRouter() {
           <Route path="/dashboard" component={DashboardRouter} nest />
           
           {/* Redirect root to dashboard for authenticated users */}
-          <Route path="/" component={() => {
-            window.location.href = '/dashboard';
-            return null;
-          }} />
+          <Route path="/">
+            {() => {
+              window.location.replace('/dashboard');
+              return null;
+            }}
+          </Route>
           
           {/* Public pages with regular layout */}
           <Route path="/blogs" component={BlogsPage} />

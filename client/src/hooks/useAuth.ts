@@ -7,10 +7,13 @@ export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30000, // 30 seconds
+    refetchOnMount: true,
   });
 
-  const isAuthenticated = !!user && !error;
+  // Only consider user authenticated if we have user data
+  // Don't let temporary errors affect authentication state
+  const isAuthenticated = !!user;
 
   return {
     user,
