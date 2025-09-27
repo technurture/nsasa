@@ -273,6 +273,9 @@ export class MongoStorage implements IMongoStorage {
     const blogPostDoc: Omit<BlogPost, '_id'> = {
       ...post,
       authorId,
+      likes: post.likes ?? 0,
+      views: post.views ?? 0,
+      readTime: post.readTime ?? 5,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
