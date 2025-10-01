@@ -87,3 +87,16 @@ Preferred communication style: Simple, everyday language.
 
 ### Replit Integration
 - **Replit-specific tooling**: Development environment integration with runtime error overlay and cartographer plugin for enhanced debugging
+- **Environment Setup**: Configured for Replit with proper host settings (0.0.0.0:5000) and allowedHosts enabled for proxy support
+- **Workflow**: Single workflow "Start application" running `npm run dev` which starts both Express backend and Vite frontend on port 5000
+- **Database**: Uses DATABASE_URL environment variable for MongoDB connection (currently connected to technurture619_db)
+- **Required Secrets**: JWT_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+
+## Recent Changes
+
+### October 1, 2025 - Replit Environment Setup
+- Fixed TypeScript compilation errors in server/routes.ts and server/mongoDb.ts
+- Configured workflow to run on port 5000 with webview output
+- Verified MongoDB connection and database initialization
+- Confirmed frontend is loading correctly with all navigation and hero sections displaying properly
+- Application successfully running in Replit environment with proper proxy configuration

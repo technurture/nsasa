@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, Document } from 'mongodb';
 
 // MongoDB connection
 let client: MongoClient;
@@ -59,7 +59,7 @@ export async function connectToMongoDB(): Promise<Db> {
   return db;
 }
 
-export async function getCollection<T = any>(collectionName: string): Promise<Collection<T>> {
+export async function getCollection<T extends Document = Document>(collectionName: string): Promise<Collection<T>> {
   if (!db) {
     await connectToMongoDB();
   }
@@ -111,7 +111,7 @@ export async function initializeMongoDB(): Promise<void> {
       await database.collection(COLLECTIONS.STAFF_PROFILES).createIndex({ userId: 1 }, { unique: true });
       
       console.log('MongoDB indexes created successfully');
-    } catch (indexError) {
+    } catch (indexError: any) {
       // Index creation failures should not stop the app from starting
       console.warn('Some indexes failed to create:', indexError.message);
     }

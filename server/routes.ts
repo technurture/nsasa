@@ -5,23 +5,11 @@ import { mongoStorage } from "./mongoStorage";
 import { authenticateToken, requireAdmin, requireSuperAdmin, requireRole, optionalAuth } from "./customAuth";
 import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
-import { blogPostSchema } from "../shared/mongoSchema";
+import { insertBlogPostSchema } from "../shared/mongoSchema";
 import { z } from "zod";
 
-// Create validation schema for blog requests (excluding server-managed fields)
-const blogRequestSchema = blogPostSchema.omit({
-  _id: true,
-  authorId: true,
-  createdAt: true,
-  updatedAt: true,
-  likes: true,
-  views: true
-}).extend({
-  // Make some fields optional for updates
-  likes: z.number().optional(),
-  views: z.number().optional(),
-  readTime: z.number().optional()
-});
+// Use insertBlogPostSchema directly for validation
+const blogRequestSchema = insertBlogPostSchema;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB
