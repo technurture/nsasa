@@ -89,28 +89,6 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
           </div>
         </div>
 
-        {/* User Profile */}
-        <div className="p-4 border-b border-slate-700">
-          <div className="flex items-center space-x-3">
-            <Avatar>
-              <AvatarFallback className="bg-blue-600">
-                {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user.firstName && user.lastName 
-                    ? `${user.firstName} ${user.lastName}` 
-                    : user.email
-                  }
-                </p>
-                <p className="text-xs text-slate-400 capitalize">{user.role}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
           {filteredSidebarItems.map((item) => {
@@ -204,11 +182,33 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
               <Button variant="ghost" size="sm" data-testid="button-notifications">
                 <Bell className="w-5 h-5" />
               </Button>
-              {user.role !== 'student' && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                  {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-                </Badge>
-              )}
+              
+              {/* User Profile with Badge */}
+              <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-blue-600 text-white">
+                      {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden lg:block">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {user.firstName && user.lastName 
+                          ? `${user.firstName} ${user.lastName}` 
+                          : user.email
+                        }
+                      </p>
+                      {user.role !== 'student' && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                          {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">{user.role}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </header>

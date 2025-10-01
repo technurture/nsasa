@@ -8,6 +8,14 @@ Nsasa is a comprehensive student-focused blog and media-sharing platform designe
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**Latest Update: October 01, 2025**
+
+- Moved user profile section from dashboard sidebar to top navigation (beside notification icon)
+- The user profile now displays in the top-right area with avatar, name, and role
+- On mobile (smaller screens), only the avatar is shown to save space
+
 ## System Architecture
 
 ### Frontend Architecture
