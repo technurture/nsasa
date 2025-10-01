@@ -1,8 +1,8 @@
-# Nsasa - Department of Social Science Portal
+# Nsasa - Department of Sociology Portal
 
 ## Overview
 
-Nsasa is a comprehensive student-focused blog and media-sharing platform designed specifically for the Department of Social Science. The platform combines academic engagement with modern social features, providing students with a secure, interactive environment to share knowledge, access learning resources, and participate in departmental activities. Key features include student registration with matric number validation, a personalized dashboard with gamification elements, blog creation and interaction, downloadable learning resources, event management, and robust admin tools for content and user management.
+Nsasa is a comprehensive student-focused blog and media-sharing platform designed specifically for the Department of Sociology. The platform combines academic engagement with modern social features, providing students with a secure, interactive environment to share knowledge, access learning resources, and participate in departmental activities. Key features include student registration with matric number validation, a personalized dashboard with gamification elements, blog creation and interaction, downloadable learning resources, event management, and robust admin tools for content and user management.
 
 ## User Preferences
 

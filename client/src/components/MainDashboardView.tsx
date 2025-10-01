@@ -235,7 +235,7 @@ function BlogFormModal({
                           <SelectItem value="Psychology">Psychology</SelectItem>
                           <SelectItem value="Research">Research</SelectItem>
                           <SelectItem value="Academic">Academic</SelectItem>
-                          <SelectItem value="Social Science">Social Science</SelectItem>
+                          <SelectItem value="Sociology">Sociology</SelectItem>
                           <SelectItem value="News">News</SelectItem>
                           <SelectItem value="Tutorial">Tutorial</SelectItem>
                         </SelectContent>

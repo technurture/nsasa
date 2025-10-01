@@ -11,7 +11,7 @@ export default function ContactFormExample() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
           <p className="text-muted-foreground">
-            Get in touch with the Department of Social Science
+            Get in touch with the Department of Sociology
           </p>
         </div>
         <ContactForm onSubmit={handleSubmit} />

@@ -167,7 +167,7 @@ export default function ContactForm({ onSubmit }: ContactFormProps) {
             <div>
               <h3 className="font-semibold">Address</h3>
               <p className="text-sm text-muted-foreground" data-testid="text-address">
-                Social Science Building<br />
+                Sociology Building<br />
                 University Campus
               </p>
             </div>

@@ -6,16 +6,16 @@ export default function StaffProfileCardExample() {
     id: "1",
     name: "Dr. Sarah Johnson",
     title: "Professor of Social Psychology",
-    department: "Department of Social Science",
+    department: "Department of Sociology",
     specializations: ["Social Psychology", "Behavioral Research", "Community Studies", "Group Dynamics"],
     email: "s.johnson@university.edu",
     phone: "+1 (555) 123-4567",
-    office: "Room 305, Social Science Building",
+    office: "Room 305, Sociology Building",
     bio: "Dr. Johnson is a renowned expert in social psychology with over 15 years of experience in behavioral research and community studies. Her work focuses on understanding group dynamics and social influence in modern digital societies.",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-prof",
     courses: [
       "Introduction to Social Psychology",
-      "Research Methods in Social Science",
+      "Research Methods in Sociology",
       "Advanced Behavioral Studies",
       "Community Psychology"
     ],
@@ -24,7 +24,7 @@ export default function StaffProfileCardExample() {
     education: [
       "Ph.D. in Social Psychology, Harvard University",
       "M.A. in Psychology, Stanford University",
-      "B.A. in Social Sciences, UC Berkeley"
+      "B.A. in Sociology, UC Berkeley"
     ]
   };
 

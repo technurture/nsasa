@@ -13,7 +13,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { useState } from "react";
-import logoUrl from "@assets/generated_images/Nsasa_academic_logo_design_56dc9c49.png";
+import logoUrl from "@assets/WhatsApp Image 2025-09-24 at 15.46.00_1759342497956.jpeg";
 
 interface FooterProps {
   onNewsletterSignup?: (email: string) => void;
@@ -68,7 +68,7 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
             </div>
             
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The premier student-focused blog and media-sharing platform for the Department of Social Science. 
+              The premier student-focused blog and media-sharing platform for the Department of Sociology. 
               Connecting students, fostering learning, and building communities.
             </p>
             
@@ -168,7 +168,7 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
-                  <span>Social Science Building, University Campus</span>
+                  <span>Sociology Building, University Campus</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -190,7 +190,7 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-muted-foreground">
-            © 2024 Nsasa - Department of Social Science. All rights reserved.
+            © 2024 Nsasa - Department of Sociology. All rights reserved.
           </div>
           
           <div className="flex gap-4 text-sm">

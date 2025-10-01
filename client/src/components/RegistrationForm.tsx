@@ -275,7 +275,7 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Only students from the Department of Social Science are eligible (matric number must contain 'soc')
+                Only students from the Department of Sociology are eligible (matric number must contain 'soc')
               </p>
             </div>
           </div>

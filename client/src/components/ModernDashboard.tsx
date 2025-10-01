@@ -83,7 +83,7 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
             {!sidebarCollapsed && (
               <div>
                 <h1 className="font-bold text-lg">Nsasa Portal</h1>
-                <p className="text-slate-400 text-sm">Social Science Dept</p>
+                <p className="text-slate-400 text-sm">Sociology Dept</p>
               </div>
             )}
           </div>

@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Bell, Search, Menu, User, Settings, LogOut, Home, BookOpen, Calendar, Users, FileText, Phone, Info } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import logoUrl from "@assets/generated_images/Nsasa_academic_logo_design_56dc9c49.png";
+import logoUrl from "@assets/WhatsApp Image 2025-09-24 at 15.46.00_1759342497956.jpeg";
 
 interface HeaderProps {
   user?: {

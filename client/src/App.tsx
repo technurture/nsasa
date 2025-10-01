@@ -66,7 +66,7 @@ function LandingPage() {
     },
     {
       id: "2",
-      title: "Research Methods in Social Science",
+      title: "Research Methods in Sociology",
       excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
       content: "Full content...",
       author: {
@@ -98,7 +98,7 @@ function LandingPage() {
       registered: 127,
       price: 25,
       image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=300&fit=crop",
-      organizer: "Department of Social Science",
+      organizer: "Department of Sociology",
       tags: ["innovation", "research", "networking"]
     }
   ];
@@ -184,7 +184,7 @@ function BlogsPage() {
     },
     {
       id: "2",
-      title: "Research Methods in Social Science",
+      title: "Research Methods in Sociology",
       excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
       content: "Full content...",
       author: {
@@ -227,11 +227,11 @@ function StaffPage() {
       id: "1",
       name: "Dr. Sarah Johnson",
       title: "Professor of Social Psychology",
-      department: "Department of Social Science",
+      department: "Department of Sociology",
       specializations: ["Social Psychology", "Behavioral Research", "Community Studies"],
       email: "s.johnson@university.edu",
       phone: "+1 (555) 123-4567",
-      office: "Room 305, Social Science Building",
+      office: "Room 305, Sociology Building",
       bio: "Dr. Johnson is a renowned expert in social psychology with over 15 years of experience.",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-prof",
       courses: ["Introduction to Social Psychology", "Research Methods"],
@@ -419,7 +419,7 @@ function ContactPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
         <p className="text-muted-foreground">
-          Get in touch with the Department of Social Science
+          Get in touch with the Department of Sociology
         </p>
       </div>
       <ContactForm onSubmit={handleSubmit} />

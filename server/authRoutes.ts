@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
     // Additional validation for matric number
     if (validatedData.matricNumber && !validatedData.matricNumber.toLowerCase().includes('soc')) {
       return res.status(400).json({
-        message: 'Matric number must contain "soc" for Department of Social Science students'
+        message: 'Matric number must contain "soc" for Department of Sociology students'
       });
     }
 

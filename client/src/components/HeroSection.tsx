@@ -35,7 +35,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
         <div className="max-w-4xl mx-auto text-center text-white">
           {/* Badge */}
           <Badge variant="outline" className="mb-6 bg-white/10 text-white border-white/20 backdrop-blur-sm">
-            Department of Social Science Portal
+            Department of Sociology Portal
           </Badge>
 
           {/* Heading */}
