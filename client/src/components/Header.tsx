@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, Search, Menu, User, Settings, LogOut, Home, BookOpen, Calendar, Users, FileText, Phone, Info } from "lucide-react";
+import { Bell, Search, Menu, User, Settings, LogOut, Home, BookOpen, Calendar, Users, FileText, Phone, Info, LayoutDashboard } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import logoUrl from "@assets/WhatsApp Image 2025-09-24 at 15.46.00_1759342497956.jpeg";
@@ -101,18 +101,24 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem data-testid="menu-dashboard">
-                      <User className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem data-testid="menu-profile">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem data-testid="menu-settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </DropdownMenuItem>
+                    <Link href="/dashboard">
+                      <DropdownMenuItem data-testid="menu-dashboard">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/dashboard/settings">
+                      <DropdownMenuItem data-testid="menu-profile">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/dashboard/settings">
+                      <DropdownMenuItem data-testid="menu-settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </DropdownMenuItem>
+                    </Link>
                     <DropdownMenuItem onClick={onAuthAction} data-testid="menu-logout">
                       <LogOut className="mr-2 h-4 w-4" />
                       Logout
