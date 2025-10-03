@@ -1174,9 +1174,9 @@ function ResourceFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
-          <DialogTitle>{resource ? "Edit Learning Resource" : "Upload New Learning Resource"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{resource ? "Edit Learning Resource" : "Upload New Learning Resource"}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -1676,7 +1676,7 @@ export function SettingsView() {
       firstName: z.string().min(1, "First name is required"),
       lastName: z.string().min(1, "Last name is required"),
       email: z.string().email("Invalid email address"),
-      profileImageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
+      profileImageUrl: z.union([z.string().url(), z.literal("")]).optional()
     })),
     defaultValues: {
       firstName: user?.firstName || "",

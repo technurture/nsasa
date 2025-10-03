@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, useLogout } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,20 +24,24 @@ import {
   Shield,
   Bell,
   LogOut,
-  UserCog
+  UserCog,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const DASHBOARD_BASE = "/dashboard";
+
 const sidebarItems = [
-  { icon: Home, label: "Dashboard", path: "/dashboard", roles: ["student", "admin", "super_admin"] },
-  { icon: Users, label: "User Management", path: "/dashboard/users", roles: ["admin", "super_admin"] },
-  { icon: FileText, label: "Blog Management", path: "/dashboard/blogs", roles: ["admin", "super_admin"] },
-  { icon: Calendar, label: "Events", path: "/dashboard/events", roles: ["admin", "super_admin", "student"] },
-  { icon: BookOpen, label: "Learning Resources", path: "/dashboard/resources", roles: ["admin", "super_admin", "student"] },
-  { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics", roles: ["admin", "super_admin"] },
-  { icon: Award, label: "Gamification", path: "/dashboard/gamification", roles: ["student"] },
-  { icon: MessageSquare, label: "My Posts", path: "/dashboard/my-posts", roles: ["student"] },
-  { icon: Settings, label: "Settings", path: "/dashboard/settings", roles: ["student", "admin", "super_admin"] },
+  { icon: Home, label: "Dashboard", path: "/", roles: ["student", "admin", "super_admin"] },
+  { icon: Users, label: "User Management", path: "/users", roles: ["admin", "super_admin"] },
+  { icon: FileText, label: "Blog Management", path: "/blogs", roles: ["admin", "super_admin"] },
+  { icon: Calendar, label: "Events", path: "/events", roles: ["admin", "super_admin", "student"] },
+  { icon: BookOpen, label: "Learning Resources", path: "/resources", roles: ["admin", "super_admin", "student"] },
+  { icon: BarChart3, label: "Analytics", path: "/analytics", roles: ["admin", "super_admin"] },
+  { icon: Award, label: "Gamification", path: "/gamification", roles: ["student"] },
+  { icon: MessageSquare, label: "My Posts", path: "/my-posts", roles: ["student"] },
+  { icon: Settings, label: "Settings", path: "/settings", roles: ["student", "admin", "super_admin"] },
 ];
 
 interface ModernDashboardProps {
@@ -48,6 +52,28 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const logoutMutation = useLogout();
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [location]);
 
   if (!isAuthenticated || !user) {
     return (
@@ -64,18 +90,32 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
   );
 
   const handleLogout = () => {
-    window.location.href = '/api/auth/logout';
+    logoutMutation.mutate();
   };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <div className={cn(
-        "bg-slate-900 dark:bg-slate-950 text-white flex flex-col transition-all duration-300",
-        sidebarCollapsed ? "w-16" : "w-64"
+        "bg-slate-900 dark:bg-slate-950 text-white flex flex-col transition-all duration-300 z-50",
+        sidebarCollapsed ? "w-16" : "w-64",
+        "md:relative fixed inset-y-0 left-0",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {/* Logo/Header */}
-        <div className="p-6 border-b border-slate-700">
+        <div 
+          onClick={() => window.location.href = '/'}
+          className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors" 
+          data-testid="link-logo"
+        >
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <Shield className="w-6 h-6 text-white" />
@@ -93,7 +133,8 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
         <nav className="flex-1 p-4 space-y-2">
           {filteredSidebarItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location === item.path;
+            const fullPath = item.path === "/" ? DASHBOARD_BASE : `${DASHBOARD_BASE}${item.path}`;
+            const isActive = location === fullPath;
             
             return (
               <Link key={item.path} href={item.path}>
@@ -134,38 +175,48 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-white dark:bg-slate-800 shadow-sm border-b px-6 py-4">
+        <header className="bg-white dark:bg-slate-800 shadow-sm border-b px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden"
+                data-testid="button-mobile-menu"
+              >
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden md:flex"
                 data-testid="button-toggle-sidebar"
               >
                 <BarChart3 className="w-5 h-5" />
               </Button>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <div className="hidden sm:block">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                   {user.role === 'super_admin' ? 'Super Admin Dashboard' : 
                    user.role === 'admin' ? 'Admin Dashboard' : 
                    'Student Dashboard'}
                 </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   Welcome back, {user.firstName || 'User'}!
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {user.role === 'super_admin' && (
                 <Select onValueChange={(value) => {
                   if (value === 'user-management') {
-                    setLocation('/dashboard/users');
+                    setLocation('/users');
                   } else if (value === 'analytics') {
-                    setLocation('/dashboard/analytics');
+                    setLocation('/analytics');
                   } else if (value === 'permissions') {
-                    setLocation('/dashboard/settings');
+                    setLocation('/settings');
                   }
                 }}>
                   <SelectTrigger className="w-[140px] h-8 bg-gray-50 dark:bg-gray-700" data-testid="select-role-management">
@@ -214,7 +265,7 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 bg-gray-50 dark:bg-gray-900">
           {children}
         </main>
       </div>

@@ -40,7 +40,7 @@ function LandingPage() {
   };
 
   const handleLearnMore = () => {
-    console.log('Learn More clicked - would scroll to about section');
+    // Scroll to about section
   };
 
   // todo: remove mock functionality
@@ -367,7 +367,7 @@ function DashboardPage() {
 
 function RegisterPage() {
   const handleSubmit = (data: any) => {
-    console.log('Registration submitted:', data);
+    // Registration will be handled by RegistrationForm component
   };
 
   const handleCancel = () => {
@@ -383,7 +383,7 @@ function RegisterPage() {
 
 function LoginPage() {
   const handleLogin = (credentials: any) => {
-    console.log('Login attempt:', credentials);
+    // Login will be handled by LoginForm component
   };
 
   const handleSignUpRedirect = () => {
@@ -411,7 +411,7 @@ function AboutPage() {
 
 function ContactPage() {
   const handleSubmit = (data: any) => {
-    console.log('Contact form submitted:', data);
+    // Contact form submission will be handled by ContactForm component
   };
 
   return (
@@ -442,14 +442,14 @@ function DashboardRouter() {
   return (
     <ModernDashboard>
       <Switch>
-        <Route path="/dashboard" component={MainDashboardView} />
-        <Route path="/dashboard/users" component={UserManagementView} />
-        <Route path="/dashboard/blogs" component={BlogManagementView} />
-        <Route path="/dashboard/events" component={EventManagementView} />
-        <Route path="/dashboard/resources" component={ResourceManagementView} />
-        <Route path="/dashboard/analytics" component={AnalyticsView} />
-        <Route path="/dashboard/gamification" component={StudentGamificationView} />
-        <Route path="/dashboard/settings" component={SettingsView} />
+        <Route path="/" component={MainDashboardView} />
+        <Route path="/users" component={UserManagementView} />
+        <Route path="/blogs" component={BlogManagementView} />
+        <Route path="/events" component={EventManagementView} />
+        <Route path="/resources" component={ResourceManagementView} />
+        <Route path="/analytics" component={AnalyticsView} />
+        <Route path="/gamification" component={StudentGamificationView} />
+        <Route path="/settings" component={SettingsView} />
         <Route component={MainDashboardView} />
       </Switch>
     </ModernDashboard>
@@ -459,14 +459,6 @@ function DashboardRouter() {
 // Main app router for authenticated and public pages with layout
 function MainRouter() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [location, setLocation] = useLocation();
-
-  // Handle redirect to dashboard for authenticated users using useEffect
-  useEffect(() => {
-    if (isAuthenticated && !isLoading && location === '/') {
-      setLocation('/dashboard');
-    }
-  }, [isAuthenticated, isLoading, location, setLocation]);
 
   return (
     <Switch>
@@ -491,6 +483,9 @@ function MainRouter() {
           {/* Dashboard routes use ModernDashboard layout */}
           <Route path="/dashboard" component={DashboardRouter} nest />
           
+          {/* Landing page accessible to authenticated users */}
+          <Route path="/" component={LandingPage} />
+          
           {/* Public pages with regular layout for authenticated users */}
           <Route path="/blogs" component={BlogsPage} />
           <Route path="/staff" component={StaffPage} />
@@ -498,9 +493,6 @@ function MainRouter() {
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/events" component={BlogsPage} />
-          
-          {/* Default route for authenticated users */}
-          <Route path="/" component={DashboardRedirect} />
         </>
       )}
     </Switch>
@@ -554,7 +546,6 @@ function AppContent() {
   };
 
   const handleNewsletterSignup = (email: string) => {
-    console.log('Newsletter signup:', email);
     alert(`Thank you for subscribing with email: ${email}`);
   };
 
