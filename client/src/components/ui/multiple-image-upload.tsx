@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +38,17 @@ export function MultipleImageUpload({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<string[]>(value);
+  
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -91,7 +102,7 @@ export function MultipleImageUpload({
     setError(null);
 
     try {
-      const progressInterval = setInterval(() => {
+      progressIntervalRef.current = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
@@ -100,7 +111,10 @@ export function MultipleImageUpload({
         resourceType: 'image'
       });
 
-      clearInterval(progressInterval);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setUploadProgress(100);
 
       const urls = results.map(r => r.secure_url);
@@ -111,10 +125,15 @@ export function MultipleImageUpload({
       });
       
       setSelectedFiles([]);
-      const fileInput = document.querySelector(`input[type="file"][multiple]`) as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
 
     } catch (err: any) {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setError(err.message || 'Upload failed');
       onError?.(err.message || 'Upload failed');
       setPreviews(prev => prev.slice(0, value.length));
@@ -160,6 +179,7 @@ export function MultipleImageUpload({
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-2">
           <Input
+            ref={fileInputRef}
             id="multiple-file-upload"
             type="file"
             accept="image/*"
