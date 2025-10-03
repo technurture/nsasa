@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { MultipleImageUpload } from "@/components/ui/multiple-image-upload";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import GamificationDashboard from "./GamificationDashboard";
 import AdminDashboard from "./AdminDashboard";
@@ -42,8 +43,9 @@ const blogFormSchema = blogPostSchema.omit({
   views: true, 
   readTime: true 
 }).extend({
-  tags: z.string().optional(), // Transform array to comma-separated string for form input
-  imageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
+  tags: z.string().optional(),
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  imageUrls: z.array(z.string()).optional().default([])
 });
 
 type BlogFormData = z.infer<typeof blogFormSchema>;
@@ -182,6 +184,7 @@ function BlogFormModal({
       category: blog?.category || "",
       tags: blog?.tags?.join(", ") || "",
       imageUrl: blog?.imageUrl || "",
+      imageUrls: blog?.imageUrls || [],
       published: blog?.published || false,
       featured: blog?.featured || false
     }
@@ -191,16 +194,17 @@ function BlogFormModal({
     const submitData = {
       ...data,
       tags: data.tags ? data.tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
-      imageUrl: data.imageUrl || undefined
+      imageUrl: data.imageUrl || undefined,
+      imageUrls: data.imageUrls || []
     };
     onSubmit(submitData);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
-          <DialogTitle>{blog ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{blog ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -275,6 +279,27 @@ function BlogFormModal({
                       folder="blogs"
                       label="Upload Featured Image"
                       description="Upload a featured image for your blog post (optional)"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="imageUrls"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Additional Images</FormLabel>
+                  <FormControl>
+                    <MultipleImageUpload
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      folder="blogs"
+                      maxFiles={5}
+                      label="Upload Multiple Images"
+                      description="Upload up to 5 additional images to be displayed in your blog post (optional)"
                     />
                   </FormControl>
                   <FormMessage />
@@ -419,9 +444,9 @@ function EventFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
-          <DialogTitle>{event ? "Edit Event" : "Create New Event"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{event ? "Edit Event" : "Create New Event"}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -1651,13 +1676,13 @@ export function SettingsView() {
       firstName: z.string().min(1, "First name is required"),
       lastName: z.string().min(1, "Last name is required"),
       email: z.string().email("Invalid email address"),
-      profilePicture: z.string().url("Invalid URL").optional().or(z.literal(""))
+      profileImageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
     })),
     defaultValues: {
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       email: user?.email || "",
-      profilePicture: user?.profilePicture || ""
+      profileImageUrl: user?.profileImageUrl || ""
     }
   });
 
@@ -1829,7 +1854,7 @@ export function SettingsView() {
                 <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-6">
                   <FormField
                     control={profileForm.control}
-                    name="profilePicture"
+                    name="profileImageUrl"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Profile Picture</FormLabel>

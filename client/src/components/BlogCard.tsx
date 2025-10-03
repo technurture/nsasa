@@ -23,6 +23,7 @@ interface BlogCardProps {
     comments: number;
     views: number;
     image?: string;
+    images?: string[];
     tags: string[];
   };
   onReadMore?: (id: string) => void;
@@ -57,13 +58,15 @@ export default function BlogCard({ blog, onReadMore, onLike, onComment, onShare,
     });
   };
 
+  const displayImage = blog.image || (blog.images && blog.images.length > 0 ? blog.images[0] : undefined);
+  
   return (
     <Card className="group overflow-hidden hover-elevate transition-all duration-200">
       {/* Blog Image */}
-      {blog.image && (
+      {displayImage && (
         <div className="aspect-video w-full overflow-hidden">
           <img 
-            src={blog.image} 
+            src={displayImage} 
             alt={blog.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />

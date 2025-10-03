@@ -48,6 +48,7 @@ export const blogPostSchema = z.object({
   readTime: z.number().default(5),
   
   imageUrl: z.string().optional(),
+  imageUrls: z.array(z.string()).optional().default([]),
   
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),

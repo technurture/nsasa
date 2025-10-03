@@ -103,23 +103,32 @@ export function useLogout() {
     mutationFn: async () => {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Important: include cookies
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Logout failed');
       }
     },
     onSuccess: () => {
-      // Clear all cached data
-      queryClient.clear();
-      
       toast({
         title: "Logged Out",
         description: "You have been logged out successfully",
       });
       
-      // Redirect to home page
-      window.location.href = '/';
+      queryClient.clear();
+      queryClient.removeQueries();
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     },
+    onError: () => {
+      queryClient.clear();
+      queryClient.removeQueries();
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    }
   });
 }

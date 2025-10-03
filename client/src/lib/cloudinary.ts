@@ -1,14 +1,14 @@
 
 // Cloudinary configuration
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
 if (!CLOUD_NAME) {
-  console.warn('Cloudinary Cloud Name not found in environment variables');
+  console.error('⚠️ CRITICAL: Cloudinary Cloud Name not found! Please set VITE_CLOUDINARY_CLOUD_NAME in environment variables.');
 }
 
-if (!UPLOAD_PRESET) {
-  console.warn('Cloudinary Upload Preset not found in environment variables');
+if (!import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET) {
+  console.warn('⚠️ Cloudinary Upload Preset not set. Using default: "ml_default". Set VITE_CLOUDINARY_UPLOAD_PRESET for production.');
 }
 
 export interface CloudinaryUploadResult {
@@ -63,16 +63,34 @@ export const uploadToCloudinary = async (
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Upload failed');
+      let errorMessage = 'Upload failed';
+      try {
+        const errorData = await response.json();
+        console.error('Cloudinary API error:', errorData);
+        errorMessage = errorData.error?.message || `Upload failed with status ${response.status}`;
+        
+        if (response.status === 400) {
+          errorMessage = 'Invalid upload request. Please check your file and try again.';
+        } else if (response.status === 401 || response.status === 403) {
+          errorMessage = 'Upload preset not configured correctly. Please contact support.';
+        }
+      } catch (parseError) {
+        console.error('Error parsing Cloudinary error response:', parseError);
+      }
+      throw new Error(errorMessage);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log('✅ Upload successful:', result.secure_url);
+    return result;
   } catch (error: any) {
     console.error('Cloudinary upload error:', error);
-    throw new Error(
-      error.message || 'Failed to upload file to Cloudinary'
-    );
+    
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      throw new Error('Network error. Please check your internet connection and try again.');
+    }
+    
+    throw new Error(error.message || 'Failed to upload file to Cloudinary. Please try again.');
   }
 };
 

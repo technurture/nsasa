@@ -10,7 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Latest Update: October 03, 2025 - GitHub Import Setup**
+**Latest Update: October 03, 2025 - File Upload and Logout Improvements**
+
+- ✅ **Fixed Cloudinary Error Handling**: Improved error messages for upload failures with detailed user feedback
+- ✅ **Added Multiple Image Upload**: Created `MultipleImageUpload` component supporting up to 5 images per blog post
+- ✅ **Updated Blog Schema**: Added `imageUrls` array field to support multiple images in blog posts
+- ✅ **Enhanced Logout Flow**: Improved logout to properly clear query cache and redirect to landing page
+- ✅ **Mobile Responsiveness**: Updated all modals and forms to be fully responsive on mobile devices
+- ✅ **BlogCard Component**: Updated to display multiple images when available
+- ⚠️ **ACTION REQUIRED**: Set `VITE_CLOUDINARY_UPLOAD_PRESET` environment variable (see Cloudinary Upload Configuration section)
+
+**Previous Update: October 03, 2025 - GitHub Import Setup**
 
 - Successfully imported project from GitHub and configured for Replit environment
 - Verified MongoDB connection to technurture619_db database
@@ -109,7 +119,33 @@ Preferred communication style: Simple, everyday language.
 - **Environment Setup**: Configured for Replit with proper host settings (0.0.0.0:5000) and allowedHosts enabled for proxy support
 - **Workflow**: Single workflow "Start application" running `npm run dev` which starts both Express backend and Vite frontend on port 5000
 - **Database**: Uses DATABASE_URL environment variable for MongoDB connection (currently connected to technurture619_db)
-- **Required Secrets**: JWT_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+- **Required Secrets**: JWT_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, VITE_CLOUDINARY_UPLOAD_PRESET
+
+### Cloudinary Upload Configuration (IMPORTANT)
+**STATUS**: ⚠️ REQUIRES CONFIGURATION
+
+The application uses Cloudinary for file uploads (images for blogs, events, and resources). To enable uploads, you must:
+
+1. **Create an Upload Preset in Cloudinary Dashboard**:
+   - Log in to your Cloudinary account at https://cloudinary.com/console
+   - Navigate to Settings → Upload → Upload presets
+   - Click "Add upload preset"
+   - Set **Signing Mode** to "Unsigned" (this is critical for browser-based uploads)
+   - Set a preset name (e.g., "nsasa_uploads" or "ml_default")
+   - Configure any transformations or settings you want (optional)
+   - Save the preset
+
+2. **Set the Environment Variable**:
+   - In Replit Secrets, add: `VITE_CLOUDINARY_UPLOAD_PRESET` = `your_preset_name`
+   - The preset name must match exactly what you created in Cloudinary
+   - Restart the Replit application after adding the secret
+
+3. **Current Error**: 
+   - Console shows "Upload preset not found" error
+   - This prevents all image uploads from working
+   - Once configured, uploads will work for blogs, events, and learning resources
+
+**Note**: The `VITE_` prefix is required for Vite to expose the variable to the frontend.
 
 ## Recent Changes
 
