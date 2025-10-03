@@ -5,10 +5,14 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_defau
 
 if (!CLOUD_NAME) {
   console.error('⚠️ CRITICAL: Cloudinary Cloud Name not found! Please set VITE_CLOUDINARY_CLOUD_NAME in environment variables.');
+} else {
+  console.log('✅ Cloudinary Cloud Name configured:', CLOUD_NAME);
 }
 
 if (!import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET) {
   console.warn('⚠️ Cloudinary Upload Preset not set. Using default: "ml_default". Set VITE_CLOUDINARY_UPLOAD_PRESET for production.');
+} else {
+  console.log('✅ Cloudinary Upload Preset configured:', UPLOAD_PRESET);
 }
 
 export interface CloudinaryUploadResult {
