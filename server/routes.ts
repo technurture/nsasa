@@ -103,7 +103,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const blogs = await mongoStorage.getBlogPosts(limit, offset);
-      res.json(blogs);
+      
+      // Add isLikedByUser field to each blog
+      const blogsWithLikeStatus = await Promise.all(
+        blogs.map(async (blog) => {
+          const isLikedByUser = req.user 
+            ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
+            : false;
+          return { ...blog, isLikedByUser };
+        })
+      );
+      
+      res.json(blogsWithLikeStatus);
     } catch (error: any) {
       console.error('Get blogs error:', error);
       res.status(500).json({ message: 'Failed to get blogs', error: error.message });
@@ -120,14 +131,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment views
       await mongoStorage.incrementBlogViews(req.params.id);
       
-      res.json(blog);
+      // Add isLikedByUser field
+      const isLikedByUser = req.user 
+        ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
+        : false;
+      
+      res.json({ ...blog, isLikedByUser });
     } catch (error: any) {
       console.error('Get blog error:', error);
       res.status(500).json({ message: 'Failed to get blog', error: error.message });
     }
   });
 
-  app.post('/api/blogs', authenticateToken, async (req, res) => {
+  app.post('/api/blogs', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
@@ -150,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/blogs/:id', authenticateToken, async (req, res) => {
+  app.put('/api/blogs/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
@@ -184,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/blogs/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/blogs/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
@@ -212,7 +228,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/blogs/:id/comments', optionalAuth, async (req, res) => {
     try {
       const comments = await mongoStorage.getBlogComments(req.params.id);
-      res.json(comments);
+      
+      // Add isLikedByUser field to each comment
+      const commentsWithLikeStatus = await Promise.all(
+        comments.map(async (comment) => {
+          const isLikedByUser = req.user 
+            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+            : false;
+          return { ...comment, isLikedByUser };
+        })
+      );
+      
+      res.json(commentsWithLikeStatus);
     } catch (error: any) {
       console.error('Get comments error:', error);
       res.status(500).json({ message: 'Failed to get comments', error: error.message });
@@ -234,6 +261,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Create comment error:', error);
       res.status(500).json({ message: 'Failed to create comment', error: error.message });
+    }
+  });
+
+  // Like/Unlike blog routes
+  app.post('/api/blogs/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.likeBlogPost(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getBlogLikesCount(req.params.id);
+      res.json({ message: 'Blog liked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Like blog error:', error);
+      res.status(500).json({ message: 'Failed to like blog', error: error.message });
+    }
+  });
+
+  app.delete('/api/blogs/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.unlikeBlogPost(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getBlogLikesCount(req.params.id);
+      res.json({ message: 'Blog unliked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Unlike blog error:', error);
+      res.status(500).json({ message: 'Failed to unlike blog', error: error.message });
+    }
+  });
+
+  // Like/Unlike comment routes
+  app.post('/api/comments/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.likeComment(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getCommentLikesCount(req.params.id);
+      res.json({ message: 'Comment liked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Like comment error:', error);
+      res.status(500).json({ message: 'Failed to like comment', error: error.message });
+    }
+  });
+
+  app.delete('/api/comments/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.unlikeComment(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getCommentLikesCount(req.params.id);
+      res.json({ message: 'Comment unliked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Unlike comment error:', error);
+      res.status(500).json({ message: 'Failed to unlike comment', error: error.message });
     }
   });
 

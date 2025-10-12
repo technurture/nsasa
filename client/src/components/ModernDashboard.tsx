@@ -137,7 +137,7 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
             const isActive = location === fullPath;
             
             return (
-              <Link key={item.path} href={item.path}>
+              <Link key={item.path} href={fullPath}>
                 <Button
                   variant="ghost"
                   className={cn(

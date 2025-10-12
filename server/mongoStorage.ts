@@ -93,6 +93,16 @@ export interface IMongoStorage {
   getUserGamificationStats(userId: string): Promise<any>;
   getLeaderboard(): Promise<any[]>;
   getUserBadges(userId: string): Promise<any[]>;
+  
+  // Like operations
+  likeBlogPost(userId: string, blogPostId: string): Promise<void>;
+  unlikeBlogPost(userId: string, blogPostId: string): Promise<void>;
+  getBlogLikesCount(blogPostId: string): Promise<number>;
+  isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean>;
+  likeComment(userId: string, commentId: string): Promise<void>;
+  unlikeComment(userId: string, commentId: string): Promise<void>;
+  getCommentLikesCount(commentId: string): Promise<number>;
+  isCommentLikedByUser(userId: string, commentId: string): Promise<boolean>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -859,6 +869,97 @@ export class MongoStorage implements IMongoStorage {
     ]);
 
     return this.calculateUserBadges(userBlogs, userComments, userEvents);
+  }
+
+  // Like operations
+  async likeBlogPost(userId: string, blogPostId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    
+    const existingLike = await likesCollection.findOne({ userId, blogPostId });
+    
+    if (!existingLike) {
+      await likesCollection.insertOne({
+        userId,
+        blogPostId,
+        createdAt: new Date(),
+      });
+      
+      await blogsCollection.updateOne(
+        { _id: new ObjectId(blogPostId) },
+        { $inc: { likes: 1 } }
+      );
+    }
+  }
+  
+  async unlikeBlogPost(userId: string, blogPostId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    
+    const result = await likesCollection.deleteOne({ userId, blogPostId });
+    
+    if (result.deletedCount > 0) {
+      await blogsCollection.updateOne(
+        { _id: new ObjectId(blogPostId) },
+        { $inc: { likes: -1 } }
+      );
+    }
+  }
+  
+  async getBlogLikesCount(blogPostId: string): Promise<number> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    return await likesCollection.countDocuments({ blogPostId });
+  }
+  
+  async isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const like = await likesCollection.findOne({ userId, blogPostId });
+    return !!like;
+  }
+  
+  async likeComment(userId: string, commentId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    const existingLike = await likesCollection.findOne({ userId, commentId });
+    
+    if (!existingLike) {
+      await likesCollection.insertOne({
+        userId,
+        commentId,
+        createdAt: new Date(),
+      });
+      
+      await commentsCollection.updateOne(
+        { _id: new ObjectId(commentId) },
+        { $inc: { likes: 1 } }
+      );
+    }
+  }
+  
+  async unlikeComment(userId: string, commentId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    const result = await likesCollection.deleteOne({ userId, commentId });
+    
+    if (result.deletedCount > 0) {
+      await commentsCollection.updateOne(
+        { _id: new ObjectId(commentId) },
+        { $inc: { likes: -1 } }
+      );
+    }
+  }
+  
+  async getCommentLikesCount(commentId: string): Promise<number> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    return await likesCollection.countDocuments({ commentId });
+  }
+  
+  async isCommentLikedByUser(userId: string, commentId: string): Promise<boolean> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    const like = await likesCollection.findOne({ userId, commentId });
+    return !!like;
   }
 
   private calculateUserBadges(blogCount: number, commentCount: number, eventCount: number): any[] {

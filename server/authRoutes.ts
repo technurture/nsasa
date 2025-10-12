@@ -206,8 +206,8 @@ router.get('/admin/users', authenticateToken, async (req, res) => {
 
 router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
   try {
-    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
-      return res.status(403).json({ message: 'Admin access required' });
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Super admin access required' });
     }
 
     const { id } = req.params;
@@ -230,6 +230,37 @@ router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
     console.error('Update user approval error:', error);
     res.status(500).json({ 
       message: 'Failed to update user approval status',
+      error: error.message 
+    });
+  }
+});
+
+router.put('/admin/users/:id/role', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Super admin access required' });
+    }
+
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!['student', 'admin', 'super_admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Must be student, admin, or super_admin' });
+    }
+
+    const updatedUser = await mongoStorage.updateUserRole(id, role);
+    
+    // Remove password hash from response
+    const { passwordHash, ...userResponse } = updatedUser;
+    
+    res.json({
+      message: `User role updated to ${role} successfully`,
+      user: userResponse
+    });
+  } catch (error: any) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ 
+      message: 'Failed to update user role',
       error: error.message 
     });
   }

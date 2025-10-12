@@ -1,10 +1,11 @@
 import { Switch, Route, useLocation } from "wouter";
 import React, { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import type { BlogPost, Event } from "@shared/mongoSchema";
 
 // Components
 import Header from "@/components/Header";
@@ -33,8 +34,30 @@ import MainDashboardView, {
   SettingsView
 } from "@/components/MainDashboardView";
 
+// Pages
+import BlogsPage from "@/pages/BlogsPage";
+import EventsPage from "@/pages/EventsPage";
+
 // Main Pages
 function LandingPage() {
+  const { data: blogs, isLoading: blogsLoading } = useQuery<BlogPost[]>({
+    queryKey: ['/api/blogs', { limit: 3 }],
+    queryFn: async () => {
+      const response = await fetch('/api/blogs?limit=3');
+      if (!response.ok) throw new Error('Failed to fetch blogs');
+      return response.json();
+    },
+  });
+
+  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ['/api/events', { limit: 3 }],
+    queryFn: async () => {
+      const response = await fetch('/api/events?limit=3');
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
+    },
+  });
+
   const handleGetStarted = () => {
     window.location.href = '/register';
   };
@@ -42,66 +65,6 @@ function LandingPage() {
   const handleLearnMore = () => {
     // Scroll to about section
   };
-
-  // todo: remove mock functionality
-  const mockBlogs = [
-    {
-      id: "1",
-      title: "Understanding Social Psychology in Modern Society",
-      excerpt: "Explore the fascinating world of social psychology and how it shapes our daily interactions.",
-      content: "Full content...",
-      author: {
-        name: "Dr. Sarah Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-        level: "Professor"
-      },
-      category: "Psychology",
-      publishedAt: "2024-01-15",
-      readTime: 8,
-      likes: 24,
-      comments: 12,
-      views: 156,
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
-      tags: ["psychology", "society", "behavior"]
-    },
-    {
-      id: "2",
-      title: "Research Methods in Sociology",
-      excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
-      content: "Full content...",
-      author: {
-        name: "Prof. Michael Chen",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-        level: "Associate Professor"
-      },
-      category: "Research",
-      publishedAt: "2024-01-12",
-      readTime: 12,
-      likes: 18,
-      comments: 8,
-      views: 203,
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop",
-      tags: ["research", "methodology", "data"]
-    }
-  ];
-
-  const mockEvents = [
-    {
-      id: "1",
-      title: "Social Innovation Summit 2024",
-      description: "Join us for an inspiring day of presentations and networking.",
-      date: "2024-02-20",
-      time: "9:00 AM - 5:00 PM",
-      location: "Main Auditorium",
-      type: 'conference' as const,
-      capacity: 150,
-      registered: 127,
-      price: 25,
-      image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=300&fit=crop",
-      organizer: "Department of Sociology",
-      tags: ["innovation", "research", "networking"]
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,11 +81,56 @@ function LandingPage() {
               Discover insights, research, and perspectives from our faculty and students
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {mockBlogs.map((blog) => (
-              <BlogCard key={blog.id} blog={blog} />
-            ))}
-          </div>
+          {blogsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-4">
+                  <div className="h-48 bg-muted animate-pulse rounded-lg" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : blogs && blogs.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                {blogs.slice(0, 3).map((blog) => {
+                  const transformedBlog = {
+                    id: blog._id || '',
+                    title: blog.title,
+                    excerpt: blog.excerpt || '',
+                    content: blog.content,
+                    author: {
+                      name: blog.authorId,
+                      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${blog.authorId}`,
+                      level: 'Author',
+                    },
+                    category: blog.category,
+                    publishedAt: new Date(blog.createdAt).toISOString().split('T')[0],
+                    readTime: blog.readTime,
+                    likes: blog.likes,
+                    comments: 0,
+                    views: blog.views,
+                    image: blog.imageUrl,
+                    images: blog.imageUrls,
+                    tags: blog.tags,
+                  };
+                  return <BlogCard key={blog._id} blog={transformedBlog} />;
+                })}
+              </div>
+              <div className="text-center mt-8">
+                <a 
+                  href="/blogs" 
+                  className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
+                  data-testid="link-view-all-blogs"
+                >
+                  View All Blog Posts →
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-muted-foreground">No blog posts available yet.</p>
+          )}
         </section>
 
         {/* Upcoming Events */}
@@ -133,11 +141,51 @@ function LandingPage() {
               Join us for workshops, seminars, and community gatherings
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {mockEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
+          {eventsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-4">
+                  <div className="h-48 bg-muted animate-pulse rounded-lg" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : events && events.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {events.slice(0, 3).map((event) => {
+                  const transformedEvent = {
+                    id: event._id || '',
+                    title: event.title,
+                    description: event.description,
+                    date: new Date(event.date).toISOString().split('T')[0],
+                    time: event.time,
+                    location: event.location,
+                    type: event.type,
+                    capacity: event.capacity,
+                    registered: 0,
+                    price: event.price / 100,
+                    image: event.imageUrl,
+                    organizer: event.organizerId,
+                    tags: event.tags,
+                  };
+                  return <EventCard key={event._id} event={transformedEvent} />;
+                })}
+              </div>
+              <div className="text-center mt-8">
+                <a 
+                  href="/events" 
+                  className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
+                  data-testid="link-view-all-events"
+                >
+                  View All Events →
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-muted-foreground">No upcoming events at the moment.</p>
+          )}
         </section>
 
         {/* Call to Action */}
@@ -150,71 +198,12 @@ function LandingPage() {
             <button 
               onClick={handleGetStarted}
               className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              data-testid="button-get-started"
             >
               Get Started Today
             </button>
           </div>
         </section>
-      </div>
-    </div>
-  );
-}
-
-function BlogsPage() {
-  // todo: remove mock functionality
-  const mockBlogs = [
-    {
-      id: "1",
-      title: "Understanding Social Psychology in Modern Society",
-      excerpt: "Explore the fascinating world of social psychology and how it shapes our daily interactions.",
-      content: "Full content...",
-      author: {
-        name: "Dr. Sarah Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-        level: "Professor"
-      },
-      category: "Psychology",
-      publishedAt: "2024-01-15",
-      readTime: 8,
-      likes: 24,
-      comments: 12,
-      views: 156,
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
-      tags: ["psychology", "society", "behavior"]
-    },
-    {
-      id: "2",
-      title: "Research Methods in Sociology",
-      excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
-      content: "Full content...",
-      author: {
-        name: "Prof. Michael Chen",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-        level: "Associate Professor"
-      },
-      category: "Research",
-      publishedAt: "2024-01-12",
-      readTime: 12,
-      likes: 18,
-      comments: 8,
-      views: 203,
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop",
-      tags: ["research", "methodology", "data"]
-    }
-  ];
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Blog Posts</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Explore our collection of articles, research insights, and academic discussions
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {mockBlogs.map((blog) => (
-          <BlogCard key={blog.id} blog={blog} />
-        ))}
       </div>
     </div>
   );
@@ -442,14 +431,14 @@ function DashboardRouter() {
   return (
     <ModernDashboard>
       <Switch>
-        <Route path="/" component={MainDashboardView} />
-        <Route path="/users" component={UserManagementView} />
-        <Route path="/blogs" component={BlogManagementView} />
-        <Route path="/events" component={EventManagementView} />
-        <Route path="/resources" component={ResourceManagementView} />
-        <Route path="/analytics" component={AnalyticsView} />
-        <Route path="/gamification" component={StudentGamificationView} />
-        <Route path="/settings" component={SettingsView} />
+        <Route path="/dashboard" component={MainDashboardView} />
+        <Route path="/dashboard/users" component={UserManagementView} />
+        <Route path="/dashboard/blogs" component={BlogManagementView} />
+        <Route path="/dashboard/events" component={EventManagementView} />
+        <Route path="/dashboard/resources" component={ResourceManagementView} />
+        <Route path="/dashboard/analytics" component={AnalyticsView} />
+        <Route path="/dashboard/gamification" component={StudentGamificationView} />
+        <Route path="/dashboard/settings" component={SettingsView} />
         <Route component={MainDashboardView} />
       </Switch>
     </ModernDashboard>
@@ -458,7 +447,8 @@ function DashboardRouter() {
 
 // Main app router for authenticated and public pages with layout
 function MainRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   return (
     <Switch>
@@ -474,25 +464,44 @@ function MainRouter() {
         <>
           <Route path="/" component={LandingPage} />
           <Route path="/blogs" component={BlogsPage} />
+          <Route path="/events" component={EventsPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
         </>
       ) : (
         <>
-          {/* Dashboard routes use ModernDashboard layout */}
-          <Route path="/dashboard" component={DashboardRouter} nest />
+          {/* Dashboard routes with access control - use wildcard to match all dashboard paths */}
+          <Route path="/dashboard/:rest*">
+            {(params) => {
+              // Check if user has admin or super_admin role
+              if (user?.role === 'admin' || user?.role === 'super_admin') {
+                return <DashboardRouter />;
+              } else {
+                // Redirect students to home page
+                setLocation('/');
+                return (
+                  <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center bg-destructive/10 p-6 rounded-lg" data-testid="access-denied-message">
+                      <h2 className="text-xl font-semibold text-destructive mb-2">Access Denied</h2>
+                      <p className="text-muted-foreground">You don't have permission to access the dashboard.</p>
+                    </div>
+                  </div>
+                );
+              }
+            }}
+          </Route>
           
           {/* Landing page accessible to authenticated users */}
           <Route path="/" component={LandingPage} />
           
           {/* Public pages with regular layout for authenticated users */}
           <Route path="/blogs" component={BlogsPage} />
+          <Route path="/events" component={EventsPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
-          <Route path="/events" component={BlogsPage} />
         </>
       )}
     </Switch>
