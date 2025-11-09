@@ -478,6 +478,7 @@ function MainRouter() {
       ) : (
         <>
           {/* Dashboard routes - all authenticated users can access */}
+          <Route path="/dashboard" component={DashboardRouter} />
           <Route path="/dashboard/:rest*">
             {(params) => <DashboardRouter />}
           </Route>

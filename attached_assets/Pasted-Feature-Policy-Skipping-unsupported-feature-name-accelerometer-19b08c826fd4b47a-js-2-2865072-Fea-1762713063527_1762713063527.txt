@@ -1,0 +1,54 @@
+Feature Policy: Skipping unsupported feature name “accelerometer”. 19b08c826fd4b47a.js:2:2865072
+Feature Policy: Skipping unsupported feature name “encrypted-media”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “execution-while-not-rendered”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “execution-while-out-of-viewport”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “gyroscope”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “layout-animations”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “legacy-image-formats”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “magnetometer”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “midi”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “navigation-override”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “oversized-images”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “payment”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “picture-in-picture”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “publickey-credentials”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “sync-xhr”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “unoptimized-images”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “unsized-media”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “usb”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “xr-spatial-tracking”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “clipboard-read”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “clipboard-write”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “accelerometer”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “ambient-light-sensor”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “autoplay”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “battery”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “encrypted-media”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “execution-while-not-rendered”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “execution-while-out-of-viewport”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “gyroscope”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “layout-animations”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “legacy-image-formats”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “magnetometer”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “midi”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “navigation-override”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “oversized-images”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “payment”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “picture-in-picture”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “publickey-credentials”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “sync-xhr”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “unoptimized-images”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “unsized-media”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “usb”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “xr-spatial-tracking”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “clipboard-read”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “clipboard-write”. workspace_iframe.html:151:20
+The script from “https://5a9a1812-39f2-40e7-95c1-b8437029a129-00-3331ht4yv1lx1.janeway.replit.dev/__replco/static/devtools/injected.js” was loaded even though its MIME type (“text/plain”) is not a valid JavaScript MIME type.
+dashboard
+[vite] connecting... injected.js:27:27
+[vite] connected. injected.js:27:27
+✅ Cloudinary Cloud Name configured: dvgewacb7 injected.js:27:27
+✅ Cloudinary Upload Preset configured: Nsasa001 injected.js:27:27
+Cookie warnings 2
+Partitioned cookie or storage access was provided to “https://5a9a1812-39f2-40e7-95c1-b8437029a129-00-3331ht4yv1lx1.janeway.replit.dev/__replco/workspace_iframe.html?initialPath=%2Fdashboard&id=%3Ar9d%3A” because it is loaded in the third-party context and dynamic state partitioning is enabled.
+workspace_iframe.html:92:32
