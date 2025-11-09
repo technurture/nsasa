@@ -212,11 +212,11 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
               {user.role === 'super_admin' && (
                 <Select onValueChange={(value) => {
                   if (value === 'user-management') {
-                    setLocation('/users');
+                    setLocation('/dashboard/users');
                   } else if (value === 'analytics') {
-                    setLocation('/analytics');
+                    setLocation('/dashboard/analytics');
                   } else if (value === 'permissions') {
-                    setLocation('/settings');
+                    setLocation('/dashboard/settings');
                   }
                 }}>
                   <SelectTrigger className="w-[140px] h-8 bg-gray-50 dark:bg-gray-700" data-testid="select-role-management">
