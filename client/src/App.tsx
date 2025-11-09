@@ -468,28 +468,16 @@ function MainRouter() {
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
+          {/* Redirect to login if trying to access dashboard while not authenticated */}
+          <Route path="/dashboard/:rest*">
+            {(params) => <RedirectToLogin />}
+          </Route>
         </>
       ) : (
         <>
-          {/* Dashboard routes with access control - use wildcard to match all dashboard paths */}
+          {/* Dashboard routes - all authenticated users can access */}
           <Route path="/dashboard/:rest*">
-            {(params) => {
-              // Check if user has admin or super_admin role
-              if (user?.role === 'admin' || user?.role === 'super_admin') {
-                return <DashboardRouter />;
-              } else {
-                // Redirect students to home page
-                setLocation('/');
-                return (
-                  <div className="flex items-center justify-center min-h-screen">
-                    <div className="text-center bg-destructive/10 p-6 rounded-lg" data-testid="access-denied-message">
-                      <h2 className="text-xl font-semibold text-destructive mb-2">Access Denied</h2>
-                      <p className="text-muted-foreground">You don't have permission to access the dashboard.</p>
-                    </div>
-                  </div>
-                );
-              }
-            }}
+            {(params) => <DashboardRouter />}
           </Route>
           
           {/* Landing page accessible to authenticated users */}
@@ -517,6 +505,23 @@ function DashboardRedirect() {
   }, [setLocation]);
   
   return null;
+}
+
+// Redirect to login component
+function RedirectToLogin() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation('/login');
+  }, [setLocation]);
+  
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Redirecting to login...</h2>
+      </div>
+    </div>
+  );
 }
 
 function Router() {
