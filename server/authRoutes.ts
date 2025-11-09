@@ -75,10 +75,12 @@ router.post('/login', async (req, res) => {
     const { user, token } = await mongoStorage.loginUser(email, password);
     
     // Set token in HTTP-only cookie for security
+    // Only set secure flag when actually using HTTPS
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      secure: isSecure,
+      sameSite: isSecure ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/' // Ensure cookie is sent for all paths
     });
@@ -114,10 +116,11 @@ router.post('/login', async (req, res) => {
 // Logout endpoint - support both GET and POST for compatibility
 router.all('/logout', (req, res) => {
   // Clear cookie with same options as when it was set
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    secure: isSecure,
+    sameSite: isSecure ? 'strict' : 'lax',
     path: '/'
   });
   res.json({ message: 'Logged out successfully' });
