@@ -302,6 +302,8 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const posts = await blogPostsCollection
       .find({ published: true })
       .sort({ createdAt: -1 })
@@ -309,13 +311,37 @@ export class MongoStorage implements IMongoStorage {
       .limit(limit)
       .toArray();
     
-    return posts.map(post => ({ ...post, _id: post._id.toString() }));
+    const postsWithAuthorInfo = await Promise.all(
+      posts.map(async (post) => {
+        const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) });
+        return {
+          ...post,
+          _id: post._id.toString(),
+          authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
+          authorAvatar: author?.profileImageUrl
+        } as any;
+      })
+    );
+    
+    return postsWithAuthorInfo as BlogPost[];
   }
   
   async getBlogPost(id: string): Promise<BlogPost | undefined> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const post = await blogPostsCollection.findOne({ _id: new ObjectId(id) });
-    return post ? { ...post, _id: post._id.toString() } : undefined;
+    
+    if (!post) return undefined;
+    
+    const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) });
+    
+    return {
+      ...post,
+      _id: post._id.toString(),
+      authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
+      authorAvatar: author?.profileImageUrl
+    } as any;
   }
   
   async updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost> {
@@ -341,12 +367,21 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const posts = await blogPostsCollection
       .find({ authorId })
       .sort({ createdAt: -1 })
       .toArray();
     
-    return posts.map(post => ({ ...post, _id: post._id.toString() }));
+    const author = await usersCollection.findOne({ _id: new ObjectId(authorId) });
+    
+    return posts.map(post => ({
+      ...post,
+      _id: post._id.toString(),
+      authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
+      authorAvatar: author?.profileImageUrl
+    })) as BlogPost[];
   }
   
   async incrementBlogViews(id: string): Promise<void> {
@@ -417,6 +452,8 @@ export class MongoStorage implements IMongoStorage {
   
   async getEvents(limit = 20, offset = 0): Promise<Event[]> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const events = await eventsCollection
       .find({})
       .sort({ date: -1 })
@@ -424,7 +461,19 @@ export class MongoStorage implements IMongoStorage {
       .limit(limit)
       .toArray();
     
-    return events.map(event => ({ ...event, _id: event._id.toString() }));
+    const eventsWithOrganizerInfo = await Promise.all(
+      events.map(async (event) => {
+        const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) });
+        return {
+          ...event,
+          _id: event._id.toString(),
+          organizerName: organizer ? `${organizer.firstName} ${organizer.lastName}` : 'Unknown Organizer',
+          organizerAvatar: organizer?.profileImageUrl
+        } as any;
+      })
+    );
+    
+    return eventsWithOrganizerInfo as Event[];
   }
   
   async getEvent(id: string): Promise<Event | undefined> {
@@ -509,6 +558,8 @@ export class MongoStorage implements IMongoStorage {
   
   async getLearningResources(limit = 20, offset = 0): Promise<LearningResource[]> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const resources = await resourcesCollection
       .find({})
       .sort({ createdAt: -1 })
@@ -516,7 +567,19 @@ export class MongoStorage implements IMongoStorage {
       .limit(limit)
       .toArray();
     
-    return resources.map(resource => ({ ...resource, _id: resource._id.toString() }));
+    const resourcesWithUploaderInfo = await Promise.all(
+      resources.map(async (resource) => {
+        const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) });
+        return {
+          ...resource,
+          _id: resource._id.toString(),
+          uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : 'Unknown Uploader',
+          uploaderAvatar: uploader?.profileImageUrl
+        } as any;
+      })
+    );
+    
+    return resourcesWithUploaderInfo as LearningResource[];
   }
   
   async getLearningResource(id: string): Promise<LearningResource | undefined> {

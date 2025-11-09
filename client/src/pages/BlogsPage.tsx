@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import BlogCard from "@/components/BlogCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -6,6 +7,8 @@ import { BookOpen } from "lucide-react";
 import type { BlogPost } from "@shared/mongoSchema";
 
 export default function BlogsPage() {
+  const [, setLocation] = useLocation();
+  
   const { data: blogs, isLoading, error } = useQuery<BlogPost[]>({
     queryKey: ['/api/blogs'],
   });
@@ -54,8 +57,8 @@ export default function BlogsPage() {
               excerpt: blog.excerpt || '',
               content: blog.content,
               author: {
-                name: blog.authorId, // TODO: Fetch actual author name
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${blog.authorId}`,
+                name: blog.authorName || 'Unknown Author',
+                avatar: blog.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${blog.authorId}`,
                 level: 'Author',
               },
               category: blog.category,
@@ -74,8 +77,8 @@ export default function BlogsPage() {
                 key={blog._id} 
                 blog={transformedBlog}
                 isLikedByUser={blog.isLikedByUser || false}
-                onReadMore={(id) => console.log('Read more blog:', id)}
-                onComment={(id) => console.log('View comments:', id)}
+                onReadMore={(id) => setLocation(`/blogs/${id}`)}
+                onComment={(id) => setLocation(`/blogs/${id}#comments`)}
               />
             );
           })}

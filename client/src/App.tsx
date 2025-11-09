@@ -37,6 +37,7 @@ import MainDashboardView, {
 
 // Pages
 import BlogsPage from "@/pages/BlogsPage";
+import BlogDetailPage from "@/pages/BlogDetailPage";
 import EventsPage from "@/pages/EventsPage";
 
 // Main Pages
@@ -95,15 +96,15 @@ function LandingPage() {
           ) : blogs && blogs.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                {blogs.slice(0, 3).map((blog) => {
+                {blogs.slice(0, 3).map((blog: any) => {
                   const transformedBlog = {
                     id: blog._id || '',
                     title: blog.title,
                     excerpt: blog.excerpt || '',
                     content: blog.content,
                     author: {
-                      name: blog.authorId,
-                      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${blog.authorId}`,
+                      name: blog.authorName || 'Unknown Author',
+                      avatar: blog.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${blog.authorId}`,
                       level: 'Author',
                     },
                     category: blog.category,
@@ -155,7 +156,7 @@ function LandingPage() {
           ) : events && events.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {events.slice(0, 3).map((event) => {
+                {events.slice(0, 3).map((event: any) => {
                   const transformedEvent = {
                     id: event._id || '',
                     title: event.title,
@@ -168,7 +169,7 @@ function LandingPage() {
                     registered: 0,
                     price: event.price / 100,
                     image: event.imageUrl,
-                    organizer: event.organizerId,
+                    organizer: event.organizerName || 'Unknown Organizer',
                     tags: event.tags,
                   };
                   return <EventCard key={event._id} event={transformedEvent} />;
@@ -465,6 +466,7 @@ function MainRouter() {
       ) : !isAuthenticated ? (
         <>
           <Route path="/" component={LandingPage} />
+          <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/staff" component={StaffPage} />
@@ -487,6 +489,7 @@ function MainRouter() {
           <Route path="/" component={LandingPage} />
           
           {/* Public pages with regular layout for authenticated users */}
+          <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/staff" component={StaffPage} />
