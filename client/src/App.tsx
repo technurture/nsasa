@@ -24,6 +24,7 @@ import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
 import ModernDashboard from "@/components/ModernDashboard";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import MainDashboardView, {
   UserManagementView,
   StudentGamificationView,
@@ -426,22 +427,23 @@ function AuthRouter() {
   );
 }
 
-// Dashboard router for authenticated dashboard pages
+// Dashboard router for authenticated dashboard pages (Admin and Super Admin only)
 function DashboardRouter() {
   return (
-    <ModernDashboard>
-      <Switch>
-        <Route path="/dashboard" component={MainDashboardView} />
-        <Route path="/dashboard/users" component={UserManagementView} />
-        <Route path="/dashboard/blogs" component={BlogManagementView} />
-        <Route path="/dashboard/events" component={EventManagementView} />
-        <Route path="/dashboard/resources" component={ResourceManagementView} />
-        <Route path="/dashboard/analytics" component={AnalyticsView} />
-        <Route path="/dashboard/gamification" component={StudentGamificationView} />
-        <Route path="/dashboard/settings" component={SettingsView} />
-        <Route component={MainDashboardView} />
-      </Switch>
-    </ModernDashboard>
+    <ProtectedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/">
+      <ModernDashboard>
+        <Switch>
+          <Route path="/dashboard" component={MainDashboardView} />
+          <Route path="/dashboard/users" component={UserManagementView} />
+          <Route path="/dashboard/blogs" component={BlogManagementView} />
+          <Route path="/dashboard/events" component={EventManagementView} />
+          <Route path="/dashboard/resources" component={ResourceManagementView} />
+          <Route path="/dashboard/analytics" component={AnalyticsView} />
+          <Route path="/dashboard/settings" component={SettingsView} />
+          <Route component={MainDashboardView} />
+        </Switch>
+      </ModernDashboard>
+    </ProtectedRoute>
   );
 }
 

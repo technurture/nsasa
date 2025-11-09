@@ -394,6 +394,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Event registration routes
+  app.post('/api/events/:id/register', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const registration = await mongoStorage.registerForEvent(req.user.userId, req.params.id);
+      res.status(201).json({ 
+        message: 'Successfully registered for event',
+        registration 
+      });
+    } catch (error: any) {
+      console.error('Event registration error:', error);
+      res.status(500).json({ message: 'Failed to register for event', error: error.message });
+    }
+  });
+
+  app.get('/api/events/:id/registrations', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const registrations = await mongoStorage.getEventRegistrations(req.params.id);
+      res.json(registrations);
+    } catch (error: any) {
+      console.error('Get event registrations error:', error);
+      res.status(500).json({ message: 'Failed to get event registrations', error: error.message });
+    }
+  });
+
+  app.get('/api/user/event-registrations', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const registrations = await mongoStorage.getUserEventRegistrations(req.user.userId);
+      res.json(registrations);
+    } catch (error: any) {
+      console.error('Get user event registrations error:', error);
+      res.status(500).json({ message: 'Failed to get user event registrations', error: error.message });
+    }
+  });
+
   // Learning resources routes
   app.get('/api/resources', authenticateToken, async (req, res) => {
     try {
@@ -417,6 +459,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Get resource error:', error);
       res.status(500).json({ message: 'Failed to get resource', error: error.message });
+    }
+  });
+
+  // Resource download tracking
+  app.post('/api/resources/:id/download', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.recordResourceDownload(req.user.userId, req.params.id);
+      res.json({ message: 'Download recorded successfully' });
+    } catch (error: any) {
+      console.error('Record download error:', error);
+      res.status(500).json({ message: 'Failed to record download', error: error.message });
     }
   });
 
