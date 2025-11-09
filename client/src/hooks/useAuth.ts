@@ -41,10 +41,12 @@ export function useLogin() {
       }
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // Update the user data in cache
       queryClient.setQueryData(["/api/auth/user"], data.user);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Verify the cookie is set by refetching
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
         title: "Success",
