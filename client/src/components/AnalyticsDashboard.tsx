@@ -17,19 +17,41 @@ interface AnalyticsDashboardProps {
   userRole: 'admin' | 'super_admin';
 }
 
+interface AnalyticsOverview {
+  totalUsers: number;
+  activeUsers: number;
+  blogViews: number;
+  totalDownloads: number;
+  pendingApprovals: number;
+}
+
+interface RecentActivityItem {
+  action: string;
+  author?: string;
+  user?: string;
+  title?: string;
+  time: string;
+}
+
+interface TopBlogItem {
+  title: string;
+  views: number;
+  likes: number;
+}
+
 export default function AnalyticsDashboard({ userRole }: AnalyticsDashboardProps) {
   // Fetch real analytics data
-  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery<AnalyticsOverview>({
     queryKey: ['/api/analytics/overview'],
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
-  const { data: recentActivity = [], isLoading: activityLoading, error: activityError } = useQuery({
+  const { data: recentActivity = [], isLoading: activityLoading, error: activityError } = useQuery<RecentActivityItem[]>({
     queryKey: ['/api/analytics/recent-activity'],
     refetchInterval: 30000
   });
 
-  const { data: topBlogs = [], isLoading: blogsLoading, error: blogsError } = useQuery({
+  const { data: topBlogs = [], isLoading: blogsLoading, error: blogsError } = useQuery<TopBlogItem[]>({
     queryKey: ['/api/analytics/top-blogs'],
     refetchInterval: 60000 // Refresh every minute
   });
