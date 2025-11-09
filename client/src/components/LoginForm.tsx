@@ -53,9 +53,15 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
     loginMutation.mutate(
       { email: formData.email, password: formData.password },
       {
-        onSuccess: () => {
-          // Redirect to dashboard on successful login
-          setLocation('/dashboard');
+        onSuccess: (data) => {
+          // Redirect based on user role
+          const userRole = data?.user?.role;
+          if (userRole === 'admin' || userRole === 'super_admin') {
+            setLocation('/dashboard');
+          } else {
+            // Students and other roles go to home page
+            setLocation('/');
+          }
           onLogin?.(formData);
         },
         onError: (error: any) => {
