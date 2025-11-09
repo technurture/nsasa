@@ -54,14 +54,16 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
       { email: formData.email, password: formData.password },
       {
         onSuccess: (data) => {
-          // Redirect based on user role
+          // Redirect based on user role - use full page redirect to ensure cookies are set
           const userRole = data?.user?.role;
-          if (userRole === 'admin' || userRole === 'super_admin') {
-            setLocation('/dashboard');
-          } else {
-            // Students and other roles go to home page
-            setLocation('/');
-          }
+          setTimeout(() => {
+            if (userRole === 'admin' || userRole === 'super_admin') {
+              window.location.href = '/dashboard';
+            } else {
+              // Students and other roles go to home page
+              window.location.href = '/';
+            }
+          }, 100); // Small delay to ensure cookie is set
           onLogin?.(formData);
         },
         onError: (error: any) => {

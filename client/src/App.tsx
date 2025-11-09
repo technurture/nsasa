@@ -4,7 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, useLogout } from "@/hooks/useAuth";
 import type { BlogPost, Event } from "@shared/mongoSchema";
 
 // Components
@@ -541,16 +541,17 @@ function App() {
 }
 
 function AppContent() {
-  const { user, isAuthenticated } = useAuth();
-  const [location] = useLocation();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
+  const logoutMutation = useLogout();
 
   const handleAuthAction = () => {
     if (isAuthenticated) {
-      // Logout - call the logout endpoint
-      window.location.href = '/api/auth/logout';
+      // Logout - call the logout mutation
+      logoutMutation.mutate();
     } else {
       // Login - redirect to login page
-      window.location.href = '/login';
+      setLocation('/login');
     }
   };
 
@@ -562,7 +563,8 @@ function AppContent() {
   const isAuthPage = location === '/login' || location === '/register';
   
   // Check if current path is a dashboard page (should not have header/footer)
-  const isDashboardPage = isAuthenticated && location.startsWith('/dashboard');
+  // Don't show header/footer while loading auth or when on dashboard
+  const isDashboardPage = (isLoading && location.startsWith('/dashboard')) || (isAuthenticated && location.startsWith('/dashboard'));
 
   return (
     <TooltipProvider>
