@@ -26,8 +26,8 @@ interface BlogCardProps {
     likes: number;
     comments: number;
     views: number;
-    image?: string;
-    images?: string[];
+    imageUrl?: string;
+    imageUrls?: string[];
     tags: string[];
   };
   onReadMore?: (id: string) => void;
@@ -123,7 +123,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
     });
   };
 
-  const displayImage = blog.image || (blog.images && blog.images.length > 0 ? blog.images[0] : undefined);
+  const displayImage = blog.imageUrl || (blog.imageUrls && blog.imageUrls.length > 0 ? blog.imageUrls[0] : undefined);
   
   return (
     <Card className="group overflow-hidden hover-elevate transition-all duration-200">

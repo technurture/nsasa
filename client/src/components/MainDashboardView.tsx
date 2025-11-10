@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -189,6 +189,21 @@ function BlogFormModal({
       featured: blog?.featured || false
     }
   });
+
+  // Reset form when blog changes (for editing different blogs)
+  useEffect(() => {
+    form.reset({
+      title: blog?.title || "",
+      excerpt: blog?.excerpt || "",
+      content: blog?.content || "",
+      category: blog?.category || "",
+      tags: blog?.tags?.join(", ") || "",
+      imageUrl: blog?.imageUrl || "",
+      imageUrls: blog?.imageUrls || [],
+      published: blog?.published || false,
+      featured: blog?.featured || false
+    });
+  }, [blog, form]);
 
   const handleSubmit = (data: BlogFormData) => {
     const submitData = {
@@ -431,6 +446,22 @@ function EventFormModal({
       imageUrl: event?.imageUrl || ""
     }
   });
+
+  // Reset form when event changes (for editing different events)
+  useEffect(() => {
+    form.reset({
+      title: event?.title || "",
+      description: event?.description || "",
+      date: event?.date ? new Date(event.date).toISOString().split('T')[0] : "",
+      time: event?.time || "",
+      location: event?.location || "",
+      type: event?.type || 'workshop',
+      capacity: event?.capacity || 50,
+      price: event?.price || 0,
+      tags: event?.tags?.join(", ") || "",
+      imageUrl: event?.imageUrl || ""
+    });
+  }, [event, form]);
 
   const handleSubmit = (data: EventFormData) => {
     const submitData = {
