@@ -124,19 +124,18 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
   };
 
   const displayImage = blog.imageUrl || (blog.imageUrls && blog.imageUrls.length > 0 ? blog.imageUrls[0] : undefined);
+  const placeholderImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(blog.title)}&size=800&background=random&bold=true&format=svg`;
   
   return (
     <Card className="group overflow-hidden hover-elevate transition-all duration-200">
       {/* Blog Image */}
-      {displayImage && (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={displayImage} 
-            alt={blog.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-          />
-        </div>
-      )}
+      <div className="aspect-video w-full overflow-hidden bg-muted">
+        <img 
+          src={displayImage || placeholderImage} 
+          alt={blog.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+        />
+      </div>
 
       <CardHeader className="space-y-4">
         {/* Category and Read Time */}
