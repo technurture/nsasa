@@ -42,6 +42,8 @@ import EventsPage from "@/pages/EventsPage";
 
 // Main Pages
 function LandingPage() {
+  const [, setLocation] = useLocation();
+  
   const { data: blogs, isLoading: blogsLoading } = useQuery<BlogPost[]>({
     queryKey: ['/api/blogs', { limit: 3 }],
     queryFn: async () => {
@@ -117,7 +119,15 @@ function LandingPage() {
                     imageUrls: blog.imageUrls,
                     tags: blog.tags,
                   };
-                  return <BlogCard key={blog._id} blog={transformedBlog} />;
+                  return (
+                    <BlogCard 
+                      key={blog._id} 
+                      blog={transformedBlog}
+                      isLikedByUser={blog.isLikedByUser || false}
+                      onReadMore={(id) => setLocation(`/blogs/${id}`)}
+                      onComment={(id) => setLocation(`/blogs/${id}#comments`)}
+                    />
+                  );
                 })}
               </div>
               <div className="text-center mt-8">
