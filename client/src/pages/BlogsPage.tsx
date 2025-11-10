@@ -67,8 +67,8 @@ export default function BlogsPage() {
               likes: blog.likes,
               comments: 0, // TODO: Get actual comment count
               views: blog.views,
-              image: blog.imageUrl,
-              images: blog.imageUrls,
+              imageUrl: blog.imageUrl,
+              imageUrls: blog.imageUrls,
               tags: blog.tags,
             };
 

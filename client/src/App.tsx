@@ -113,8 +113,8 @@ function LandingPage() {
                     likes: blog.likes,
                     comments: 0,
                     views: blog.views,
-                    image: blog.imageUrl,
-                    images: blog.imageUrls,
+                    imageUrl: blog.imageUrl,
+                    imageUrls: blog.imageUrls,
                     tags: blog.tags,
                   };
                   return <BlogCard key={blog._id} blog={transformedBlog} />;
