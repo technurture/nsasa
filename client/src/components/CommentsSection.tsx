@@ -6,10 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Heart, MessageCircle, MoreHorizontal, Reply, Flag } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Comment {
   id: string;
@@ -27,7 +29,7 @@ interface Comment {
 
 interface CommentsSectionProps {
   blogPostId: string;
-  comments: Comment[];
+  comments?: Comment[];
   currentUser?: {
     name: string;
     avatar?: string;
@@ -38,7 +40,7 @@ interface CommentsSectionProps {
 
 export default function CommentsSection({ 
   blogPostId,
-  comments, 
+  comments: propComments, 
   currentUser, 
   onAddComment, 
   onReportComment 
@@ -47,7 +49,16 @@ export default function CommentsSection({
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+
+  // Fetch comments from API
+  const { data: fetchedComments, isLoading, error } = useQuery<any[]>({
+    queryKey: ['/api/blogs', blogPostId, 'comments'],
+    enabled: !!blogPostId
+  });
+
+  // Use fetched comments if available, otherwise use prop comments
+  const comments = fetchedComments || propComments || [];
 
   const likeCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
@@ -83,10 +94,46 @@ export default function CommentsSection({
     },
   });
 
+  const createCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await apiRequest('POST', `/api/blogs/${blogPostId}/comments`, {
+        content
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/blogs', blogPostId, 'comments'] });
+      toast({
+        title: "Success",
+        description: "Comment added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmitComment = () => {
     if (!newComment.trim()) return;
     
-    onAddComment?.(newComment);
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add a comment",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (onAddComment) {
+      onAddComment(newComment);
+    } else {
+      createCommentMutation.mutate(newComment);
+    }
     setNewComment("");
   };
 
@@ -249,6 +296,49 @@ export default function CommentsSection({
       </div>
     );
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Comments
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Comments
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertDescription>
+              Failed to load comments. Please try again later.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
