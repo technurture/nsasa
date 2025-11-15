@@ -48,18 +48,19 @@ export const uploadToCloudinary = async (
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
   
-  // Add optional parameters
+  // Add optional parameters (only those allowed for unsigned uploads)
   if (options.folder) {
     formData.append('folder', options.folder);
   }
-  
-  if (options.resourceType) {
-    formData.append('resource_type', options.resourceType);
-  }
+
+  // Determine the resource type for the URL
+  const resourceType = options.resourceType || 'image';
 
   try {
+    console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+    
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${options.resourceType || 'auto'}/upload`,
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
       {
         method: 'POST',
         body: formData,
@@ -70,13 +71,17 @@ export const uploadToCloudinary = async (
       let errorMessage = 'Upload failed';
       try {
         const errorData = await response.json();
-        console.error('Cloudinary API error:', errorData);
+        console.error('❌ Cloudinary API error:', errorData);
         errorMessage = errorData.error?.message || `Upload failed with status ${response.status}`;
         
         if (response.status === 400) {
-          errorMessage = 'Invalid upload request. Please check your file and try again.';
+          if (errorData.error?.message?.includes('preset')) {
+            errorMessage = 'Upload preset configuration error. Make sure the preset is set to "Unsigned" mode in Cloudinary settings.';
+          } else {
+            errorMessage = `Invalid upload request: ${errorData.error?.message || 'Please check your file and try again.'}`;
+          }
         } else if (response.status === 401 || response.status === 403) {
-          errorMessage = 'Upload preset not configured correctly. Please contact support.';
+          errorMessage = 'Upload preset not configured correctly. Ensure the preset "Nsasa001" is set to "Unsigned" mode in Cloudinary.';
         }
       } catch (parseError) {
         console.error('Error parsing Cloudinary error response:', parseError);
@@ -85,9 +90,10 @@ export const uploadToCloudinary = async (
     }
 
     const result = await response.json();
+    console.log('✅ Upload successful:', result.secure_url);
     return result;
   } catch (error: any) {
-    console.error('Cloudinary upload error:', error);
+    console.error('❌ Cloudinary upload error:', error);
     
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
       throw new Error('Network error. Please check your internet connection and try again.');
