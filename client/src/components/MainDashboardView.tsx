@@ -583,7 +583,7 @@ function EventFormModal({
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price (in cents, 0 for free)</FormLabel>
+                    <FormLabel>Amount in Naira</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value))} data-testid="input-event-price" />
                     </FormControl>
