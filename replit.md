@@ -10,7 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Latest Update: November 15, 2025 - Blog Image Gallery Enhancement**
+**Latest Update: November 15, 2025 - Complete Image Gallery & Nested Comments Rollout**
+
+- ✅ **Event Detail Pages with Image Galleries**: Created EventDetailPage with full image gallery support (featured image + swipeable carousel)
+- ✅ **Learning Resource Detail Pages**: Created LearningResourceDetailPage with multi-image gallery and full-screen modal viewer
+- ✅ **Schema Updates**: Added `imageUrls` array field to both Event and Learning Resource schemas for multiple image support
+- ✅ **Nested/Threaded Comments**: Implemented full nested comment functionality allowing users to reply to other comments
+- ✅ **Comment Backend Fix**: Fixed parentCommentId conversion in MongoDB aggregation to properly organize parent-child comment relationships
+- ✅ **Comment Frontend**: Added reply mutation with proper state management and cache invalidation
+- ✅ **Route Integration**: Registered `/events/:id` and `/resources/:id` routes for detail pages
+- ✅ **Consistent UX**: All image galleries (Blogs, Events, Resources) now share identical functionality and design patterns
+
+**Previous Update: November 15, 2025 - Blog Image Gallery Enhancement**
 
 - ✅ **Fixed Image Gallery Display**: Resolved issue where only 3 out of 4 uploaded images were showing
 - ✅ **Enhanced Gallery Logic**: When a separate featured image exists, all additional images now display in the gallery
