@@ -194,7 +194,7 @@ export class MongoStorage implements IMongoStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    const user = await usersCollection.findOne({ _id: new ObjectId(id) });
+    const user = await usersCollection.findOne({ _id: new ObjectId(id) } as any);
     return user ? { ...user, _id: user._id.toString() } : undefined;
   }
   
@@ -220,7 +220,7 @@ export class MongoStorage implements IMongoStorage {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     
     const result = await usersCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $set: { approvalStatus: status as any, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
@@ -236,7 +236,7 @@ export class MongoStorage implements IMongoStorage {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     
     const result = await usersCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $set: { role: role as any, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
@@ -258,7 +258,7 @@ export class MongoStorage implements IMongoStorage {
     };
     
     const result = await usersCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $set: updateData },
       { returnDocument: 'after' }
     );
@@ -388,11 +388,11 @@ export class MongoStorage implements IMongoStorage {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
     
-    const post = await blogPostsCollection.findOne({ _id: new ObjectId(id) });
+    const post = await blogPostsCollection.findOne({ _id: new ObjectId(id) } as any);
     
     if (!post) return undefined;
     
-    const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) });
+    const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) } as any);
     const commentCount = await commentsCollection.countDocuments({ blogPostId: id });
     
     return {
@@ -408,7 +408,7 @@ export class MongoStorage implements IMongoStorage {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     
     const result = await blogPostsCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $set: { ...post, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
@@ -422,7 +422,7 @@ export class MongoStorage implements IMongoStorage {
   
   async deleteBlogPost(id: string): Promise<void> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    await blogPostsCollection.deleteOne({ _id: new ObjectId(id) });
+    await blogPostsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
   
   async getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]> {
@@ -434,7 +434,7 @@ export class MongoStorage implements IMongoStorage {
       .sort({ createdAt: -1 })
       .toArray();
     
-    const author = await usersCollection.findOne({ _id: new ObjectId(authorId) });
+    const author = await usersCollection.findOne({ _id: new ObjectId(authorId) } as any);
     
     return posts.map(post => ({
       ...post,
@@ -447,7 +447,7 @@ export class MongoStorage implements IMongoStorage {
   async incrementBlogViews(id: string): Promise<void> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     await blogPostsCollection.updateOne(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $inc: { views: 1 } }
     );
   }
@@ -593,7 +593,7 @@ export class MongoStorage implements IMongoStorage {
   
   async deleteComment(id: string): Promise<void> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+    await commentsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
   
   // Event operations
@@ -631,7 +631,7 @@ export class MongoStorage implements IMongoStorage {
     
     const eventsWithOrganizerInfo = await Promise.all(
       events.map(async (event) => {
-        const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) });
+        const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) } as any);
         const registrationCount = await registrationsCollection.countDocuments({ eventId: event._id.toString() });
         return {
           ...event,
@@ -648,7 +648,7 @@ export class MongoStorage implements IMongoStorage {
   
   async getEvent(id: string): Promise<Event | undefined> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
-    const event = await eventsCollection.findOne({ _id: new ObjectId(id) });
+    const event = await eventsCollection.findOne({ _id: new ObjectId(id) } as any);
     return event ? { ...event, _id: event._id.toString() } : undefined;
   }
   
@@ -656,7 +656,7 @@ export class MongoStorage implements IMongoStorage {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
     
     const result = await eventsCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $set: { ...event, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
@@ -670,7 +670,7 @@ export class MongoStorage implements IMongoStorage {
   
   async deleteEvent(id: string): Promise<void> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
-    await eventsCollection.deleteOne({ _id: new ObjectId(id) });
+    await eventsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
   
   async registerForEvent(userId: string, eventId: string): Promise<EventRegistration> {
@@ -739,7 +739,7 @@ export class MongoStorage implements IMongoStorage {
     
     const resourcesWithUploaderInfo = await Promise.all(
       resources.map(async (resource) => {
-        const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) });
+        const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) } as any);
         return {
           ...resource,
           _id: resource._id.toString(),
@@ -754,7 +754,7 @@ export class MongoStorage implements IMongoStorage {
   
   async getLearningResource(id: string): Promise<LearningResource | undefined> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
-    const resource = await resourcesCollection.findOne({ _id: new ObjectId(id) });
+    const resource = await resourcesCollection.findOne({ _id: new ObjectId(id) } as any);
     return resource ? { ...resource, _id: resource._id.toString() } : undefined;
   }
   
@@ -762,7 +762,7 @@ export class MongoStorage implements IMongoStorage {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
     
     const result = await resourcesCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id) } as any,
       { $set: { ...resource, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
@@ -776,13 +776,13 @@ export class MongoStorage implements IMongoStorage {
   
   async deleteLearningResource(id: string): Promise<void> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
-    await resourcesCollection.deleteOne({ _id: new ObjectId(id) });
+    await resourcesCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
   
   async recordResourceDownload(userId: string, resourceId: string): Promise<void> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
     await resourcesCollection.updateOne(
-      { _id: new ObjectId(resourceId) },
+      { _id: new ObjectId(resourceId) } as any,
       { $inc: { downloads: 1 } }
     );
   }
@@ -857,7 +857,7 @@ export class MongoStorage implements IMongoStorage {
   
   async getContactSubmissions(status?: string): Promise<ContactSubmission[]> {
     const contactCollection = await getCollection<ContactSubmission>(COLLECTIONS.CONTACT_SUBMISSIONS);
-    const query = status ? { status } : {};
+    const query = status ? { status: status as any } : {};
     
     const submissions = await contactCollection
       .find(query)
@@ -871,8 +871,8 @@ export class MongoStorage implements IMongoStorage {
     const contactCollection = await getCollection<ContactSubmission>(COLLECTIONS.CONTACT_SUBMISSIONS);
     
     const result = await contactCollection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: { status } },
+      { _id: new ObjectId(id) } as any,
+      { $set: { status: status as any } },
       { returnDocument: 'after' }
     );
     
@@ -1025,7 +1025,7 @@ export class MongoStorage implements IMongoStorage {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
 
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) } as any);
     if (!user) {
       throw new Error('User not found');
     }
@@ -1119,7 +1119,7 @@ export class MongoStorage implements IMongoStorage {
       });
       
       await blogsCollection.updateOne(
-        { _id: new ObjectId(blogPostId) },
+        { _id: new ObjectId(blogPostId) } as any,
         { $inc: { likes: 1 } }
       );
     }
@@ -1133,7 +1133,7 @@ export class MongoStorage implements IMongoStorage {
     
     if (result.deletedCount > 0) {
       await blogsCollection.updateOne(
-        { _id: new ObjectId(blogPostId) },
+        { _id: new ObjectId(blogPostId) } as any,
         { $inc: { likes: -1 } }
       );
     }
@@ -1164,7 +1164,7 @@ export class MongoStorage implements IMongoStorage {
       });
       
       await commentsCollection.updateOne(
-        { _id: new ObjectId(commentId) },
+        { _id: new ObjectId(commentId) } as any,
         { $inc: { likes: 1 } }
       );
     }
@@ -1178,7 +1178,7 @@ export class MongoStorage implements IMongoStorage {
     
     if (result.deletedCount > 0) {
       await commentsCollection.updateOne(
-        { _id: new ObjectId(commentId) },
+        { _id: new ObjectId(commentId) } as any,
         { $inc: { likes: -1 } }
       );
     }
