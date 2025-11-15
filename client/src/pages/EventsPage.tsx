@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import EventCard from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -6,6 +7,8 @@ import { Calendar } from "lucide-react";
 import type { Event } from "@shared/mongoSchema";
 
 export default function EventsPage() {
+  const [, setLocation] = useLocation();
+  
   const { data: events, isLoading, error } = useQuery<Event[]>({
     queryKey: ['/api/events'],
   });
@@ -70,7 +73,7 @@ export default function EventsPage() {
                 event={transformedEvent}
                 onRegister={(id) => console.log('Register for event:', id)}
                 onShare={(id) => console.log('Share event:', id)}
-                onViewDetails={(id) => console.log('View event details:', id)}
+                onViewDetails={(id) => setLocation(`/events/${id}`)}
               />
             );
           })}

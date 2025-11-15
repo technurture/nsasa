@@ -87,6 +87,7 @@ export const eventSchema = z.object({
   
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
+  imageUrls: z.array(z.string()).optional().default([]),
   
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
@@ -128,6 +129,7 @@ export const learningResourceSchema = z.object({
   
   previewAvailable: z.boolean().default(false),
   thumbnailUrl: z.string().optional(),
+  imageUrls: z.array(z.string()).optional().default([]),
   
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),

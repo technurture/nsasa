@@ -538,6 +538,13 @@ export class MongoStorage implements IMongoStorage {
           _id: { $toString: "$_id" },
           authorId: 1,
           blogPostId: 1,
+          parentCommentId: {
+            $cond: {
+              if: "$parentCommentId",
+              then: { $toString: "$parentCommentId" },
+              else: null
+            }
+          },
           content: 1,
           likes: 1,
           createdAt: 1,
@@ -554,7 +561,34 @@ export class MongoStorage implements IMongoStorage {
       }
     ]).toArray();
     
-    return comments as Comment[];
+    // Organize comments into nested structure
+    const allComments = comments as any[];
+    
+    // Separate top-level comments (no parentCommentId) from replies
+    const topLevelComments = allComments.filter(c => !c.parentCommentId);
+    const repliesMap = new Map<string, any[]>();
+    
+    // Group replies by parent comment ID
+    allComments.filter(c => c.parentCommentId).forEach(reply => {
+      if (!repliesMap.has(reply.parentCommentId)) {
+        repliesMap.set(reply.parentCommentId, []);
+      }
+      repliesMap.get(reply.parentCommentId)!.push(reply);
+    });
+    
+    // Recursively attach replies to their parents
+    const attachReplies = (comment: any): any => {
+      const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
+      return {
+        ...comment,
+        replies: replies.map(attachReplies)
+      };
+    };
+    
+    // Attach replies to top-level comments
+    const commentsWithReplies = topLevelComments.map(attachReplies);
+    
+    return commentsWithReplies as Comment[];
   }
   
   async deleteComment(id: string): Promise<void> {

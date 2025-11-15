@@ -117,6 +117,32 @@ export default function CommentsSection({
     },
   });
 
+  const createReplyMutation = useMutation({
+    mutationFn: async ({ content, parentCommentId }: { content: string; parentCommentId: string }) => {
+      const res = await apiRequest('POST', `/api/blogs/${blogPostId}/comments`, {
+        content,
+        parentCommentId
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/blogs', blogPostId, 'comments'] });
+      setReplyContent("");
+      setReplyingTo(null);
+      toast({
+        title: "Success",
+        description: "Reply added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add reply",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmitComment = () => {
     if (!newComment.trim()) return;
     
@@ -140,9 +166,20 @@ export default function CommentsSection({
   const handleSubmitReply = (parentId: string) => {
     if (!replyContent.trim()) return;
     
-    onAddComment?.(replyContent, parentId);
-    setReplyContent("");
-    setReplyingTo(null);
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add a reply",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (onAddComment) {
+      onAddComment(replyContent, parentId);
+    } else {
+      createReplyMutation.mutate({ content: replyContent, parentCommentId: parentId });
+    }
   };
 
   const handleLike = (comment: Comment) => {

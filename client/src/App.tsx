@@ -39,6 +39,8 @@ import MainDashboardView, {
 import BlogsPage from "@/pages/BlogsPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
 import EventsPage from "@/pages/EventsPage";
+import EventDetailPage from "@/pages/EventDetailPage";
+import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
 
 // Main Pages
 function LandingPage() {
@@ -478,7 +480,9 @@ function MainRouter() {
           <Route path="/" component={LandingPage} />
           <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
+          <Route path="/events/:id" component={EventDetailPage} />
           <Route path="/events" component={EventsPage} />
+          <Route path="/resources/:id" component={LearningResourceDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
@@ -501,7 +505,9 @@ function MainRouter() {
           {/* Public pages with regular layout for authenticated users */}
           <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
+          <Route path="/events/:id" component={EventDetailPage} />
           <Route path="/events" component={EventsPage} />
+          <Route path="/resources/:id" component={LearningResourceDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
           <Route path="/about" component={AboutPage} />
