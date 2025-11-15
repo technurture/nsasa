@@ -10,7 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Latest Update: October 03, 2025 - GitHub Import Successfully Configured**
+**Latest Update: November 15, 2025 - Blog Image Gallery Enhancement**
+
+- ✅ **Fixed Image Gallery Display**: Resolved issue where only 3 out of 4 uploaded images were showing
+- ✅ **Enhanced Gallery Logic**: When a separate featured image exists, all additional images now display in the gallery
+- ✅ **Full-Screen Image Viewer**: Added clickable images that open in a full-screen modal
+- ✅ **Image Navigation**: Users can now swipe through all images using navigation arrows or click to view full-size
+- ✅ **Image Counter**: Modal shows current image position (e.g., "2 / 4")
+- ✅ **Responsive Design**: Gallery and modal work seamlessly on all screen sizes
+
+**Previous Update: October 03, 2025 - GitHub Import Successfully Configured**
 
 - ✅ **Successfully Imported from GitHub**: Fresh clone configured for Replit environment
 - ✅ **MongoDB Connected**: Connected to technurture619_db database via DATABASE_URL
