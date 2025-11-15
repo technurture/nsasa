@@ -302,45 +302,103 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     
-    const posts = await blogPostsCollection
-      .find({ published: true })
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
-      .toArray();
+    const posts = await blogPostsCollection.aggregate([
+      { $match: { published: true } },
+      { $sort: { createdAt: -1 } },
+      { $skip: offset },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: COLLECTIONS.COMMENTS,
+          let: { blogId: { $toString: "$_id" } },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$blogPostId", "$$blogId"] } } },
+            { $count: "count" }
+          ],
+          as: "commentsCount"
+        }
+      },
+      {
+        $addFields: {
+          commentCount: { $ifNull: [{ $arrayElemAt: ["$commentsCount.count", 0] }, 0] }
+        }
+      },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { 
+            authorId: { 
+              $convert: { 
+                input: "$authorId", 
+                to: "objectId",
+                onError: null,
+                onNull: null
+              } 
+            } 
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          title: 1,
+          content: 1,
+          excerpt: 1,
+          category: 1,
+          tags: 1,
+          featuredImageUrl: 1,
+          published: 1,
+          likes: 1,
+          views: 1,
+          readTime: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          commentCount: 1,
+          authorName: {
+            $cond: {
+              if: "$authorData",
+              then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+              else: "Unknown Author"
+            }
+          },
+          authorAvatar: "$authorData.profileImageUrl"
+        }
+      }
+    ]).toArray();
     
-    const postsWithAuthorInfo = await Promise.all(
-      posts.map(async (post) => {
-        const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) });
-        return {
-          ...post,
-          _id: post._id.toString(),
-          authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
-          authorAvatar: author?.profileImageUrl
-        } as any;
-      })
-    );
-    
-    return postsWithAuthorInfo as BlogPost[];
+    return posts as BlogPost[];
   }
   
   async getBlogPost(id: string): Promise<BlogPost | undefined> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
     
     const post = await blogPostsCollection.findOne({ _id: new ObjectId(id) });
     
     if (!post) return undefined;
     
     const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) });
+    const commentCount = await commentsCollection.countDocuments({ blogPostId: id });
     
     return {
       ...post,
       _id: post._id.toString(),
       authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
-      authorAvatar: author?.profileImageUrl
+      authorAvatar: author?.profileImageUrl,
+      commentCount
     } as any;
   }
   
@@ -416,12 +474,85 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogComments(blogPostId: string): Promise<Comment[]> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    const comments = await commentsCollection
-      .find({ blogPostId })
-      .sort({ createdAt: -1 })
-      .toArray();
     
-    return comments.map(comment => ({ ...comment, _id: comment._id.toString() }));
+    const comments = await commentsCollection.aggregate([
+      { $match: { blogPostId } },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { 
+            authorId: { 
+              $convert: { 
+                input: "$authorId", 
+                to: "objectId",
+                onError: null,
+                onNull: null
+              } 
+            } 
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          author: {
+            name: {
+              $cond: {
+                if: "$authorData",
+                then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+                else: "Unknown Author"
+              }
+            },
+            avatar: {
+              $cond: {
+                if: "$authorData.profileImageUrl",
+                then: "$authorData.profileImageUrl",
+                else: { $concat: ["https://api.dicebear.com/7.x/avataaars/svg?seed=", "$authorId"] }
+              }
+            },
+            level: {
+              $cond: {
+                if: "$authorData.level",
+                then: "$authorData.level",
+                else: "Student"
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          id: { $toString: "$_id" },
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          blogPostId: 1,
+          content: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          author: 1,
+          timestamp: {
+            $cond: {
+              if: { $eq: [{ $type: "$createdAt" }, "date"] },
+              then: { $dateToString: { date: "$createdAt", format: "%Y-%m-%dT%H:%M:%S.%LZ" } },
+              else: "$createdAt"
+            }
+          }
+        }
+      }
+    ]).toArray();
+    
+    return comments as Comment[];
   }
   
   async deleteComment(id: string): Promise<void> {

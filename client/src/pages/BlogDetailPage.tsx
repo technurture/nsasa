@@ -260,7 +260,7 @@ export default function BlogDetailPage() {
               data-testid="button-comment"
             >
               <MessageCircle className="h-5 w-5" />
-              <span>0</span>
+              <span>{blog.commentCount || 0}</span>
             </Button>
 
             <Button

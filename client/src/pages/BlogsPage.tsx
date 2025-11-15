@@ -65,7 +65,7 @@ export default function BlogsPage() {
               publishedAt: new Date(blog.createdAt).toISOString().split('T')[0],
               readTime: blog.readTime,
               likes: blog.likes,
-              comments: 0, // TODO: Get actual comment count
+              comments: blog.commentCount || 0,
               views: blog.views,
               imageUrl: blog.imageUrl,
               imageUrls: blog.imageUrls,
