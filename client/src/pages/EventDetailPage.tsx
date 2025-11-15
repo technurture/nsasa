@@ -302,7 +302,7 @@ export default function EventDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-medium" data-testid="text-price">
-                    {event.price > 0 ? `$${(event.price / 100).toFixed(2)}` : 'Free'}
+                    {event.price > 0 ? `₦${(event.price / 100).toFixed(2)}` : 'Free'}
                   </p>
                 </div>
               </div>
