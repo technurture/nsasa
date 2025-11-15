@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card } from "@/components/ui/card";
-import {  ArrowLeft, Calendar, Clock, Eye, Heart, MessageCircle, Share2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {  ArrowLeft, Calendar, Clock, Eye, Heart, MessageCircle, Share2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -24,6 +25,8 @@ export default function BlogDetailPage() {
   const { toast } = useToast();
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const { data: blog, isLoading, error } = useQuery<any>({
     queryKey: ['/api/blogs', blogId],
@@ -144,6 +147,32 @@ export default function BlogDetailPage() {
   };
 
   const displayImage = blog.imageUrl || (blog.imageUrls && blog.imageUrls.length > 0 ? blog.imageUrls[0] : undefined);
+  
+  const galleryImages = blog.imageUrl 
+    ? (blog.imageUrls || [])
+    : (blog.imageUrls && blog.imageUrls.length > 1 ? blog.imageUrls.slice(1) : []);
+  
+  const allImages = [displayImage, ...galleryImages].filter(Boolean);
+  
+  const openImageModal = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageModalOpen(true);
+  };
+  
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setSelectedImageIndex(null);
+  };
+  
+  const navigateImage = (direction: 'prev' | 'next') => {
+    if (selectedImageIndex === null) return;
+    
+    if (direction === 'prev') {
+      setSelectedImageIndex((selectedImageIndex - 1 + allImages.length) % allImages.length);
+    } else {
+      setSelectedImageIndex((selectedImageIndex + 1) % allImages.length);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -163,7 +192,11 @@ export default function BlogDetailPage() {
         <article>
           {/* Featured Image */}
           {displayImage && (
-            <div className="aspect-video w-full overflow-hidden rounded-md mb-8">
+            <div 
+              className="aspect-video w-full overflow-hidden rounded-md mb-8 cursor-pointer hover-elevate"
+              onClick={() => openImageModal(0)}
+              data-testid="img-featured-container"
+            >
               <img 
                 src={displayImage} 
                 alt={blog.title}
@@ -242,7 +275,7 @@ export default function BlogDetailPage() {
           />
 
           {/* Additional Images Gallery - Swipeable Carousel */}
-          {blog.imageUrls && blog.imageUrls.length > 1 && (
+          {galleryImages.length > 0 && (
             <div className="mb-12">
               <h2 className="text-2xl font-semibold mb-6">Gallery</h2>
               <Carousel
@@ -253,11 +286,11 @@ export default function BlogDetailPage() {
                 className="w-full"
               >
                 <CarouselContent className="-ml-2 md:-ml-4">
-                  {blog.imageUrls.slice(1).map((imageUrl, index) => (
+                  {galleryImages.map((imageUrl: string, index: number) => (
                     <CarouselItem key={index} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
                       <Card 
                         className="overflow-hidden hover-elevate transition-all cursor-pointer border-0"
-                        onClick={() => window.open(imageUrl, '_blank')}
+                        onClick={() => openImageModal(index + 1)}
                         data-testid={`img-gallery-slide-${index}`}
                       >
                         <div className="aspect-video w-full overflow-hidden bg-muted">
@@ -328,6 +361,70 @@ export default function BlogDetailPage() {
           </div>
         </article>
       </div>
+      
+      {/* Full Screen Image Modal */}
+      <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Close Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 z-50 text-white hover:bg-white/20"
+              onClick={closeImageModal}
+              data-testid="button-close-modal"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            
+            {/* Navigation Buttons */}
+            {allImages.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-4 z-50 text-white hover:bg-white/20"
+                  onClick={() => navigateImage('prev')}
+                  data-testid="button-prev-image"
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 z-50 text-white hover:bg-white/20"
+                  onClick={() => navigateImage('next')}
+                  data-testid="button-next-image"
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </Button>
+              </>
+            )}
+            
+            {/* Image Display */}
+            {selectedImageIndex !== null && allImages[selectedImageIndex] && (
+              <div className="w-full h-full flex items-center justify-center p-12">
+                <img
+                  src={allImages[selectedImageIndex]}
+                  alt={`${blog.title} - Full size`}
+                  className="max-w-full max-h-full object-contain"
+                  data-testid="img-modal-display"
+                />
+              </div>
+            )}
+            
+            {/* Image Counter */}
+            {allImages.length > 1 && selectedImageIndex !== null && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-md">
+                <span className="text-sm">
+                  {selectedImageIndex + 1} / {allImages.length}
+                </span>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
