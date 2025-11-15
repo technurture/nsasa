@@ -239,6 +239,29 @@ export default function BlogDetailPage() {
             dangerouslySetInnerHTML={{ __html: blog.content }}
           />
 
+          {/* Additional Images Gallery */}
+          {blog.imageUrls && blog.imageUrls.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-2xl font-semibold mb-6">Gallery</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {blog.imageUrls.map((imageUrl, index) => (
+                  <div 
+                    key={index} 
+                    className="aspect-video w-full overflow-hidden rounded-md bg-muted hover-elevate transition-all cursor-pointer"
+                    onClick={() => window.open(imageUrl, '_blank')}
+                    data-testid={`img-gallery-${index}`}
+                  >
+                    <img 
+                      src={imageUrl} 
+                      alt={`${blog.title} - Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Engagement Actions */}
           <div className="flex items-center gap-4 py-8 border-t border-b">
             <Button
