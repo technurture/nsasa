@@ -23,9 +23,10 @@ interface EventCardProps {
   onRegister?: (id: string) => void;
   onShare?: (id: string) => void;
   onViewDetails?: (id: string) => void;
+  onReadMore?: (id: string) => void;
 }
 
-export default function EventCard({ event, onRegister, onShare, onViewDetails }: EventCardProps) {
+export default function EventCard({ event, onRegister, onShare, onViewDetails, onReadMore }: EventCardProps) {
   const [isRegistered, setIsRegistered] = useState(false);
 
   const handleRegister = () => {
@@ -80,7 +81,7 @@ export default function EventCard({ event, onRegister, onShare, onViewDetails }:
           </Badge>
           {event.price && (
             <Badge variant="outline" className="text-green-600">
-              ${event.price}
+              ₦{event.price}
             </Badge>
           )}
           {!event.price && (
@@ -96,7 +97,7 @@ export default function EventCard({ event, onRegister, onShare, onViewDetails }:
         </h3>
 
         {/* Description */}
-        <p className="text-muted-foreground line-clamp-2" data-testid={`text-description-${event.id}`}>
+        <p className="text-muted-foreground line-clamp-3" data-testid={`text-description-${event.id}`}>
           {event.description}
         </p>
 
@@ -150,7 +151,7 @@ export default function EventCard({ event, onRegister, onShare, onViewDetails }:
         </p>
       </CardHeader>
 
-      <CardFooter className="flex items-center justify-between pt-0">
+      <CardFooter className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-0">
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-1">
           {!isRegistered && !isFull && (
@@ -184,9 +185,17 @@ export default function EventCard({ event, onRegister, onShare, onViewDetails }:
               Event Full
             </Button>
           )}
+
+          <Button 
+            size="sm"
+            onClick={() => onReadMore?.(event.id)}
+            data-testid={`button-read-more-${event.id}`}
+          >
+            Read More
+          </Button>
         </div>
 
-        <div className="flex items-center gap-1 ml-2">
+        <div className="flex items-center gap-1">
           <Button 
             variant="ghost" 
             size="icon"
