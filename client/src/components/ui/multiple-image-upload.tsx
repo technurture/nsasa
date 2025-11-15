@@ -95,8 +95,12 @@ export function MultipleImageUpload({
   }, [maxSize, maxFiles, value.length, onError]);
 
   const handleUpload = useCallback(async () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0) {
+      console.warn('⚠️ No files selected to upload');
+      return;
+    }
 
+    console.log(`🚀 Starting upload of ${selectedFiles.length} files...`);
     setIsUploading(true);
     setUploadProgress(0);
     setError(null);
@@ -106,11 +110,14 @@ export function MultipleImageUpload({
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 100);
 
+      console.log('📤 Calling uploadMultipleToCloudinary...');
       const results: CloudinaryUploadResult[] = await uploadMultipleToCloudinary(selectedFiles, {
         folder,
         resourceType: 'image'
       });
 
+      console.log('✅ Upload complete! Results:', results.length);
+      
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -118,6 +125,7 @@ export function MultipleImageUpload({
       setUploadProgress(100);
 
       const urls = results.map(r => r.secure_url);
+      console.log('📝 Updating form with URLs:', urls);
       onChange([...value, ...urls]);
       setPreviews(prev => {
         const uploadedCount = selectedFiles.length;
@@ -130,12 +138,14 @@ export function MultipleImageUpload({
       }
 
     } catch (err: any) {
+      console.error('❌ Upload failed:', err);
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
       }
-      setError(err.message || 'Upload failed');
-      onError?.(err.message || 'Upload failed');
+      const errorMessage = err.message || 'Upload failed';
+      setError(errorMessage);
+      onError?.(errorMessage);
       setPreviews(prev => prev.slice(0, value.length));
     } finally {
       setIsUploading(false);
