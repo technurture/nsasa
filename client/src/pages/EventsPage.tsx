@@ -100,10 +100,10 @@ export default function EventsPage() {
               location: event.location,
               type: event.type,
               capacity: event.capacity,
-              registered: 0, // TODO: Get actual registration count
-              price: event.price, // Price in Naira
+              registered: (event as any).registrationCount || 0,
+              price: event.price,
               image: event.imageUrl,
-              organizer: event.organizerId, // TODO: Fetch organizer name
+              organizer: (event as any).organizerName || event.organizerId,
               tags: event.tags,
             };
 
@@ -112,8 +112,6 @@ export default function EventsPage() {
                 key={event._id} 
                 event={transformedEvent}
                 onRegister={handleRegister}
-                onShare={(id) => console.log('Share event:', id)}
-                onViewDetails={(id) => setLocation(`/events/${id}`)}
                 onReadMore={(id) => setLocation(`/events/${id}`)}
               />
             );

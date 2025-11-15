@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Users, ExternalLink } from "lucide-react";
+import { Calendar, Clock, MapPin, Users } from "lucide-react";
 import { useState } from "react";
 
 interface EventCardProps {
@@ -21,12 +21,10 @@ interface EventCardProps {
     tags: string[];
   };
   onRegister?: (id: string) => void;
-  onShare?: (id: string) => void;
-  onViewDetails?: (id: string) => void;
   onReadMore?: (id: string) => void;
 }
 
-export default function EventCard({ event, onRegister, onShare, onViewDetails, onReadMore }: EventCardProps) {
+export default function EventCard({ event, onRegister, onReadMore }: EventCardProps) {
   const [isRegistered, setIsRegistered] = useState(false);
 
   const handleRegister = () => {
@@ -192,26 +190,6 @@ export default function EventCard({ event, onRegister, onShare, onViewDetails, o
             data-testid={`button-read-more-${event.id}`}
           >
             Read More
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => onShare?.(event.id)}
-            data-testid={`button-share-${event.id}`}
-          >
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => onViewDetails?.(event.id)}
-            data-testid={`button-details-${event.id}`}
-          >
-            <ExternalLink className="h-4 w-4" />
           </Button>
         </div>
       </CardFooter>

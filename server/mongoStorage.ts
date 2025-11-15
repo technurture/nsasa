@@ -620,6 +620,7 @@ export class MongoStorage implements IMongoStorage {
   async getEvents(limit = 20, offset = 0): Promise<Event[]> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
     
     const events = await eventsCollection
       .find({})
@@ -631,11 +632,13 @@ export class MongoStorage implements IMongoStorage {
     const eventsWithOrganizerInfo = await Promise.all(
       events.map(async (event) => {
         const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) });
+        const registrationCount = await registrationsCollection.countDocuments({ eventId: event._id.toString() });
         return {
           ...event,
           _id: event._id.toString(),
           organizerName: organizer ? `${organizer.firstName} ${organizer.lastName}` : 'Unknown Organizer',
-          organizerAvatar: organizer?.profileImageUrl
+          organizerAvatar: organizer?.profileImageUrl,
+          registrationCount
         } as any;
       })
     );
