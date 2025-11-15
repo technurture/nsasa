@@ -358,6 +358,8 @@ export class MongoStorage implements IMongoStorage {
           excerpt: 1,
           category: 1,
           tags: 1,
+          imageUrl: 1,
+          imageUrls: 1,
           featuredImageUrl: 1,
           published: 1,
           likes: 1,
