@@ -5,6 +5,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Card } from "@/components/ui/card";
 import {  ArrowLeft, Calendar, Clock, Eye, Heart, MessageCircle, Share2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
@@ -239,26 +241,49 @@ export default function BlogDetailPage() {
             dangerouslySetInnerHTML={{ __html: blog.content }}
           />
 
-          {/* Additional Images Gallery */}
-          {blog.imageUrls && blog.imageUrls.length > 0 && (
+          {/* Additional Images Gallery - Swipeable Carousel */}
+          {blog.imageUrls && blog.imageUrls.length > 1 && (
             <div className="mb-12">
               <h2 className="text-2xl font-semibold mb-6">Gallery</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {blog.imageUrls.map((imageUrl, index) => (
-                  <div 
-                    key={index} 
-                    className="aspect-video w-full overflow-hidden rounded-md bg-muted hover-elevate transition-all cursor-pointer"
-                    onClick={() => window.open(imageUrl, '_blank')}
-                    data-testid={`img-gallery-${index}`}
-                  >
-                    <img 
-                      src={imageUrl} 
-                      alt={`${blog.title} - Image ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: true,
+                }}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {blog.imageUrls.slice(1).map((imageUrl, index) => (
+                    <CarouselItem key={index} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
+                      <Card 
+                        className="overflow-hidden hover-elevate transition-all cursor-pointer border-0"
+                        onClick={() => window.open(imageUrl, '_blank')}
+                        data-testid={`img-gallery-slide-${index}`}
+                      >
+                        <div className="aspect-video w-full overflow-hidden bg-muted">
+                          <img 
+                            src={imageUrl} 
+                            alt={`${blog.title} - Image ${index + 2}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious 
+                  className="hidden sm:flex -left-12" 
+                  data-testid="button-gallery-prev"
+                />
+                <CarouselNext 
+                  className="hidden sm:flex -right-12" 
+                  data-testid="button-gallery-next"
+                />
+              </Carousel>
+              <p className="text-sm text-muted-foreground text-center mt-4">
+                Swipe or use arrows to view more images • Click any image to view full size
+              </p>
             </div>
           )}
 
