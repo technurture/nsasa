@@ -93,6 +93,16 @@ export interface IMongoStorage {
   getUserGamificationStats(userId: string): Promise<any>;
   getLeaderboard(): Promise<any[]>;
   getUserBadges(userId: string): Promise<any[]>;
+  
+  // Like operations
+  likeBlogPost(userId: string, blogPostId: string): Promise<void>;
+  unlikeBlogPost(userId: string, blogPostId: string): Promise<void>;
+  getBlogLikesCount(blogPostId: string): Promise<number>;
+  isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean>;
+  likeComment(userId: string, commentId: string): Promise<void>;
+  unlikeComment(userId: string, commentId: string): Promise<void>;
+  getCommentLikesCount(commentId: string): Promise<number>;
+  isCommentLikedByUser(userId: string, commentId: string): Promise<boolean>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -273,6 +283,9 @@ export class MongoStorage implements IMongoStorage {
     const blogPostDoc: Omit<BlogPost, '_id'> = {
       ...post,
       authorId,
+      likes: post.likes ?? 0,
+      views: post.views ?? 0,
+      readTime: post.readTime ?? 5,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -289,20 +302,106 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    const posts = await blogPostsCollection
-      .find({ published: true })
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
-      .toArray();
     
-    return posts.map(post => ({ ...post, _id: post._id.toString() }));
+    const posts = await blogPostsCollection.aggregate([
+      { $match: { published: true } },
+      { $sort: { createdAt: -1 } },
+      { $skip: offset },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: COLLECTIONS.COMMENTS,
+          let: { blogId: { $toString: "$_id" } },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$blogPostId", "$$blogId"] } } },
+            { $count: "count" }
+          ],
+          as: "commentsCount"
+        }
+      },
+      {
+        $addFields: {
+          commentCount: { $ifNull: [{ $arrayElemAt: ["$commentsCount.count", 0] }, 0] }
+        }
+      },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { 
+            authorId: { 
+              $convert: { 
+                input: "$authorId", 
+                to: "objectId",
+                onError: null,
+                onNull: null
+              } 
+            } 
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          title: 1,
+          content: 1,
+          excerpt: 1,
+          category: 1,
+          tags: 1,
+          imageUrl: 1,
+          imageUrls: 1,
+          featuredImageUrl: 1,
+          published: 1,
+          likes: 1,
+          views: 1,
+          readTime: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          commentCount: 1,
+          authorName: {
+            $cond: {
+              if: "$authorData",
+              then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+              else: "Unknown Author"
+            }
+          },
+          authorAvatar: "$authorData.profileImageUrl"
+        }
+      }
+    ]).toArray();
+    
+    return posts as BlogPost[];
   }
   
   async getBlogPost(id: string): Promise<BlogPost | undefined> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
     const post = await blogPostsCollection.findOne({ _id: new ObjectId(id) });
-    return post ? { ...post, _id: post._id.toString() } : undefined;
+    
+    if (!post) return undefined;
+    
+    const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) });
+    const commentCount = await commentsCollection.countDocuments({ blogPostId: id });
+    
+    return {
+      ...post,
+      _id: post._id.toString(),
+      authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
+      authorAvatar: author?.profileImageUrl,
+      commentCount
+    } as any;
   }
   
   async updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost> {
@@ -328,12 +427,21 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const posts = await blogPostsCollection
       .find({ authorId })
       .sort({ createdAt: -1 })
       .toArray();
     
-    return posts.map(post => ({ ...post, _id: post._id.toString() }));
+    const author = await usersCollection.findOne({ _id: new ObjectId(authorId) });
+    
+    return posts.map(post => ({
+      ...post,
+      _id: post._id.toString(),
+      authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown Author',
+      authorAvatar: author?.profileImageUrl
+    })) as BlogPost[];
   }
   
   async incrementBlogViews(id: string): Promise<void> {
@@ -368,12 +476,119 @@ export class MongoStorage implements IMongoStorage {
   
   async getBlogComments(blogPostId: string): Promise<Comment[]> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    const comments = await commentsCollection
-      .find({ blogPostId })
-      .sort({ createdAt: -1 })
-      .toArray();
     
-    return comments.map(comment => ({ ...comment, _id: comment._id.toString() }));
+    const comments = await commentsCollection.aggregate([
+      { $match: { blogPostId } },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { 
+            authorId: { 
+              $convert: { 
+                input: "$authorId", 
+                to: "objectId",
+                onError: null,
+                onNull: null
+              } 
+            } 
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          author: {
+            name: {
+              $cond: {
+                if: "$authorData",
+                then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+                else: "Unknown Author"
+              }
+            },
+            avatar: {
+              $cond: {
+                if: "$authorData.profileImageUrl",
+                then: "$authorData.profileImageUrl",
+                else: { $concat: ["https://api.dicebear.com/7.x/avataaars/svg?seed=", "$authorId"] }
+              }
+            },
+            level: {
+              $cond: {
+                if: "$authorData.level",
+                then: "$authorData.level",
+                else: "Student"
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          id: { $toString: "$_id" },
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          blogPostId: 1,
+          parentCommentId: {
+            $cond: {
+              if: "$parentCommentId",
+              then: { $toString: "$parentCommentId" },
+              else: null
+            }
+          },
+          content: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          author: 1,
+          timestamp: {
+            $cond: {
+              if: { $eq: [{ $type: "$createdAt" }, "date"] },
+              then: { $dateToString: { date: "$createdAt", format: "%Y-%m-%dT%H:%M:%S.%LZ" } },
+              else: "$createdAt"
+            }
+          }
+        }
+      }
+    ]).toArray();
+    
+    // Organize comments into nested structure
+    const allComments = comments as any[];
+    
+    // Separate top-level comments (no parentCommentId) from replies
+    const topLevelComments = allComments.filter(c => !c.parentCommentId);
+    const repliesMap = new Map<string, any[]>();
+    
+    // Group replies by parent comment ID
+    allComments.filter(c => c.parentCommentId).forEach(reply => {
+      if (!repliesMap.has(reply.parentCommentId)) {
+        repliesMap.set(reply.parentCommentId, []);
+      }
+      repliesMap.get(reply.parentCommentId)!.push(reply);
+    });
+    
+    // Recursively attach replies to their parents
+    const attachReplies = (comment: any): any => {
+      const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
+      return {
+        ...comment,
+        replies: replies.map(attachReplies)
+      };
+    };
+    
+    // Attach replies to top-level comments
+    const commentsWithReplies = topLevelComments.map(attachReplies);
+    
+    return commentsWithReplies as Comment[];
   }
   
   async deleteComment(id: string): Promise<void> {
@@ -404,6 +619,8 @@ export class MongoStorage implements IMongoStorage {
   
   async getEvents(limit = 20, offset = 0): Promise<Event[]> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const events = await eventsCollection
       .find({})
       .sort({ date: -1 })
@@ -411,7 +628,19 @@ export class MongoStorage implements IMongoStorage {
       .limit(limit)
       .toArray();
     
-    return events.map(event => ({ ...event, _id: event._id.toString() }));
+    const eventsWithOrganizerInfo = await Promise.all(
+      events.map(async (event) => {
+        const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) });
+        return {
+          ...event,
+          _id: event._id.toString(),
+          organizerName: organizer ? `${organizer.firstName} ${organizer.lastName}` : 'Unknown Organizer',
+          organizerAvatar: organizer?.profileImageUrl
+        } as any;
+      })
+    );
+    
+    return eventsWithOrganizerInfo as Event[];
   }
   
   async getEvent(id: string): Promise<Event | undefined> {
@@ -496,6 +725,8 @@ export class MongoStorage implements IMongoStorage {
   
   async getLearningResources(limit = 20, offset = 0): Promise<LearningResource[]> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const resources = await resourcesCollection
       .find({})
       .sort({ createdAt: -1 })
@@ -503,7 +734,19 @@ export class MongoStorage implements IMongoStorage {
       .limit(limit)
       .toArray();
     
-    return resources.map(resource => ({ ...resource, _id: resource._id.toString() }));
+    const resourcesWithUploaderInfo = await Promise.all(
+      resources.map(async (resource) => {
+        const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) });
+        return {
+          ...resource,
+          _id: resource._id.toString(),
+          uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : 'Unknown Uploader',
+          uploaderAvatar: uploader?.profileImageUrl
+        } as any;
+      })
+    );
+    
+    return resourcesWithUploaderInfo as LearningResource[];
   }
   
   async getLearningResource(id: string): Promise<LearningResource | undefined> {
@@ -856,6 +1099,97 @@ export class MongoStorage implements IMongoStorage {
     ]);
 
     return this.calculateUserBadges(userBlogs, userComments, userEvents);
+  }
+
+  // Like operations
+  async likeBlogPost(userId: string, blogPostId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    
+    const existingLike = await likesCollection.findOne({ userId, blogPostId });
+    
+    if (!existingLike) {
+      await likesCollection.insertOne({
+        userId,
+        blogPostId,
+        createdAt: new Date(),
+      });
+      
+      await blogsCollection.updateOne(
+        { _id: new ObjectId(blogPostId) },
+        { $inc: { likes: 1 } }
+      );
+    }
+  }
+  
+  async unlikeBlogPost(userId: string, blogPostId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+    
+    const result = await likesCollection.deleteOne({ userId, blogPostId });
+    
+    if (result.deletedCount > 0) {
+      await blogsCollection.updateOne(
+        { _id: new ObjectId(blogPostId) },
+        { $inc: { likes: -1 } }
+      );
+    }
+  }
+  
+  async getBlogLikesCount(blogPostId: string): Promise<number> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    return await likesCollection.countDocuments({ blogPostId });
+  }
+  
+  async isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const like = await likesCollection.findOne({ userId, blogPostId });
+    return !!like;
+  }
+  
+  async likeComment(userId: string, commentId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    const existingLike = await likesCollection.findOne({ userId, commentId });
+    
+    if (!existingLike) {
+      await likesCollection.insertOne({
+        userId,
+        commentId,
+        createdAt: new Date(),
+      });
+      
+      await commentsCollection.updateOne(
+        { _id: new ObjectId(commentId) },
+        { $inc: { likes: 1 } }
+      );
+    }
+  }
+  
+  async unlikeComment(userId: string, commentId: string): Promise<void> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    const result = await likesCollection.deleteOne({ userId, commentId });
+    
+    if (result.deletedCount > 0) {
+      await commentsCollection.updateOne(
+        { _id: new ObjectId(commentId) },
+        { $inc: { likes: -1 } }
+      );
+    }
+  }
+  
+  async getCommentLikesCount(commentId: string): Promise<number> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    return await likesCollection.countDocuments({ commentId });
+  }
+  
+  async isCommentLikedByUser(userId: string, commentId: string): Promise<boolean> {
+    const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
+    const like = await likesCollection.findOne({ userId, commentId });
+    return !!like;
   }
 
   private calculateUserBadges(blogCount: number, commentCount: number, eventCount: number): any[] {

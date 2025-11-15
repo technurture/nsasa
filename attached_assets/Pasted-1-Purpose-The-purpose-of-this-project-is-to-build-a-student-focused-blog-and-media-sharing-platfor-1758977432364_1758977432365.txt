@@ -1,0 +1,199 @@
+1. Purpose
+
+The purpose of this project is to build a student-focused blog and media-sharing platform tailored for the Department of Social Science. The platform will allow students and admins to create, share, and engage with multimedia content (blogs, images, videos, PDFs). It will also feature structured student registration, profile management, and robust admin oversight with role and permission control.
+
+To make the system unique, Phase 1 will include a smart student dashboard, gamification, and an admin analytics dashboard so that the portal feels engaging and tailored to the student community, not just another blog system.
+
+2. Goals & Objectives
+
+Provide students with a structured platform to register, share, and engage in departmental activities.
+
+Ensure secure registration by validating matric numbers (soc only).
+
+Offer admins robust content and role management capabilities.
+
+Create a personalized, interactive student experience via a dashboard, gamification, and insights.
+
+Support distribution of downloadable resources (learning PDFs, videos, images).
+
+3. Key Features
+3.1 Student Features
+
+Registration & Login:
+
+Fields: Name, Gender, Location (OnCampus/OffCampus), Hostel/OffCampus Address, Phone Number, Level, Matric Number (Unique + must contain “soc”), Email, Password, Occupation (Optional)
+
+Students must be approved by the first seed admin before accessing features.
+
+Profile Management:
+
+View and edit/update personal profile.
+
+Blog Interaction:
+
+View blogs, comment, reply (nested comments).
+
+Learning Resources:
+
+Access dedicated Learning PDFs repository.
+
+Download PDFs, videos, and images.
+
+Dashboard (Differentiator):
+
+Personalized homepage showing:
+
+Recent blogs/events relevant to student level.
+
+Downloadable resource highlights.
+
+Pending approval status (if applicable).
+
+Profile completion tracker (gamified element).
+
+Gamification (Differentiator):
+
+Badges or highlights for contributions (e.g., first comment, first blog, frequent downloads).
+
+Leaderboard of top contributors (by comments, posts, or engagement).
+
+3.2 Admin Features
+Admin Seeding & Roles
+
+First Seed Admin:
+
+Created at system initialization.
+
+Approves/rejects student registrations.
+
+Assigns/removes admin roles to/from students.
+
+Grants/revokes permissions for other admins (blogs, events, files).
+
+Other Admins:
+
+Capabilities defined by permissions assigned by the seed admin.
+
+Admin Capabilities
+
+User Oversight:
+
+Approve/reject/reactivate student registrations.
+
+Manage admin roles and permissions.
+
+Content Management:
+
+Create, update, delete blogs.
+
+Create, update, delete events.
+
+Upload/manage images, videos, and PDFs.
+
+Profile Management:
+
+Admins can edit/update their own profiles.
+
+Analytics Dashboard (Differentiator):
+
+Basic insights into:
+
+Active students.
+
+Most downloaded resources.
+
+Most engaged blogs (based on comments).
+
+3.3 Pages / Sections
+
+Landing Page: Blog highlights, staff previews, and event highlights.
+
+Dashboard (Student & Admin): Personalized experience with activities, engagement, and insights.
+
+Blog Page: Blog list with detail view, comments & replies.
+
+Staff Page: Staff profiles with details.
+
+Events Page: List of events with descriptions.
+
+Learning PDFs Page: Repository of downloadable resources.
+
+About Us Page: Organizational background.
+
+Contact Us Page: Contact form and details.
+
+Profile Page (Student & Admin): View and edit personal details.
+
+Admin Analytics Page: Insights into engagement and resource usage.
+
+4. Non-Functional Requirements
+
+Performance: Scalable to handle [X] concurrent users.
+
+Security:
+
+Role-based access control (Guest, Student, Admin).
+
+Matric number validation (soc).
+
+File upload validation (type, size, extension).
+
+Secure authentication (JWT or OAuth2).
+
+Scalability: Designed to add advanced features in Phase 2 (forums, RSVP, AI search).
+
+Usability:
+
+Fully responsive (desktop, tablet, mobile).
+
+Simple, intuitive, and clean UI.
+
+5. User Roles
+
+Guest:
+
+View public pages (Landing, Blogs, About Us, Staff, Contact).
+
+Student (Approved):
+
+Register & login (pending admin approval).
+
+Comment and reply on blogs.
+
+Download resources (PDFs, videos, images).
+
+Access dashboard with personalized highlights.
+
+Earn badges/leaderboard rankings.
+
+Edit/update profile.
+
+Admin:
+
+First seed admin has super-admin rights.
+
+Other admins’ rights depend on assigned permissions.
+
+Manage blogs, events, users, and files.
+
+Approve/reject students.
+
+Assign/remove admin roles.
+
+Access admin analytics dashboard.
+
+Edit/update profile.
+
+6. Success Metrics
+
+Student Adoption: Number of approved student registrations per month.
+
+Engagement: Average comments & replies per blog post.
+
+Learning Resource Usage: Number of downloads (PDFs, videos, images).
+
+Gamification Impact: Number of badges earned, leaderboard participation.
+
+Admin Efficiency: Turnaround time for approving/rejecting student registrations.
+
+Dashboard Use: Frequency of student logins to the dashboard.

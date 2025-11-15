@@ -28,7 +28,7 @@ export default function StudentDashboardExample() {
     {
       id: "2", 
       type: 'comment' as const,
-      title: "Commented on: Research Methods in Social Science",
+      title: "Commented on: Research Methods in Sociology",
       timestamp: "2024-01-14T15:45:00Z"
     },
     {
@@ -81,7 +81,7 @@ export default function StudentDashboardExample() {
     },
     {
       id: "3",
-      title: "Digital Ethics in Social Science Research",
+      title: "Digital Ethics in Sociology Research",
       author: "Dr. Emma Wilson",
       readTime: 15
     }

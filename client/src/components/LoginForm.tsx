@@ -53,9 +53,17 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
     loginMutation.mutate(
       { email: formData.email, password: formData.password },
       {
-        onSuccess: () => {
-          // Redirect to dashboard on successful login
-          setLocation('/dashboard');
+        onSuccess: (data) => {
+          // Use full page navigation to ensure cookies are properly set
+          const userRole = data?.user?.role;
+          setTimeout(() => {
+            if (userRole === 'admin' || userRole === 'super_admin') {
+              window.location.href = '/dashboard';
+            } else {
+              // Students and other roles go to home page
+              window.location.href = '/';
+            }
+          }, 200); // Small delay to ensure cookie is set and cache is updated
           onLogin?.(formData);
         },
         onError: (error: any) => {

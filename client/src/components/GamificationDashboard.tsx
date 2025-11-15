@@ -40,6 +40,34 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
 
   const isLoading = statsLoading || leaderboardLoading || badgesLoading;
   const hasError = statsError || leaderboardError || badgesError;
+  
+  // Check for null data which indicates authentication failure (401)
+  const isUnauthorized = !statsLoading && userStats === null;
+
+  if (isUnauthorized) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-yellow-500 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Authentication Required</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Please log in again to access your progress dashboard.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/login'} 
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            data-testid="button-login"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (hasError) {
     return (

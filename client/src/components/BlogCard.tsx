@@ -3,7 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, MessageCircle, Share2, Bookmark, Eye } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BlogCardProps {
   blog: {
@@ -22,30 +26,92 @@ interface BlogCardProps {
     likes: number;
     comments: number;
     views: number;
-    image?: string;
+    imageUrl?: string;
+    imageUrls?: string[];
     tags: string[];
   };
   onReadMore?: (id: string) => void;
-  onLike?: (id: string) => void;
   onComment?: (id: string) => void;
   onShare?: (id: string) => void;
   onBookmark?: (id: string) => void;
+  isLikedByUser?: boolean;
 }
 
-export default function BlogCard({ blog, onReadMore, onLike, onComment, onShare, onBookmark }: BlogCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
+export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookmark, isLikedByUser = false }: BlogCardProps) {
+  const [isLiked, setIsLiked] = useState(isLikedByUser);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [likesCount, setLikesCount] = useState(blog.likes);
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+
+  // Sync with server state when prop changes
+  useEffect(() => {
+    setIsLiked(isLikedByUser);
+  }, [isLikedByUser]);
+
+  // Sync likes count when it changes
+  useEffect(() => {
+    setLikesCount(blog.likes);
+  }, [blog.likes]);
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/blogs/${blog.id}/like`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setIsLiked(true);
+      setLikesCount(data.likesCount || likesCount + 1);
+      queryClient.invalidateQueries({ queryKey: ['/api/blogs'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to like the blog post",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('DELETE', `/api/blogs/${blog.id}/like`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setIsLiked(false);
+      setLikesCount(data.likesCount || likesCount - 1);
+      queryClient.invalidateQueries({ queryKey: ['/api/blogs'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to unlike the blog post",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleLike = () => {
-    setIsLiked(!isLiked);
-    onLike?.(blog.id);
-    console.log(`${isLiked ? 'Unliked' : 'Liked'} blog: ${blog.title}`);
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please login to like blog posts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isLiked) {
+      unlikeMutation.mutate();
+    } else {
+      likeMutation.mutate();
+    }
   };
 
   const handleBookmark = () => {
     setIsBookmarked(!isBookmarked);
     onBookmark?.(blog.id);
-    console.log(`${isBookmarked ? 'Unbookmarked' : 'Bookmarked'} blog: ${blog.title}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -57,18 +123,19 @@ export default function BlogCard({ blog, onReadMore, onLike, onComment, onShare,
     });
   };
 
+  const displayImage = blog.imageUrl || (blog.imageUrls && blog.imageUrls.length > 0 ? blog.imageUrls[0] : undefined);
+  const placeholderImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(blog.title)}&size=800&background=random&bold=true&format=svg`;
+  
   return (
     <Card className="group overflow-hidden hover-elevate transition-all duration-200">
       {/* Blog Image */}
-      {blog.image && (
-        <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={blog.image} 
-            alt={blog.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-          />
-        </div>
-      )}
+      <div className="aspect-video w-full overflow-hidden bg-muted">
+        <img 
+          src={displayImage || placeholderImage} 
+          alt={blog.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+        />
+      </div>
 
       <CardHeader className="space-y-4">
         {/* Category and Read Time */}
@@ -128,10 +195,11 @@ export default function BlogCard({ blog, onReadMore, onLike, onComment, onShare,
             size="sm" 
             className={`gap-1 ${isLiked ? 'text-red-500' : ''}`}
             onClick={handleLike}
+            disabled={likeMutation.isPending || unlikeMutation.isPending}
             data-testid={`button-like-${blog.id}`}
           >
             <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-            <span>{blog.likes + (isLiked ? 1 : 0)}</span>
+            <span>{likesCount}</span>
           </Button>
 
           <Button 

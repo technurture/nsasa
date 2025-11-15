@@ -7,10 +7,13 @@ export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30000, // 30 seconds
+    refetchOnMount: true,
   });
 
-  const isAuthenticated = !!user && !error;
+  // Only consider user authenticated if we have user data
+  // Don't let temporary errors affect authentication state
+  const isAuthenticated = !!user;
 
   return {
     user,
@@ -38,10 +41,12 @@ export function useLogin() {
       }
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // Update the user data in cache
       queryClient.setQueryData(["/api/auth/user"], data.user);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Verify the cookie is set by refetching
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
         title: "Success",
@@ -100,23 +105,32 @@ export function useLogout() {
     mutationFn: async () => {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Important: include cookies
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Logout failed');
       }
     },
     onSuccess: () => {
-      // Clear all cached data
-      queryClient.clear();
-      
       toast({
         title: "Logged Out",
         description: "You have been logged out successfully",
       });
       
-      // Redirect to home page
-      window.location.href = '/';
+      queryClient.clear();
+      queryClient.removeQueries();
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     },
+    onError: () => {
+      queryClient.clear();
+      queryClient.removeQueries();
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    }
   });
 }

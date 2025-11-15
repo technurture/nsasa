@@ -51,7 +51,7 @@ export default function AboutSection({ onGetInvolved, onViewPrograms, onContactU
   ];
 
   const achievements = [
-    "Top-ranked Social Science department in the region",
+    "Top-ranked Sociology department in the region",
     "Award-winning research programs in community development",
     "Strong industry partnerships and internship opportunities",
     "Alumni network spanning across government, NGOs, and academia",
@@ -70,7 +70,7 @@ export default function AboutSection({ onGetInvolved, onViewPrograms, onContactU
           <span className="text-primary block">Social Scientists</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          The Department of Social Science has been at the forefront of academic excellence and social research 
+          The Department of Sociology has been at the forefront of academic excellence and social research 
           for over two decades, nurturing critical thinkers and change-makers who make a difference in society.
         </p>
       </div>

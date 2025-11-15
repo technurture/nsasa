@@ -5,6 +5,11 @@ import { mongoStorage } from "./mongoStorage";
 import { authenticateToken, requireAdmin, requireSuperAdmin, requireRole, optionalAuth } from "./customAuth";
 import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
+import { insertBlogPostSchema } from "../shared/mongoSchema";
+import { z } from "zod";
+
+// Use insertBlogPostSchema directly for validation
+const blogRequestSchema = insertBlogPostSchema;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB
@@ -98,7 +103,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const blogs = await mongoStorage.getBlogPosts(limit, offset);
-      res.json(blogs);
+      
+      // Add isLikedByUser field to each blog
+      const blogsWithLikeStatus = await Promise.all(
+        blogs.map(async (blog) => {
+          const isLikedByUser = req.user 
+            ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
+            : false;
+          return { ...blog, isLikedByUser };
+        })
+      );
+      
+      res.json(blogsWithLikeStatus);
     } catch (error: any) {
       console.error('Get blogs error:', error);
       res.status(500).json({ message: 'Failed to get blogs', error: error.message });
@@ -115,20 +131,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Increment views
       await mongoStorage.incrementBlogViews(req.params.id);
       
-      res.json(blog);
+      // Add isLikedByUser field
+      const isLikedByUser = req.user 
+        ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
+        : false;
+      
+      res.json({ ...blog, isLikedByUser });
     } catch (error: any) {
       console.error('Get blog error:', error);
       res.status(500).json({ message: 'Failed to get blog', error: error.message });
     }
   });
 
-  app.post('/api/blogs', authenticateToken, async (req, res) => {
+  app.post('/api/blogs', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
       }
       
-      const blog = await mongoStorage.createBlogPost(req.user.userId, req.body);
+      // Validate request body against schema
+      const validationResult = blogRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid blog data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
+      const blog = await mongoStorage.createBlogPost(req.user.userId, validationResult.data);
       res.status(201).json(blog);
     } catch (error: any) {
       console.error('Create blog error:', error);
@@ -136,11 +166,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/blogs/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Validate request body against schema (partial update)
+      const updateSchema = blogRequestSchema.partial();
+      const validationResult = updateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid blog update data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
+      // Check if user owns the blog or is admin
+      const existingBlog = await mongoStorage.getBlogPost(req.params.id);
+      if (!existingBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+      
+      if (existingBlog.authorId !== req.user.userId && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Permission denied' });
+      }
+      
+      const blog = await mongoStorage.updateBlogPost(req.params.id, validationResult.data);
+      res.json(blog);
+    } catch (error: any) {
+      console.error('Update blog error:', error);
+      res.status(500).json({ message: 'Failed to update blog', error: error.message });
+    }
+  });
+
+  app.delete('/api/blogs/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Check if user owns the blog or is admin
+      const existingBlog = await mongoStorage.getBlogPost(req.params.id);
+      if (!existingBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+      
+      if (existingBlog.authorId !== req.user.userId && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Permission denied' });
+      }
+      
+      await mongoStorage.deleteBlogPost(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete blog error:', error);
+      res.status(500).json({ message: 'Failed to delete blog', error: error.message });
+    }
+  });
+
   // Comments routes
   app.get('/api/blogs/:id/comments', optionalAuth, async (req, res) => {
     try {
       const comments = await mongoStorage.getBlogComments(req.params.id);
-      res.json(comments);
+      
+      // Add isLikedByUser field to each comment
+      const commentsWithLikeStatus = await Promise.all(
+        comments.map(async (comment) => {
+          const isLikedByUser = req.user 
+            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+            : false;
+          return { ...comment, isLikedByUser };
+        })
+      );
+      
+      res.json(commentsWithLikeStatus);
     } catch (error: any) {
       console.error('Get comments error:', error);
       res.status(500).json({ message: 'Failed to get comments', error: error.message });
@@ -162,6 +261,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Create comment error:', error);
       res.status(500).json({ message: 'Failed to create comment', error: error.message });
+    }
+  });
+
+  // Like/Unlike blog routes
+  app.post('/api/blogs/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.likeBlogPost(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getBlogLikesCount(req.params.id);
+      res.json({ message: 'Blog liked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Like blog error:', error);
+      res.status(500).json({ message: 'Failed to like blog', error: error.message });
+    }
+  });
+
+  app.delete('/api/blogs/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.unlikeBlogPost(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getBlogLikesCount(req.params.id);
+      res.json({ message: 'Blog unliked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Unlike blog error:', error);
+      res.status(500).json({ message: 'Failed to unlike blog', error: error.message });
+    }
+  });
+
+  // Like/Unlike comment routes
+  app.post('/api/comments/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.likeComment(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getCommentLikesCount(req.params.id);
+      res.json({ message: 'Comment liked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Like comment error:', error);
+      res.status(500).json({ message: 'Failed to like comment', error: error.message });
+    }
+  });
+
+  app.delete('/api/comments/:id/like', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.unlikeComment(req.user.userId, req.params.id);
+      const likesCount = await mongoStorage.getCommentLikesCount(req.params.id);
+      res.json({ message: 'Comment unliked successfully', likesCount });
+    } catch (error: any) {
+      console.error('Unlike comment error:', error);
+      res.status(500).json({ message: 'Failed to unlike comment', error: error.message });
     }
   });
 
@@ -192,6 +353,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/events/:id', optionalAuth, async (req, res) => {
+    try {
+      const event = await mongoStorage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      res.json(event);
+    } catch (error: any) {
+      console.error('Get event error:', error);
+      res.status(500).json({ message: 'Failed to get event', error: error.message });
+    }
+  });
+
+  app.put('/api/events/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const event = await mongoStorage.updateEvent(req.params.id, req.body);
+      res.json(event);
+    } catch (error: any) {
+      console.error('Update event error:', error);
+      res.status(500).json({ message: 'Failed to update event', error: error.message });
+    }
+  });
+
+  app.delete('/api/events/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.deleteEvent(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete event error:', error);
+      res.status(500).json({ message: 'Failed to delete event', error: error.message });
+    }
+  });
+
+  // Event registration routes
+  app.post('/api/events/:id/register', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const registration = await mongoStorage.registerForEvent(req.user.userId, req.params.id);
+      res.status(201).json({ 
+        message: 'Successfully registered for event',
+        registration 
+      });
+    } catch (error: any) {
+      console.error('Event registration error:', error);
+      res.status(500).json({ message: 'Failed to register for event', error: error.message });
+    }
+  });
+
+  app.get('/api/events/:id/registrations', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const registrations = await mongoStorage.getEventRegistrations(req.params.id);
+      res.json(registrations);
+    } catch (error: any) {
+      console.error('Get event registrations error:', error);
+      res.status(500).json({ message: 'Failed to get event registrations', error: error.message });
+    }
+  });
+
+  app.get('/api/user/event-registrations', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const registrations = await mongoStorage.getUserEventRegistrations(req.user.userId);
+      res.json(registrations);
+    } catch (error: any) {
+      console.error('Get user event registrations error:', error);
+      res.status(500).json({ message: 'Failed to get user event registrations', error: error.message });
+    }
+  });
+
   // Learning resources routes
   app.get('/api/resources', authenticateToken, async (req, res) => {
     try {
@@ -202,6 +446,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Get resources error:', error);
       res.status(500).json({ message: 'Failed to get resources', error: error.message });
+    }
+  });
+
+  app.get('/api/resources/:id', authenticateToken, async (req, res) => {
+    try {
+      const resource = await mongoStorage.getLearningResource(req.params.id);
+      if (!resource) {
+        return res.status(404).json({ message: 'Resource not found' });
+      }
+      res.json(resource);
+    } catch (error: any) {
+      console.error('Get resource error:', error);
+      res.status(500).json({ message: 'Failed to get resource', error: error.message });
+    }
+  });
+
+  // Resource download tracking
+  app.post('/api/resources/:id/download', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.recordResourceDownload(req.user.userId, req.params.id);
+      res.json({ message: 'Download recorded successfully' });
+    } catch (error: any) {
+      console.error('Record download error:', error);
+      res.status(500).json({ message: 'Failed to record download', error: error.message });
+    }
+  });
+
+  app.post('/api/resources', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const resource = await mongoStorage.createLearningResource(req.user.userId, req.body);
+      res.status(201).json(resource);
+    } catch (error: any) {
+      console.error('Create resource error:', error);
+      res.status(500).json({ message: 'Failed to create resource', error: error.message });
+    }
+  });
+
+  app.put('/api/resources/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const resource = await mongoStorage.updateLearningResource(req.params.id, req.body);
+      res.json(resource);
+    } catch (error: any) {
+      console.error('Update resource error:', error);
+      res.status(500).json({ message: 'Failed to update resource', error: error.message });
+    }
+  });
+
+  app.delete('/api/resources/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.deleteLearningResource(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete resource error:', error);
+      res.status(500).json({ message: 'Failed to delete resource', error: error.message });
     }
   });
 

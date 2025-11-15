@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
     // Additional validation for matric number
     if (validatedData.matricNumber && !validatedData.matricNumber.toLowerCase().includes('soc')) {
       return res.status(400).json({
-        message: 'Matric number must contain "soc" for Department of Social Science students'
+        message: 'Matric number must contain "soc" for Department of Sociology students'
       });
     }
 
@@ -75,11 +75,14 @@ router.post('/login', async (req, res) => {
     const { user, token } = await mongoStorage.loginUser(email, password);
     
     // Set token in HTTP-only cookie for security
+    // Only set secure flag when actually using HTTPS
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      secure: isSecure,
+      sameSite: isSecure ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/' // Ensure cookie is sent for all paths
     });
     
     // Remove password hash from response
@@ -110,9 +113,16 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Logout endpoint
-router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+// Logout endpoint - support both GET and POST for compatibility
+router.all('/logout', (req, res) => {
+  // Clear cookie with same options as when it was set
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: isSecure ? 'strict' : 'lax',
+    path: '/'
+  });
   res.json({ message: 'Logged out successfully' });
 });
 
@@ -206,8 +216,8 @@ router.get('/admin/users', authenticateToken, async (req, res) => {
 
 router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
   try {
-    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
-      return res.status(403).json({ message: 'Admin access required' });
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Super admin access required' });
     }
 
     const { id } = req.params;
@@ -230,6 +240,37 @@ router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
     console.error('Update user approval error:', error);
     res.status(500).json({ 
       message: 'Failed to update user approval status',
+      error: error.message 
+    });
+  }
+});
+
+router.put('/admin/users/:id/role', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Super admin access required' });
+    }
+
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!['student', 'admin', 'super_admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Must be student, admin, or super_admin' });
+    }
+
+    const updatedUser = await mongoStorage.updateUserRole(id, role);
+    
+    // Remove password hash from response
+    const { passwordHash, ...userResponse } = updatedUser;
+    
+    res.json({
+      message: `User role updated to ${role} successfully`,
+      user: userResponse
+    });
+  } catch (error: any) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ 
+      message: 'Failed to update user role',
       error: error.message 
     });
   }

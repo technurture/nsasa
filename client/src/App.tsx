@@ -1,9 +1,11 @@
 import { Switch, Route, useLocation } from "wouter";
+import React, { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, useLogout } from "@/hooks/useAuth";
+import type { BlogPost, Event } from "@shared/mongoSchema";
 
 // Components
 import Header from "@/components/Header";
@@ -22,6 +24,7 @@ import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
 import ModernDashboard from "@/components/ModernDashboard";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import MainDashboardView, {
   UserManagementView,
   StudentGamificationView,
@@ -32,75 +35,42 @@ import MainDashboardView, {
   SettingsView
 } from "@/components/MainDashboardView";
 
+// Pages
+import BlogsPage from "@/pages/BlogsPage";
+import BlogDetailPage from "@/pages/BlogDetailPage";
+import EventsPage from "@/pages/EventsPage";
+import EventDetailPage from "@/pages/EventDetailPage";
+import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
+
 // Main Pages
 function LandingPage() {
+  const [, setLocation] = useLocation();
+  
+  const { data: blogs, isLoading: blogsLoading } = useQuery<BlogPost[]>({
+    queryKey: ['/api/blogs', { limit: 3 }],
+    queryFn: async () => {
+      const response = await fetch('/api/blogs?limit=3');
+      if (!response.ok) throw new Error('Failed to fetch blogs');
+      return response.json();
+    },
+  });
+
+  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ['/api/events', { limit: 3 }],
+    queryFn: async () => {
+      const response = await fetch('/api/events?limit=3');
+      if (!response.ok) throw new Error('Failed to fetch events');
+      return response.json();
+    },
+  });
+
   const handleGetStarted = () => {
     window.location.href = '/register';
   };
 
   const handleLearnMore = () => {
-    console.log('Learn More clicked - would scroll to about section');
+    // Scroll to about section
   };
-
-  // todo: remove mock functionality
-  const mockBlogs = [
-    {
-      id: "1",
-      title: "Understanding Social Psychology in Modern Society",
-      excerpt: "Explore the fascinating world of social psychology and how it shapes our daily interactions.",
-      content: "Full content...",
-      author: {
-        name: "Dr. Sarah Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-        level: "Professor"
-      },
-      category: "Psychology",
-      publishedAt: "2024-01-15",
-      readTime: 8,
-      likes: 24,
-      comments: 12,
-      views: 156,
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
-      tags: ["psychology", "society", "behavior"]
-    },
-    {
-      id: "2",
-      title: "Research Methods in Social Science",
-      excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
-      content: "Full content...",
-      author: {
-        name: "Prof. Michael Chen",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-        level: "Associate Professor"
-      },
-      category: "Research",
-      publishedAt: "2024-01-12",
-      readTime: 12,
-      likes: 18,
-      comments: 8,
-      views: 203,
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop",
-      tags: ["research", "methodology", "data"]
-    }
-  ];
-
-  const mockEvents = [
-    {
-      id: "1",
-      title: "Social Innovation Summit 2024",
-      description: "Join us for an inspiring day of presentations and networking.",
-      date: "2024-02-20",
-      time: "9:00 AM - 5:00 PM",
-      location: "Main Auditorium",
-      type: 'conference' as const,
-      capacity: 150,
-      registered: 127,
-      price: 25,
-      image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=300&fit=crop",
-      organizer: "Department of Social Science",
-      tags: ["innovation", "research", "networking"]
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,11 +87,64 @@ function LandingPage() {
               Discover insights, research, and perspectives from our faculty and students
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {mockBlogs.map((blog) => (
-              <BlogCard key={blog.id} blog={blog} />
-            ))}
-          </div>
+          {blogsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-4">
+                  <div className="h-48 bg-muted animate-pulse rounded-lg" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : blogs && blogs.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                {blogs.slice(0, 3).map((blog: any) => {
+                  const transformedBlog = {
+                    id: blog._id || '',
+                    title: blog.title,
+                    excerpt: blog.excerpt || '',
+                    content: blog.content,
+                    author: {
+                      name: blog.authorName || 'Unknown Author',
+                      avatar: blog.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${blog.authorId}`,
+                      level: 'Author',
+                    },
+                    category: blog.category,
+                    publishedAt: new Date(blog.createdAt).toISOString().split('T')[0],
+                    readTime: blog.readTime,
+                    likes: blog.likes,
+                    comments: 0,
+                    views: blog.views,
+                    imageUrl: blog.imageUrl,
+                    imageUrls: blog.imageUrls,
+                    tags: blog.tags,
+                  };
+                  return (
+                    <BlogCard 
+                      key={blog._id} 
+                      blog={transformedBlog}
+                      isLikedByUser={blog.isLikedByUser || false}
+                      onReadMore={(id) => setLocation(`/blogs/${id}`)}
+                      onComment={(id) => setLocation(`/blogs/${id}#comments`)}
+                    />
+                  );
+                })}
+              </div>
+              <div className="text-center mt-8">
+                <a 
+                  href="/blogs" 
+                  className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
+                  data-testid="link-view-all-blogs"
+                >
+                  View All Blog Posts →
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-muted-foreground">No blog posts available yet.</p>
+          )}
         </section>
 
         {/* Upcoming Events */}
@@ -132,11 +155,51 @@ function LandingPage() {
               Join us for workshops, seminars, and community gatherings
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {mockEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
+          {eventsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-4">
+                  <div className="h-48 bg-muted animate-pulse rounded-lg" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : events && events.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {events.slice(0, 3).map((event: any) => {
+                  const transformedEvent = {
+                    id: event._id || '',
+                    title: event.title,
+                    description: event.description,
+                    date: new Date(event.date).toISOString().split('T')[0],
+                    time: event.time,
+                    location: event.location,
+                    type: event.type,
+                    capacity: event.capacity,
+                    registered: 0,
+                    price: event.price / 100,
+                    image: event.imageUrl,
+                    organizer: event.organizerName || 'Unknown Organizer',
+                    tags: event.tags,
+                  };
+                  return <EventCard key={event._id} event={transformedEvent} />;
+                })}
+              </div>
+              <div className="text-center mt-8">
+                <a 
+                  href="/events" 
+                  className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
+                  data-testid="link-view-all-events"
+                >
+                  View All Events →
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-muted-foreground">No upcoming events at the moment.</p>
+          )}
         </section>
 
         {/* Call to Action */}
@@ -149,71 +212,12 @@ function LandingPage() {
             <button 
               onClick={handleGetStarted}
               className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              data-testid="button-get-started"
             >
               Get Started Today
             </button>
           </div>
         </section>
-      </div>
-    </div>
-  );
-}
-
-function BlogsPage() {
-  // todo: remove mock functionality
-  const mockBlogs = [
-    {
-      id: "1",
-      title: "Understanding Social Psychology in Modern Society",
-      excerpt: "Explore the fascinating world of social psychology and how it shapes our daily interactions.",
-      content: "Full content...",
-      author: {
-        name: "Dr. Sarah Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-        level: "Professor"
-      },
-      category: "Psychology",
-      publishedAt: "2024-01-15",
-      readTime: 8,
-      likes: 24,
-      comments: 12,
-      views: 156,
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
-      tags: ["psychology", "society", "behavior"]
-    },
-    {
-      id: "2",
-      title: "Research Methods in Social Science",
-      excerpt: "A comprehensive guide to quantitative and qualitative research methodologies.",
-      content: "Full content...",
-      author: {
-        name: "Prof. Michael Chen",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-        level: "Associate Professor"
-      },
-      category: "Research",
-      publishedAt: "2024-01-12",
-      readTime: 12,
-      likes: 18,
-      comments: 8,
-      views: 203,
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop",
-      tags: ["research", "methodology", "data"]
-    }
-  ];
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Blog Posts</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Explore our collection of articles, research insights, and academic discussions
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {mockBlogs.map((blog) => (
-          <BlogCard key={blog.id} blog={blog} />
-        ))}
       </div>
     </div>
   );
@@ -226,11 +230,11 @@ function StaffPage() {
       id: "1",
       name: "Dr. Sarah Johnson",
       title: "Professor of Social Psychology",
-      department: "Department of Social Science",
+      department: "Department of Sociology",
       specializations: ["Social Psychology", "Behavioral Research", "Community Studies"],
       email: "s.johnson@university.edu",
       phone: "+1 (555) 123-4567",
-      office: "Room 305, Social Science Building",
+      office: "Room 305, Sociology Building",
       bio: "Dr. Johnson is a renowned expert in social psychology with over 15 years of experience.",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-prof",
       courses: ["Introduction to Social Psychology", "Research Methods"],
@@ -366,7 +370,7 @@ function DashboardPage() {
 
 function RegisterPage() {
   const handleSubmit = (data: any) => {
-    console.log('Registration submitted:', data);
+    // Registration will be handled by RegistrationForm component
   };
 
   const handleCancel = () => {
@@ -382,7 +386,7 @@ function RegisterPage() {
 
 function LoginPage() {
   const handleLogin = (credentials: any) => {
-    console.log('Login attempt:', credentials);
+    // Login will be handled by LoginForm component
   };
 
   const handleSignUpRedirect = () => {
@@ -410,7 +414,7 @@ function AboutPage() {
 
 function ContactPage() {
   const handleSubmit = (data: any) => {
-    console.log('Contact form submitted:', data);
+    // Contact form submission will be handled by ContactForm component
   };
 
   return (
@@ -418,7 +422,7 @@ function ContactPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
         <p className="text-muted-foreground">
-          Get in touch with the Department of Social Science
+          Get in touch with the Department of Sociology
         </p>
       </div>
       <ContactForm onSubmit={handleSubmit} />
@@ -436,63 +440,109 @@ function AuthRouter() {
   );
 }
 
-// Dashboard router for authenticated dashboard pages
+// Dashboard router for authenticated dashboard pages (Admin and Super Admin only)
 function DashboardRouter() {
   return (
-    <ModernDashboard>
-      <Switch>
-        <Route path="/dashboard" component={MainDashboardView} />
-        <Route path="/dashboard/users" component={UserManagementView} />
-        <Route path="/dashboard/blogs" component={BlogManagementView} />
-        <Route path="/dashboard/events" component={EventManagementView} />
-        <Route path="/dashboard/resources" component={ResourceManagementView} />
-        <Route path="/dashboard/analytics" component={AnalyticsView} />
-        <Route path="/dashboard/gamification" component={StudentGamificationView} />
-        <Route path="/dashboard/settings" component={SettingsView} />
-        <Route component={MainDashboardView} />
-      </Switch>
-    </ModernDashboard>
+    <ProtectedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/">
+      <ModernDashboard>
+        <Switch>
+          <Route path="/dashboard" component={MainDashboardView} />
+          <Route path="/dashboard/users" component={UserManagementView} />
+          <Route path="/dashboard/blogs" component={BlogManagementView} />
+          <Route path="/dashboard/events" component={EventManagementView} />
+          <Route path="/dashboard/resources" component={ResourceManagementView} />
+          <Route path="/dashboard/analytics" component={AnalyticsView} />
+          <Route path="/dashboard/settings" component={SettingsView} />
+          <Route component={MainDashboardView} />
+        </Switch>
+      </ModernDashboard>
+    </ProtectedRoute>
   );
 }
 
 // Main app router for authenticated and public pages with layout
 function MainRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
-
-  // Check if current path is a dashboard route
-  const isDashboardRoute = location.startsWith('/dashboard');
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      {isLoading ? (
+        <Route component={() => (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold">Loading...</h2>
+            </div>
+          </div>
+        )} />
+      ) : !isAuthenticated ? (
         <>
           <Route path="/" component={LandingPage} />
+          <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
+          <Route path="/events/:id" component={EventDetailPage} />
+          <Route path="/events" component={EventsPage} />
+          <Route path="/resources/:id" component={LearningResourceDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
-          <Route component={LandingPage} />
+          {/* Redirect to login if trying to access dashboard while not authenticated */}
+          <Route path="/dashboard/:rest*">
+            {(params) => <RedirectToLogin />}
+          </Route>
         </>
       ) : (
         <>
-          {/* Dashboard routes use ModernDashboard layout */}
-          <Route path="/dashboard" component={DashboardRouter} nest />
-          <Route path="/" component={DashboardRouter} />
+          {/* Dashboard routes - all authenticated users can access */}
+          <Route path="/dashboard" component={DashboardRouter} />
+          <Route path="/dashboard/:rest*">
+            {(params) => <DashboardRouter />}
+          </Route>
           
-          {/* Public pages with regular layout */}
+          {/* Landing page accessible to authenticated users */}
+          <Route path="/" component={LandingPage} />
+          
+          {/* Public pages with regular layout for authenticated users */}
+          <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
+          <Route path="/events/:id" component={EventDetailPage} />
+          <Route path="/events" component={EventsPage} />
+          <Route path="/resources/:id" component={LearningResourceDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
-          <Route path="/events" component={BlogsPage} />
-          
-          {/* Fallback to dashboard */}
-          <Route component={DashboardRouter} />
         </>
       )}
     </Switch>
+  );
+}
+
+// Separate component for dashboard redirect
+function DashboardRedirect() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation('/dashboard');
+  }, [setLocation]);
+  
+  return null;
+}
+
+// Redirect to login component
+function RedirectToLogin() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation('/login');
+  }, [setLocation]);
+  
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Redirecting to login...</h2>
+      </div>
+    </div>
   );
 }
 
@@ -518,21 +568,21 @@ function App() {
 }
 
 function AppContent() {
-  const { user, isAuthenticated } = useAuth();
-  const [location] = useLocation();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
+  const logoutMutation = useLogout();
 
   const handleAuthAction = () => {
     if (isAuthenticated) {
-      // Logout - call the logout endpoint
-      window.location.href = '/api/auth/logout';
+      // Logout - call the logout mutation
+      logoutMutation.mutate();
     } else {
       // Login - redirect to login page
-      window.location.href = '/login';
+      setLocation('/login');
     }
   };
 
   const handleNewsletterSignup = (email: string) => {
-    console.log('Newsletter signup:', email);
     alert(`Thank you for subscribing with email: ${email}`);
   };
 
@@ -540,7 +590,8 @@ function AppContent() {
   const isAuthPage = location === '/login' || location === '/register';
   
   // Check if current path is a dashboard page (should not have header/footer)
-  const isDashboardPage = isAuthenticated && (location === '/' || location.startsWith('/dashboard'));
+  // Don't show header/footer while loading auth or when on dashboard
+  const isDashboardPage = (isLoading && location.startsWith('/dashboard')) || (isAuthenticated && location.startsWith('/dashboard'));
 
   return (
     <TooltipProvider>
