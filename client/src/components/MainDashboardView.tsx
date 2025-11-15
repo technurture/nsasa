@@ -1305,7 +1305,7 @@ function ResourceFormModal({
       fileUrl: resource?.fileUrl || "",
       fileName: resource?.fileName || "",
       fileSize: resource?.fileSize || "",
-      difficulty: resource?.difficulty || 'beginner',
+      difficulty: resource?.difficulty || '100l',
       tags: resource?.tags?.join(", ") || "",
       previewAvailable: resource?.previewAvailable || false,
       thumbnailUrl: resource?.thumbnailUrl || ""
@@ -1395,9 +1395,10 @@ function ResourceFormModal({
                           <SelectValue placeholder="Select difficulty" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="beginner">Beginner</SelectItem>
-                          <SelectItem value="intermediate">Intermediate</SelectItem>
-                          <SelectItem value="advanced">Advanced</SelectItem>
+                          <SelectItem value="100l">100 Level</SelectItem>
+                          <SelectItem value="200l">200 Level</SelectItem>
+                          <SelectItem value="300l">300 Level</SelectItem>
+                          <SelectItem value="400l">400 Level</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -1712,8 +1713,8 @@ export function ResourceManagementView() {
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                           <h3 className="text-lg font-semibold line-clamp-2">{resource.title}</h3>
                           <Badge variant="outline">{resource.type.toUpperCase()}</Badge>
-                          <Badge variant={resource.difficulty === 'beginner' ? 'default' : resource.difficulty === 'intermediate' ? 'secondary' : 'destructive'}>
-                            {resource.difficulty}
+                          <Badge variant={resource.difficulty === '100l' ? 'default' : resource.difficulty === '200l' ? 'secondary' : resource.difficulty === '300l' ? 'outline' : 'destructive'}>
+                            {resource.difficulty.toUpperCase()}
                           </Badge>
                         </div>
                         

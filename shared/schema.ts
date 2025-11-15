@@ -144,7 +144,7 @@ export const learningResources = pgTable("learning_resources", {
   rating: integer("rating").default(0), // Average rating * 10 (for precision)
   ratingCount: integer("rating_count").default(0),
   
-  difficulty: varchar("difficulty").notNull(), // beginner, intermediate, advanced
+  difficulty: varchar("difficulty").notNull(), // 100l, 200l, 300l, 400l
   tags: jsonb("tags").$type<string[]>().default([]),
   
   previewAvailable: boolean("preview_available").default(false),

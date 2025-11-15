@@ -107,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add isLikedByUser field to each blog
       const blogsWithLikeStatus = await Promise.all(
         blogs.map(async (blog) => {
-          const isLikedByUser = req.user 
+          const isLikedByUser = req.user && req.user.userId
             ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
             : false;
           return { ...blog, isLikedByUser };
@@ -132,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await mongoStorage.incrementBlogViews(req.params.id);
       
       // Add isLikedByUser field
-      const isLikedByUser = req.user 
+      const isLikedByUser = req.user && req.user.userId
         ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
         : false;
       
@@ -232,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add isLikedByUser field to each comment
       const commentsWithLikeStatus = await Promise.all(
         comments.map(async (comment) => {
-          const isLikedByUser = req.user 
+          const isLikedByUser = req.user && req.user.userId
             ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
             : false;
           return { ...comment, isLikedByUser };

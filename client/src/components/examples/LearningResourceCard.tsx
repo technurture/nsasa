@@ -14,7 +14,7 @@ export default function LearningResourceCardExample() {
     uploadedBy: "Dr. Sarah Johnson",
     uploadDate: "2024-01-15",
     tags: ["statistics", "research", "SPSS", "analysis", "methodology"],
-    difficulty: 'advanced' as const,
+    difficulty: '400l' as const,
     thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop",
     previewAvailable: true
   };

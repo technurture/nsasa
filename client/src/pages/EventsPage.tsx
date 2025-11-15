@@ -12,10 +12,16 @@ import { useAuth } from "@/hooks/useAuth";
 export default function EventsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
   const { data: events, isLoading, error } = useQuery<Event[]>({
     queryKey: ['/api/events'],
+  });
+
+  // Fetch user's event registrations if authenticated
+  const { data: userRegistrations } = useQuery<any[]>({
+    queryKey: ['/api/user/event-registrations'],
+    enabled: isAuthenticated,
   });
 
   // Registration mutation
@@ -107,10 +113,16 @@ export default function EventsPage() {
               tags: event.tags,
             };
 
+            // Check if user is registered for this event
+            const isUserRegistered = userRegistrations?.some(
+              (reg) => reg.eventId === event._id
+            ) || false;
+
             return (
               <EventCard 
                 key={event._id} 
                 event={transformedEvent}
+                isRegistered={isUserRegistered}
                 onRegister={handleRegister}
                 onReadMore={(id) => setLocation(`/events/${id}`)}
               />

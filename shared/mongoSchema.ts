@@ -124,7 +124,7 @@ export const learningResourceSchema = z.object({
   rating: z.number().default(0), // Average rating * 10 (for precision)
   ratingCount: z.number().default(0),
   
-  difficulty: z.enum(['beginner', 'intermediate', 'advanced']),
+  difficulty: z.enum(['100l', '200l', '300l', '400l']),
   tags: z.array(z.string()).default([]),
   
   previewAvailable: z.boolean().default(false),

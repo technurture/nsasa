@@ -648,8 +648,25 @@ export class MongoStorage implements IMongoStorage {
   
   async getEvent(id: string): Promise<Event | undefined> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
+    
     const event = await eventsCollection.findOne({ _id: new ObjectId(id) } as any);
-    return event ? { ...event, _id: event._id.toString() } : undefined;
+    
+    if (!event) {
+      return undefined;
+    }
+    
+    const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) } as any);
+    const registrationCount = await registrationsCollection.countDocuments({ eventId: event._id.toString() });
+    
+    return {
+      ...event,
+      _id: event._id.toString(),
+      organizerName: organizer ? `${organizer.firstName} ${organizer.lastName}` : 'Unknown Organizer',
+      organizerAvatar: organizer?.profileImageUrl,
+      registrationCount
+    } as any;
   }
   
   async updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event> {
@@ -675,6 +692,17 @@ export class MongoStorage implements IMongoStorage {
   
   async registerForEvent(userId: string, eventId: string): Promise<EventRegistration> {
     const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
+    
+    // Check if user is already registered for this event
+    const existingRegistration = await registrationsCollection.findOne({ 
+      userId, 
+      eventId 
+    } as any);
+    
+    if (existingRegistration) {
+      // Return the existing registration instead of creating a duplicate
+      return { ...existingRegistration, _id: existingRegistration._id.toString() };
+    }
     
     const registrationDoc: Omit<EventRegistration, '_id'> = {
       userId,

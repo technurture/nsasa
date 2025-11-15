@@ -20,15 +20,13 @@ interface EventCardProps {
     organizer: string;
     tags: string[];
   };
+  isRegistered?: boolean;
   onRegister?: (id: string) => void;
   onReadMore?: (id: string) => void;
 }
 
-export default function EventCard({ event, onRegister, onReadMore }: EventCardProps) {
-  const [isRegistered, setIsRegistered] = useState(false);
-
+export default function EventCard({ event, isRegistered = false, onRegister, onReadMore }: EventCardProps) {
   const handleRegister = () => {
-    setIsRegistered(true);
     onRegister?.(event.id);
     console.log(`Registered for event: ${event.title}`);
   };

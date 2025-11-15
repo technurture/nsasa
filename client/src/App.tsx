@@ -45,6 +45,7 @@ import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
 // Main Pages
 function LandingPage() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   
   const { data: blogs, isLoading: blogsLoading } = useQuery<BlogPost[]>({
     queryKey: ['/api/blogs', { limit: 3 }],
@@ -62,6 +63,12 @@ function LandingPage() {
       if (!response.ok) throw new Error('Failed to fetch events');
       return response.json();
     },
+  });
+
+  // Fetch user's event registrations if authenticated
+  const { data: userRegistrations } = useQuery<any[]>({
+    queryKey: ['/api/user/event-registrations'],
+    enabled: isAuthenticated,
   });
 
   const handleGetStarted = () => {
@@ -178,13 +185,26 @@ function LandingPage() {
                     location: event.location,
                     type: event.type,
                     capacity: event.capacity,
-                    registered: 0,
+                    registered: (event as any).registrationCount || 0,
                     price: event.price / 100,
                     image: event.imageUrl,
                     organizer: event.organizerName || 'Unknown Organizer',
                     tags: event.tags,
                   };
-                  return <EventCard key={event._id} event={transformedEvent} />;
+                  
+                  // Check if user is registered for this event
+                  const isUserRegistered = userRegistrations?.some(
+                    (reg) => reg.eventId === event._id
+                  ) || false;
+                  
+                  return (
+                    <EventCard 
+                      key={event._id} 
+                      event={transformedEvent}
+                      isRegistered={isUserRegistered}
+                      onReadMore={(id) => setLocation(`/events/${id}`)}
+                    />
+                  );
                 })}
               </div>
               <div className="text-center mt-8">
@@ -276,7 +296,7 @@ function ResourcesPage() {
       uploadedBy: "Dr. Sarah Johnson",
       uploadDate: "2024-01-15",
       tags: ["statistics", "research", "SPSS"],
-      difficulty: 'advanced' as const,
+      difficulty: '400l' as const,
       thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop",
       previewAvailable: true
     }
