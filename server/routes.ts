@@ -5,11 +5,27 @@ import { mongoStorage } from "./mongoStorage";
 import { authenticateToken, requireAdmin, requireSuperAdmin, requireRole, optionalAuth } from "./customAuth";
 import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
-import { insertBlogPostSchema } from "../shared/mongoSchema";
+import { insertBlogPostSchema, insertCommentSchema } from "../shared/mongoSchema";
 import { z } from "zod";
 
 // Use insertBlogPostSchema directly for validation
 const blogRequestSchema = insertBlogPostSchema;
+
+// Create comment request schemas for each resource type
+const blogCommentRequestSchema = insertCommentSchema.extend({
+  content: z.string().min(1),
+  parentCommentId: z.string().optional()
+});
+
+const eventCommentRequestSchema = insertCommentSchema.extend({
+  content: z.string().min(1),
+  parentCommentId: z.string().optional()
+});
+
+const resourceCommentRequestSchema = insertCommentSchema.extend({
+  content: z.string().min(1),
+  parentCommentId: z.string().optional()
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB
@@ -252,10 +268,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
       
+      // Validate request body against schema
+      const validationResult = blogCommentRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid comment data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
       const comment = await mongoStorage.createBlogComment(
         req.user.userId, 
         req.params.id, 
-        req.body
+        validationResult.data
       );
       res.status(201).json(comment);
     } catch (error: any) {
@@ -323,6 +348,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Unlike comment error:', error);
       res.status(500).json({ message: 'Failed to unlike comment', error: error.message });
+    }
+  });
+
+  // Event comments routes
+  app.get('/api/events/:id/comments', optionalAuth, async (req, res) => {
+    try {
+      const comments = await mongoStorage.getEventComments(req.params.id);
+      
+      // Add isLikedByUser field to each comment
+      const commentsWithLikeStatus = await Promise.all(
+        comments.map(async (comment) => {
+          const isLikedByUser = req.user && req.user.userId
+            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+            : false;
+          return { ...comment, isLikedByUser };
+        })
+      );
+      
+      res.json(commentsWithLikeStatus);
+    } catch (error: any) {
+      console.error('Get event comments error:', error);
+      res.status(500).json({ message: 'Failed to get comments', error: error.message });
+    }
+  });
+
+  app.post('/api/events/:id/comments', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Validate request body against schema
+      const validationResult = eventCommentRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid comment data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
+      const comment = await mongoStorage.createEventComment(
+        req.user.userId, 
+        req.params.id, 
+        validationResult.data
+      );
+      res.status(201).json(comment);
+    } catch (error: any) {
+      console.error('Create event comment error:', error);
+      res.status(500).json({ message: 'Failed to create comment', error: error.message });
+    }
+  });
+
+  // Learning resource comments routes
+  app.get('/api/resources/:id/comments', optionalAuth, async (req, res) => {
+    try {
+      const comments = await mongoStorage.getResourceComments(req.params.id);
+      
+      // Add isLikedByUser field to each comment
+      const commentsWithLikeStatus = await Promise.all(
+        comments.map(async (comment) => {
+          const isLikedByUser = req.user && req.user.userId
+            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+            : false;
+          return { ...comment, isLikedByUser };
+        })
+      );
+      
+      res.json(commentsWithLikeStatus);
+    } catch (error: any) {
+      console.error('Get resource comments error:', error);
+      res.status(500).json({ message: 'Failed to get comments', error: error.message });
+    }
+  });
+
+  app.post('/api/resources/:id/comments', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // Validate request body against schema
+      const validationResult = resourceCommentRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid comment data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
+      const comment = await mongoStorage.createResourceComment(
+        req.user.userId, 
+        req.params.id, 
+        validationResult.data
+      );
+      res.status(201).json(comment);
+    } catch (error: any) {
+      console.error('Create resource comment error:', error);
+      res.status(500).json({ message: 'Failed to create comment', error: error.message });
     }
   });
 

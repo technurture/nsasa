@@ -357,7 +357,7 @@ export default function BlogDetailPage() {
 
           {/* Comments Section */}
           <div className="mt-12">
-            <CommentsSection blogPostId={blogId!} />
+            <CommentsSection resourceType="blog" resourceId={blogId!} />
           </div>
         </article>
       </div>

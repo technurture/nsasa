@@ -18,7 +18,7 @@ export default function CommentsSectionExample() {
       },
       timestamp: "2024-01-15T10:30:00Z",
       likes: 12,
-      isLiked: false,
+      isLikedByUser: false,
       replies: [
         {
           id: "2",
@@ -30,7 +30,7 @@ export default function CommentsSectionExample() {
           },
           timestamp: "2024-01-15T14:20:00Z",
           likes: 8,
-          isLiked: true
+          isLikedByUser: true
         }
       ]
     },
@@ -44,7 +44,7 @@ export default function CommentsSectionExample() {
       },
       timestamp: "2024-01-15T16:45:00Z",
       likes: 5,
-      isLiked: false,
+      isLikedByUser: false,
       replies: []
     },
     {
@@ -57,7 +57,7 @@ export default function CommentsSectionExample() {
       },
       timestamp: "2024-01-16T09:15:00Z",
       likes: 3,
-      isLiked: false,
+      isLikedByUser: false,
       replies: []
     }
   ];
@@ -77,10 +77,11 @@ export default function CommentsSectionExample() {
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
       <CommentsSection 
+        resourceType="blog"
+        resourceId="example-id"
         comments={mockComments}
         currentUser={mockCurrentUser}
         onAddComment={handleAddComment}
-        onLikeComment={handleLikeComment}
         onReportComment={handleReportComment}
       />
     </div>

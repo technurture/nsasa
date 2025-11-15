@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import CommentsSection from "@/components/CommentsSection";
 import type { Event } from "@shared/mongoSchema";
 
 export default function EventDetailPage() {
@@ -419,6 +420,11 @@ export default function EventDetailPage() {
             >
               <Share2 className="h-5 w-5" />
             </Button>
+          </div>
+
+          {/* Comments Section */}
+          <div className="mt-12">
+            <CommentsSection resourceType="event" resourceId={eventId!} />
           </div>
         </article>
       </div>

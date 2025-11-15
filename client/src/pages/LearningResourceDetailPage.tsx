@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import CommentsSection from "@/components/CommentsSection";
 
 export default function LearningResourceDetailPage() {
   const params = useParams();
@@ -434,6 +435,11 @@ export default function LearningResourceDetailPage() {
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>
+          </div>
+
+          {/* Comments Section */}
+          <div className="mt-12">
+            <CommentsSection resourceType="resource" resourceId={resourceId!} />
           </div>
         </article>
 

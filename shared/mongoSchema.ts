@@ -54,13 +54,18 @@ export const blogPostSchema = z.object({
   updatedAt: z.date().default(() => new Date()),
 });
 
-// Comment schema
-export const commentSchema = z.object({
+// Base comment schema (without refinement) - used for creating insert schema
+const baseCommentSchema = z.object({
   _id: z.string().optional(),
   content: z.string(),
   
   authorId: z.string(),
-  blogPostId: z.string(),
+  
+  // Resource identifiers - at least one must be provided
+  blogPostId: z.string().optional(),  // For blog post comments
+  eventId: z.string().optional(),     // For event comments
+  resourceId: z.string().optional(),  // For learning resource comments
+  
   parentCommentId: z.string().optional(),
   
   likes: z.number().default(0),
@@ -68,6 +73,19 @@ export const commentSchema = z.object({
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
+
+// Comment schema - supports comments on blogs, events, and learning resources
+// Apply refinement to ensure exactly one resource ID is provided
+export const commentSchema = baseCommentSchema.refine(
+  (data) => {
+    // Count how many resource IDs are provided
+    const resourceIds = [data.blogPostId, data.eventId, data.resourceId].filter(Boolean);
+    return resourceIds.length === 1;
+  },
+  {
+    message: "Exactly one resource ID (blogPostId, eventId, or resourceId) must be provided"
+  }
+);
 
 // Event schema
 export const eventSchema = z.object({
@@ -183,7 +201,7 @@ export const newsletterSubscriptionSchema = z.object({
 // Insert schemas (for validation)
 export const insertUserSchema = userSchema.omit({ _id: true, createdAt: true, updatedAt: true });
 export const insertBlogPostSchema = blogPostSchema.omit({ _id: true, createdAt: true, updatedAt: true, authorId: true });
-export const insertCommentSchema = commentSchema.omit({ _id: true, createdAt: true, updatedAt: true, authorId: true, blogPostId: true });
+export const insertCommentSchema = baseCommentSchema.omit({ _id: true, createdAt: true, updatedAt: true, authorId: true, blogPostId: true });
 export const insertEventSchema = eventSchema.omit({ _id: true, createdAt: true, updatedAt: true, organizerId: true });
 export const insertLearningResourceSchema = learningResourceSchema.omit({ _id: true, createdAt: true, updatedAt: true, uploadedById: true });
 export const insertStaffProfileSchema = staffProfileSchema.omit({ _id: true, createdAt: true, updatedAt: true, userId: true });

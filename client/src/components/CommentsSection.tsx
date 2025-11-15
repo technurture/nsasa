@@ -27,8 +27,13 @@ interface Comment {
   replies?: Comment[];
 }
 
+type ResourceType = 'blog' | 'event' | 'resource';
+
 interface CommentsSectionProps {
-  blogPostId: string;
+  resourceType: ResourceType;
+  resourceId: string;
+  // Legacy prop for backwards compatibility
+  blogPostId?: string;
   comments?: Comment[];
   currentUser?: {
     name: string;
@@ -39,22 +44,58 @@ interface CommentsSectionProps {
 }
 
 export default function CommentsSection({ 
+  resourceType,
+  resourceId: propResourceId,
   blogPostId,
   comments: propComments, 
   currentUser, 
   onAddComment, 
   onReportComment 
 }: CommentsSectionProps) {
+  // Support legacy blogPostId prop
+  const resourceId = propResourceId || blogPostId || '';
+  
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
 
+  // Determine the API endpoint based on resource type
+  const getApiEndpoint = () => {
+    switch (resourceType) {
+      case 'blog':
+        return `/api/blogs/${resourceId}/comments`;
+      case 'event':
+        return `/api/events/${resourceId}/comments`;
+      case 'resource':
+        return `/api/resources/${resourceId}/comments`;
+      default:
+        return `/api/blogs/${resourceId}/comments`;
+    }
+  };
+
+  // Determine query key based on resource type
+  const getQueryKey = () => {
+    switch (resourceType) {
+      case 'blog':
+        return ['/api/blogs', resourceId, 'comments'];
+      case 'event':
+        return ['/api/events', resourceId, 'comments'];
+      case 'resource':
+        return ['/api/resources', resourceId, 'comments'];
+      default:
+        return ['/api/blogs', resourceId, 'comments'];
+    }
+  };
+
+  const apiEndpoint = getApiEndpoint();
+  const queryKey = getQueryKey();
+
   // Fetch comments from API
   const { data: fetchedComments, isLoading, error } = useQuery<any[]>({
-    queryKey: ['/api/blogs', blogPostId, 'comments'],
-    enabled: !!blogPostId
+    queryKey,
+    enabled: !!resourceId
   });
 
   // Use fetched comments if available, otherwise use prop comments
@@ -66,7 +107,7 @@ export default function CommentsSection({
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/blogs', blogPostId, 'comments'] });
+      queryClient.invalidateQueries({ queryKey });
     },
     onError: () => {
       toast({
@@ -83,7 +124,7 @@ export default function CommentsSection({
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/blogs', blogPostId, 'comments'] });
+      queryClient.invalidateQueries({ queryKey });
     },
     onError: () => {
       toast({
@@ -96,13 +137,13 @@ export default function CommentsSection({
 
   const createCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      const res = await apiRequest('POST', `/api/blogs/${blogPostId}/comments`, {
+      const res = await apiRequest('POST', apiEndpoint, {
         content
       });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/blogs', blogPostId, 'comments'] });
+      queryClient.invalidateQueries({ queryKey });
       toast({
         title: "Success",
         description: "Comment added successfully",
@@ -119,14 +160,14 @@ export default function CommentsSection({
 
   const createReplyMutation = useMutation({
     mutationFn: async ({ content, parentCommentId }: { content: string; parentCommentId: string }) => {
-      const res = await apiRequest('POST', `/api/blogs/${blogPostId}/comments`, {
+      const res = await apiRequest('POST', apiEndpoint, {
         content,
         parentCommentId
       });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/blogs', blogPostId, 'comments'] });
+      queryClient.invalidateQueries({ queryKey });
       setReplyContent("");
       setReplyingTo(null);
       toast({

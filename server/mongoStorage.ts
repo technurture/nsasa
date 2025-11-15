@@ -456,10 +456,16 @@ export class MongoStorage implements IMongoStorage {
   async createBlogComment(authorId: string, blogPostId: string, comment: InsertComment): Promise<Comment> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
     
+    // Normalize parentCommentId - convert empty string to undefined
+    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim() 
+      ? comment.parentCommentId 
+      : undefined;
+    
     const commentDoc: Omit<Comment, '_id'> = {
       ...comment,
       authorId,
       blogPostId,
+      parentCommentId,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -594,6 +600,282 @@ export class MongoStorage implements IMongoStorage {
   async deleteComment(id: string): Promise<void> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
     await commentsCollection.deleteOne({ _id: new ObjectId(id) } as any);
+  }
+  
+  // Event comment operations
+  async createEventComment(authorId: string, eventId: string, comment: InsertComment): Promise<Comment> {
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    // Normalize parentCommentId - convert empty string to undefined
+    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim() 
+      ? comment.parentCommentId 
+      : undefined;
+    
+    const commentDoc: Omit<Comment, '_id'> = {
+      ...comment,
+      authorId,
+      eventId,
+      parentCommentId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    const result = await commentsCollection.insertOne(commentDoc as any);
+    const newComment = await commentsCollection.findOne({ _id: result.insertedId });
+    
+    if (!newComment) {
+      throw new Error('Failed to create comment');
+    }
+    
+    return { ...newComment, _id: newComment._id.toString() };
+  }
+  
+  async getEventComments(eventId: string): Promise<Comment[]> {
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    const comments = await commentsCollection.aggregate([
+      { $match: { eventId } },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { 
+            authorId: { 
+              $convert: { 
+                input: "$authorId", 
+                to: "objectId",
+                onError: null,
+                onNull: null
+              } 
+            } 
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          author: {
+            name: {
+              $cond: {
+                if: "$authorData",
+                then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+                else: "Unknown Author"
+              }
+            },
+            avatar: {
+              $cond: {
+                if: "$authorData.profileImageUrl",
+                then: "$authorData.profileImageUrl",
+                else: { $concat: ["https://api.dicebear.com/7.x/avataaars/svg?seed=", "$authorId"] }
+              }
+            },
+            level: {
+              $cond: {
+                if: "$authorData.level",
+                then: "$authorData.level",
+                else: "Student"
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          id: { $toString: "$_id" },
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          eventId: 1,
+          parentCommentId: {
+            $cond: {
+              if: "$parentCommentId",
+              then: { $toString: "$parentCommentId" },
+              else: null
+            }
+          },
+          content: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          author: 1,
+          timestamp: {
+            $cond: {
+              if: { $eq: [{ $type: "$createdAt" }, "date"] },
+              then: { $dateToString: { date: "$createdAt", format: "%Y-%m-%dT%H:%M:%S.%LZ" } },
+              else: "$createdAt"
+            }
+          }
+        }
+      }
+    ]).toArray();
+    
+    const allComments = comments as any[];
+    const topLevelComments = allComments.filter(c => !c.parentCommentId);
+    const repliesMap = new Map<string, any[]>();
+    
+    allComments.filter(c => c.parentCommentId).forEach(reply => {
+      if (!repliesMap.has(reply.parentCommentId)) {
+        repliesMap.set(reply.parentCommentId, []);
+      }
+      repliesMap.get(reply.parentCommentId)!.push(reply);
+    });
+    
+    const attachReplies = (comment: any): any => {
+      const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
+      return {
+        ...comment,
+        replies: replies.map(attachReplies)
+      };
+    };
+    
+    const commentsWithReplies = topLevelComments.map(attachReplies);
+    return commentsWithReplies as Comment[];
+  }
+  
+  // Learning resource comment operations
+  async createResourceComment(authorId: string, resourceId: string, comment: InsertComment): Promise<Comment> {
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    // Normalize parentCommentId - convert empty string to undefined
+    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim() 
+      ? comment.parentCommentId 
+      : undefined;
+    
+    const commentDoc: Omit<Comment, '_id'> = {
+      ...comment,
+      authorId,
+      resourceId,
+      parentCommentId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    const result = await commentsCollection.insertOne(commentDoc as any);
+    const newComment = await commentsCollection.findOne({ _id: result.insertedId });
+    
+    if (!newComment) {
+      throw new Error('Failed to create comment');
+    }
+    
+    return { ...newComment, _id: newComment._id.toString() };
+  }
+  
+  async getResourceComments(resourceId: string): Promise<Comment[]> {
+    const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
+    
+    const comments = await commentsCollection.aggregate([
+      { $match: { resourceId } },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { 
+            authorId: { 
+              $convert: { 
+                input: "$authorId", 
+                to: "objectId",
+                onError: null,
+                onNull: null
+              } 
+            } 
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          author: {
+            name: {
+              $cond: {
+                if: "$authorData",
+                then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+                else: "Unknown Author"
+              }
+            },
+            avatar: {
+              $cond: {
+                if: "$authorData.profileImageUrl",
+                then: "$authorData.profileImageUrl",
+                else: { $concat: ["https://api.dicebear.com/7.x/avataaars/svg?seed=", "$authorId"] }
+              }
+            },
+            level: {
+              $cond: {
+                if: "$authorData.level",
+                then: "$authorData.level",
+                else: "Student"
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          id: { $toString: "$_id" },
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          resourceId: 1,
+          parentCommentId: {
+            $cond: {
+              if: "$parentCommentId",
+              then: { $toString: "$parentCommentId" },
+              else: null
+            }
+          },
+          content: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          author: 1,
+          timestamp: {
+            $cond: {
+              if: { $eq: [{ $type: "$createdAt" }, "date"] },
+              then: { $dateToString: { date: "$createdAt", format: "%Y-%m-%dT%H:%M:%S.%LZ" } },
+              else: "$createdAt"
+            }
+          }
+        }
+      }
+    ]).toArray();
+    
+    const allComments = comments as any[];
+    const topLevelComments = allComments.filter(c => !c.parentCommentId);
+    const repliesMap = new Map<string, any[]>();
+    
+    allComments.filter(c => c.parentCommentId).forEach(reply => {
+      if (!repliesMap.has(reply.parentCommentId)) {
+        repliesMap.set(reply.parentCommentId, []);
+      }
+      repliesMap.get(reply.parentCommentId)!.push(reply);
+    });
+    
+    const attachReplies = (comment: any): any => {
+      const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
+      return {
+        ...comment,
+        replies: replies.map(attachReplies)
+      };
+    };
+    
+    const commentsWithReplies = topLevelComments.map(attachReplies);
+    return commentsWithReplies as Comment[];
   }
   
   // Event operations
