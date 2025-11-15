@@ -930,6 +930,7 @@ export function EventManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
+  const [viewingRegistrations, setViewingRegistrations] = useState<Event | null>(null);
 
   // Fetch events query
   const { data: events = [], isLoading, refetch } = useQuery<Event[]>({
@@ -1082,12 +1083,23 @@ export function EventManagementView() {
                         <span>{event.location}</span>
                         <span>Capacity: {event.capacity}</span>
                         {event.price > 0 && (
-                          <span className="text-green-600">${(event.price / 100).toFixed(2)}</span>
+                          <span className="text-green-600">₦{event.price}</span>
                         )}
                       </div>
                     </div>
                     
                     <div className="flex lg:flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewingRegistrations(event)}
+                        className="flex-1 lg:flex-none"
+                        data-testid={`button-view-registrations-${event._id}`}
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Registrations</span>
+                        <span className="sm:hidden">Reg</span>
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1159,7 +1171,113 @@ export function EventManagementView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Event Registrations Modal */}
+      {viewingRegistrations && (
+        <EventRegistrationsModal
+          event={viewingRegistrations}
+          isOpen={!!viewingRegistrations}
+          onClose={() => setViewingRegistrations(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// Event Registrations Modal Component
+function EventRegistrationsModal({ 
+  event, 
+  isOpen, 
+  onClose 
+}: { 
+  event: Event; 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) {
+  const { data: registrations = [], isLoading } = useQuery<any[]>({
+    queryKey: [`/api/events/${event._id}/registrations`],
+    enabled: isOpen && !!event._id
+  });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Event Registrations - {event.title}</DialogTitle>
+          <DialogDescription>
+            View all registered users for this event
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : registrations.length === 0 ? (
+            <div className="text-center py-8" data-testid="text-no-registrations">
+              <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-muted-foreground">No registrations yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Total registrations: <span className="font-semibold">{registrations.length}</span>
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                {registrations.map((registration: any, index: number) => (
+                  <Card 
+                    key={registration._id || index} 
+                    className="p-4"
+                    data-testid={`card-registration-${registration._id || index}`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1">
+                        {registration.user ? (
+                          <div className="space-y-1">
+                            <p className="font-medium" data-testid={`text-user-name-${registration._id || index}`}>
+                              {registration.user?.firstName || ''} {registration.user?.lastName || ''}
+                            </p>
+                            <p className="text-sm text-muted-foreground" data-testid={`text-user-email-${registration._id || index}`}>
+                              {registration.user?.email || 'Email not available'}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="font-medium text-muted-foreground" data-testid={`text-user-id-${registration._id || index}`}>
+                            User ID: {registration.userId}
+                          </p>
+                        )}
+                        <p className="text-sm text-muted-foreground mt-2" data-testid={`text-registration-date-${registration._id || index}`}>
+                          Registered: {new Date(registration.createdAt).toLocaleDateString()} at {new Date(registration.createdAt).toLocaleTimeString()}
+                        </p>
+                        <Badge 
+                          variant={registration.status === 'registered' ? 'default' : 'secondary'} 
+                          className="mt-2"
+                          data-testid={`badge-status-${registration._id || index}`}
+                        >
+                          {registration.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end pt-4">
+          <Button onClick={onClose} variant="outline" data-testid="button-close-registrations-modal">
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

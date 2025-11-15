@@ -415,7 +415,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/events/:id/registrations', authenticateToken, requireAdmin, async (req, res) => {
     try {
       const registrations = await mongoStorage.getEventRegistrations(req.params.id);
-      res.json(registrations);
+      
+      // Fetch user details for each registration
+      const registrationsWithUsers = await Promise.all(
+        registrations.map(async (registration) => {
+          const user = await mongoStorage.getUser(registration.userId);
+          return {
+            ...registration,
+            user: user ? {
+              _id: user._id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              profileImageUrl: user.profileImageUrl
+            } : null
+          };
+        })
+      );
+      
+      res.json(registrationsWithUsers);
     } catch (error: any) {
       console.error('Get event registrations error:', error);
       res.status(500).json({ message: 'Failed to get event registrations', error: error.message });
