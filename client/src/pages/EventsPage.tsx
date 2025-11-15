@@ -1,17 +1,57 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import EventCard from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar } from "lucide-react";
 import type { Event } from "@shared/mongoSchema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function EventsPage() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const { user } = useAuth();
   
   const { data: events, isLoading, error } = useQuery<Event[]>({
     queryKey: ['/api/events'],
   });
+
+  // Registration mutation
+  const registerMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const res = await apiRequest('POST', `/api/events/${eventId}/register`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        title: "Registration Successful",
+        description: "You have been registered for this event",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Please log in to register for events",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRegister = (eventId: string) => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to register for events",
+        variant: "destructive",
+      });
+      setLocation('/login');
+      return;
+    }
+    registerMutation.mutate(eventId);
+  };
 
   if (error) {
     return (
@@ -61,7 +101,7 @@ export default function EventsPage() {
               type: event.type,
               capacity: event.capacity,
               registered: 0, // TODO: Get actual registration count
-              price: event.price / 100, // Convert cents to dollars
+              price: event.price, // Price in Naira
               image: event.imageUrl,
               organizer: event.organizerId, // TODO: Fetch organizer name
               tags: event.tags,
@@ -71,9 +111,10 @@ export default function EventsPage() {
               <EventCard 
                 key={event._id} 
                 event={transformedEvent}
-                onRegister={(id) => console.log('Register for event:', id)}
+                onRegister={handleRegister}
                 onShare={(id) => console.log('Share event:', id)}
                 onViewDetails={(id) => setLocation(`/events/${id}`)}
+                onReadMore={(id) => setLocation(`/events/${id}`)}
               />
             );
           })}
