@@ -7,6 +7,7 @@ import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
 import { insertBlogPostSchema, insertCommentSchema } from "../shared/mongoSchema";
 import { z } from "zod";
+import { v2 as cloudinary } from 'cloudinary';
 
 // Use insertBlogPostSchema directly for validation
 const blogRequestSchema = insertBlogPostSchema;
@@ -30,6 +31,14 @@ const resourceCommentRequestSchema = insertCommentSchema.extend({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize MongoDB
   await initializeMongoDB();
+  
+  // Configure Cloudinary
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
   
   // Add cookie parser middleware
   app.use(cookieParser());
@@ -121,10 +130,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const blogs = await mongoStorage.getBlogPosts(limit, offset);
       
       // Add isLikedByUser field to each blog
+      const userId = req.user?.userId;
       const blogsWithLikeStatus = await Promise.all(
         blogs.map(async (blog) => {
-          const isLikedByUser = req.user && req.user.userId
-            ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
+          const isLikedByUser = userId
+            ? await mongoStorage.isPostLikedByUser(userId as string, blog._id)
             : false;
           return { ...blog, isLikedByUser };
         })
@@ -148,8 +158,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await mongoStorage.incrementBlogViews(req.params.id);
       
       // Add isLikedByUser field
-      const isLikedByUser = req.user && req.user.userId
-        ? await mongoStorage.isPostLikedByUser(req.user.userId, blog._id)
+      const userId = req.user?.userId;
+      const isLikedByUser = userId
+        ? await mongoStorage.isPostLikedByUser(userId as string, blog._id)
         : false;
       
       res.json({ ...blog, isLikedByUser });
@@ -246,10 +257,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comments = await mongoStorage.getBlogComments(req.params.id);
       
       // Add isLikedByUser field to each comment
+      const userId = req.user?.userId;
       const commentsWithLikeStatus = await Promise.all(
         comments.map(async (comment) => {
-          const isLikedByUser = req.user && req.user.userId
-            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+          const isLikedByUser = userId
+            ? await mongoStorage.isCommentLikedByUser(userId as string, comment._id)
             : false;
           return { ...comment, isLikedByUser };
         })
@@ -357,10 +369,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comments = await mongoStorage.getEventComments(req.params.id);
       
       // Add isLikedByUser field to each comment
+      const userId = req.user?.userId;
       const commentsWithLikeStatus = await Promise.all(
         comments.map(async (comment) => {
-          const isLikedByUser = req.user && req.user.userId
-            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+          const isLikedByUser = userId
+            ? await mongoStorage.isCommentLikedByUser(userId as string, comment._id)
             : false;
           return { ...comment, isLikedByUser };
         })
@@ -406,10 +419,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comments = await mongoStorage.getResourceComments(req.params.id);
       
       // Add isLikedByUser field to each comment
+      const userId = req.user?.userId;
       const commentsWithLikeStatus = await Promise.all(
         comments.map(async (comment) => {
-          const isLikedByUser = req.user && req.user.userId
-            ? await mongoStorage.isCommentLikedByUser(req.user.userId, comment._id)
+          const isLikedByUser = userId
+            ? await mongoStorage.isCommentLikedByUser(userId as string, comment._id)
             : false;
           return { ...comment, isLikedByUser };
         })
@@ -600,6 +614,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Get resource error:', error);
       res.status(500).json({ message: 'Failed to get resource', error: error.message });
+    }
+  });
+
+  // Generate signed download URL for Cloudinary resources
+  app.post('/api/cloudinary/signed-url', authenticateToken, async (req, res) => {
+    try {
+      const { publicId, resourceType = 'raw', format, filename } = req.body;
+      
+      if (!publicId) {
+        return res.status(400).json({ message: 'publicId is required' });
+      }
+      
+      // Generate signed URL with 1 hour expiration
+      const signedUrl = cloudinary.url(publicId, {
+        resource_type: resourceType,
+        type: 'authenticated',
+        sign_url: true,
+        secure: true,
+        flags: 'attachment',
+        attachment: filename || true,
+        format: format
+      });
+      
+      res.json({ url: signedUrl });
+    } catch (error: any) {
+      console.error('Generate signed URL error:', error);
+      res.status(500).json({ message: 'Failed to generate signed URL', error: error.message });
     }
   });
 

@@ -240,7 +240,38 @@ export const getDownloadUrl = (url: string, filename?: string): string => {
 };
 
 /**
- * Download a file from Cloudinary with proper handling
+ * Extract public ID from Cloudinary URL
+ * @param url - Cloudinary URL
+ * @returns Public ID and resource type
+ */
+const extractCloudinaryPublicId = (url: string): { publicId: string; resourceType: string } => {
+  try {
+    const urlParts = url.split('/upload/');
+    if (urlParts.length !== 2) {
+      throw new Error('Invalid Cloudinary URL');
+    }
+    
+    // Extract path after upload (remove version if present)
+    const pathAfterUpload = urlParts[1];
+    const pathParts = pathAfterUpload.split('/');
+    
+    // Remove version number if present (starts with 'v' followed by digits)
+    const publicIdParts = pathParts.filter(part => !part.match(/^v\d+$/));
+    const publicId = publicIdParts.join('/');
+    
+    // Determine resource type from URL
+    const resourceType = url.includes('/image/') ? 'image' : 
+                        url.includes('/video/') ? 'video' : 'raw';
+    
+    return { publicId, resourceType };
+  } catch (error) {
+    console.error('Error extracting public ID:', error);
+    throw error;
+  }
+};
+
+/**
+ * Download a file from Cloudinary with proper authentication
  * @param fileUrl - Cloudinary file URL
  * @param fileName - Desired filename for download
  */
@@ -248,17 +279,38 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
   try {
     console.log(`📥 Downloading file: ${fileName}`);
     
-    // Get the download URL with attachment flag
-    const downloadUrl = getDownloadUrl(fileUrl, fileName);
+    // Extract public ID from URL
+    const { publicId, resourceType } = extractCloudinaryPublicId(fileUrl);
     
-    // Fetch the file as a blob
-    const response = await fetch(downloadUrl);
+    // Get signed URL from backend
+    const response = await fetch('/api/cloudinary/signed-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        publicId,
+        resourceType,
+        filename: fileName
+      })
+    });
     
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.statusText}`);
+      throw new Error(`Failed to get signed URL: ${response.statusText}`);
     }
     
-    const blob = await response.blob();
+    const { url: signedUrl } = await response.json();
+    console.log('📥 Signed download URL generated');
+    
+    // Fetch the file as a blob using signed URL
+    const fileResponse = await fetch(signedUrl);
+    
+    if (!fileResponse.ok) {
+      throw new Error(`Download failed: ${fileResponse.statusText}`);
+    }
+    
+    const blob = await fileResponse.blob();
     
     // Create a temporary link and trigger download
     const blobUrl = window.URL.createObjectURL(blob);
