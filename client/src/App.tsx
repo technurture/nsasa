@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +21,7 @@ import ContactForm from "@/components/ContactForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import LearningResourceCard from "@/components/LearningResourceCard";
 import ResourceDetailModal from "@/components/ResourceDetailModal";
+import FilePreviewModal from "@/components/FilePreviewModal";
 import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -286,6 +287,7 @@ function ResourcesPage() {
   const [, setLocation] = useLocation();
   const [selectedResource, setSelectedResource] = React.useState<any>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [previewResource, setPreviewResource] = React.useState<any>(null);
 
   const { data: resources, isLoading, error } = useQuery({
     queryKey: ['/api/resources'],
@@ -421,8 +423,24 @@ function ResourcesPage() {
                 console.error('Error recording download:', error);
               }
             }}
-            onPreview={(id) => console.log('Preview:', id)}
+            onPreview={(id) => {
+              const resourceToPreview = resources.find((r: any) => r._id === id);
+              if (resourceToPreview) {
+                setPreviewResource(resourceToPreview);
+              }
+            }}
           />
+
+          {previewResource && (
+            <FilePreviewModal
+              open={!!previewResource}
+              onOpenChange={(open) => !open && setPreviewResource(null)}
+              fileUrl={previewResource.fileUrl}
+              fileName={previewResource.fileName || previewResource.title}
+              fileType={previewResource.type}
+              title={previewResource.title}
+            />
+          )}
         </>
       ) : (
         <div className="text-center py-12">

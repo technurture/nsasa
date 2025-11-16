@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import CommentsSection from "@/components/CommentsSection";
 import { downloadFile } from "@/lib/cloudinary";
+import FilePreviewModal from "@/components/FilePreviewModal";
 
 export default function LearningResourceDetailPage() {
   const params = useParams();
@@ -37,6 +38,7 @@ export default function LearningResourceDetailPage() {
   const { toast } = useToast();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [userRating, setUserRating] = useState(0);
@@ -153,10 +155,7 @@ export default function LearningResourceDetailPage() {
       });
       return;
     }
-    toast({
-      title: "Preview",
-      description: "Opening preview...",
-    });
+    setIsPreviewModalOpen(true);
   };
 
   const handleRating = (rating: number) => {
@@ -524,6 +523,18 @@ export default function LearningResourceDetailPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* File Preview Modal */}
+        {resource && (
+          <FilePreviewModal
+            open={isPreviewModalOpen}
+            onOpenChange={setIsPreviewModalOpen}
+            fileUrl={resource.fileUrl}
+            fileName={resource.fileName || resource.title}
+            fileType={resource.type}
+            title={resource.title}
+          />
+        )}
       </div>
     </div>
   );
