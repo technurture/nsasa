@@ -297,7 +297,7 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
     // Extract public ID from URL
     const { publicId, resourceType } = extractCloudinaryPublicId(fileUrl);
     
-    // Get signed URL from backend
+    // Get signed URL from backend with attachment flag
     const response = await fetch('/api/cloudinary/signed-url', {
       method: 'POST',
       headers: {
@@ -318,30 +318,40 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
     const { url: signedUrl } = await response.json();
     console.log('📥 Signed download URL generated');
     
-    // Fetch the file as a blob using signed URL
-    const fileResponse = await fetch(signedUrl);
-    
-    if (!fileResponse.ok) {
-      throw new Error(`Download failed: ${fileResponse.statusText}`);
+    // Try to download using fetch and blob for better cross-origin handling
+    try {
+      const fileResponse = await fetch(signedUrl);
+      if (!fileResponse.ok) {
+        throw new Error('Failed to fetch file');
+      }
+      
+      const blob = await fileResponse.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Create temporary link for download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup: Remove link immediately and revoke blob URL after a delay
+      document.body.removeChild(link);
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+      
+      console.log('✅ Download completed:', fileName);
+    } catch (fetchError) {
+      console.warn('Fetch download failed, using fallback method:', fetchError);
+      
+      // Fallback: Use window.open for cross-origin files
+      // This will open the file in a new tab if download fails
+      window.open(signedUrl, '_blank');
+      console.log('✅ Download initiated via window.open:', fileName);
     }
-    
-    const blob = await fileResponse.blob();
-    
-    // Create a temporary link and trigger download
-    const blobUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    link.style.display = 'none';
-    
-    document.body.appendChild(link);
-    link.click();
-    
-    // Clean up
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(blobUrl);
-    
-    console.log('✅ Download complete:', fileName);
   } catch (error) {
     console.error('❌ Download error:', error);
     throw error;
@@ -350,20 +360,45 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
 
 /**
  * Get preview URL for a file (especially PDFs and documents)
+ * Creates a signed URL for previewing protected/private Cloudinary assets
  * @param url - Original Cloudinary URL
- * @returns Preview URL
+ * @returns Promise with signed preview URL
  */
-export const getPreviewUrl = (url: string): string => {
+export const getPreviewUrl = async (url: string): Promise<string> => {
   if (!url || !url.includes('cloudinary.com')) {
     return url;
   }
 
   try {
-    // For PDFs and documents, Cloudinary's URL can be used directly for preview
-    // The URL will open the file in the browser
-    return url;
+    // Extract public ID from URL
+    const { publicId, resourceType } = extractCloudinaryPublicId(url);
+    
+    // Get signed URL from backend WITHOUT filename parameter
+    // This ensures the file opens in browser instead of downloading
+    const response = await fetch('/api/cloudinary/signed-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        publicId,
+        resourceType
+        // Note: NO filename parameter - this prevents the attachment flag
+      })
+    });
+    
+    if (!response.ok) {
+      console.warn('Failed to get signed preview URL, using original URL');
+      return url;
+    }
+    
+    const { url: signedUrl } = await response.json();
+    console.log('✅ Signed preview URL generated');
+    return signedUrl;
   } catch (error) {
     console.error('Error generating preview URL:', error);
+    // Fallback to original URL if signing fails
     return url;
   }
 };

@@ -1,8 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Download, ExternalLink } from "lucide-react";
-import { downloadFile } from "@/lib/cloudinary";
-import { useState } from "react";
+import { X, Download, ExternalLink, Loader2 } from "lucide-react";
+import { downloadFile, getPreviewUrl } from "@/lib/cloudinary";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface FilePreviewModalProps {
@@ -23,7 +23,27 @@ export default function FilePreviewModal({
   title
 }: FilePreviewModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(true);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const { toast } = useToast();
+
+  // Fetch signed preview URL when modal opens
+  useEffect(() => {
+    if (open && fileUrl) {
+      setIsLoadingPreview(true);
+      getPreviewUrl(fileUrl)
+        .then(signedUrl => {
+          setPreviewUrl(signedUrl);
+          setIsLoadingPreview(false);
+        })
+        .catch(error => {
+          console.error('Failed to get preview URL:', error);
+          // Fallback to original URL
+          setPreviewUrl(fileUrl);
+          setIsLoadingPreview(false);
+        });
+    }
+  }, [open, fileUrl]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -46,16 +66,29 @@ export default function FilePreviewModal({
   };
 
   const handleOpenInNewTab = () => {
-    window.open(fileUrl, '_blank');
+    // Use signed preview URL if available, otherwise fallback to original
+    window.open(previewUrl || fileUrl, '_blank');
   };
 
   const renderPreview = () => {
+    // Show loading state while fetching signed URL
+    if (isLoadingPreview) {
+      return (
+        <div className="w-full h-[60vh] flex items-center justify-center bg-muted rounded-md">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading preview...</p>
+          </div>
+        </div>
+      );
+    }
+
     // PDF files
     if (fileType === 'pdf' || fileName.toLowerCase().endsWith('.pdf')) {
       return (
         <div className="w-full h-[70vh] bg-muted rounded-md overflow-hidden">
           <iframe
-            src={fileUrl}
+            src={previewUrl}
             className="w-full h-full border-0"
             title={title || fileName}
             data-testid="pdf-preview"
@@ -69,7 +102,7 @@ export default function FilePreviewModal({
       return (
         <div className="w-full max-h-[70vh] flex items-center justify-center bg-muted rounded-md overflow-hidden">
           <img
-            src={fileUrl}
+            src={previewUrl}
             alt={title || fileName}
             className="max-w-full max-h-[70vh] object-contain"
             data-testid="image-preview"
@@ -83,7 +116,7 @@ export default function FilePreviewModal({
       return (
         <div className="w-full bg-muted rounded-md overflow-hidden">
           <video
-            src={fileUrl}
+            src={previewUrl}
             controls
             className="w-full h-auto"
             data-testid="video-preview"
