@@ -630,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const urlOptions: any = {
         resource_type: resourceType,
-        type: 'upload',
+        type: 'upload', // Files uploaded via unsigned preset are stored as 'upload' type
         sign_url: true,
         secure: true,
         expires_at: expiresAt
@@ -639,7 +639,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Only add attachment flag if filename is provided
       if (filename) {
         urlOptions.flags = 'attachment';
-        urlOptions.attachment = filename;
       }
       
       if (format) {
