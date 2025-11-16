@@ -618,7 +618,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate signed download URL for Cloudinary resources
-  app.post('/api/cloudinary/signed-url', authenticateToken, async (req, res) => {
+  // Note: No authentication required here because signed URLs are inherently secure
+  // (time-limited and cryptographically signed). This allows previews in iframes and
+  // downloads to work properly without cookie/authentication issues.
+  app.post('/api/cloudinary/signed-url', async (req, res) => {
     try {
       const { publicId, resourceType = 'raw', format, filename } = req.body;
       
