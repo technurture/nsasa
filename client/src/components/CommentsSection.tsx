@@ -322,11 +322,11 @@ export default function CommentsSection({
             </div>
 
             {/* Reply Form */}
-            {replyingTo === comment.id && currentUser && (
+            {replyingTo === comment.id && (currentUser || user) && (
               <div className="flex gap-2 mt-3">
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src={currentUser.avatar} />
-                  <AvatarFallback className="text-xs">{currentUser.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={(currentUser?.avatar || user?.profileImageUrl || undefined)} />
+                  <AvatarFallback className="text-xs">{(currentUser?.name || user?.firstName || 'U').charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
                   <Textarea
@@ -429,12 +429,12 @@ export default function CommentsSection({
       
       <CardContent className="space-y-6">
         {/* Add Comment Form */}
-        {currentUser && (
+        {(currentUser || user) && (
           <div className="space-y-4">
             <div className="flex gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser.avatar} />
-                <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={(currentUser?.avatar || user?.profileImageUrl || undefined)} />
+                <AvatarFallback>{(currentUser?.name || user?.firstName || 'U').charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <Textarea
