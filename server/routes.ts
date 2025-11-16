@@ -630,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const urlOptions: any = {
         resource_type: resourceType,
-        type: 'authenticated',
+        type: 'upload',
         sign_url: true,
         secure: true,
         expires_at: expiresAt
