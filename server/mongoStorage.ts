@@ -68,6 +68,7 @@ export interface IMongoStorage {
   updateLearningResource(id: string, resource: Partial<LearningResource>): Promise<LearningResource>;
   deleteLearningResource(id: string): Promise<void>;
   recordResourceDownload(userId: string, resourceId: string): Promise<void>;
+  rateResource(userId: string, resourceId: string, rating: number): Promise<void>;
   
   // Staff operations
   createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile>;
@@ -327,18 +328,15 @@ export class MongoStorage implements IMongoStorage {
       {
         $lookup: {
           from: COLLECTIONS.USERS,
-          let: { 
-            authorId: { 
-              $convert: { 
-                input: "$authorId", 
-                to: "objectId",
-                onError: null,
-                onNull: null
-              } 
-            } 
-          },
+          let: { authorId: "$authorId" },
           pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+            { 
+              $match: { 
+                $expr: { 
+                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
+                } 
+              } 
+            }
           ],
           as: "authorData"
         }
@@ -489,18 +487,15 @@ export class MongoStorage implements IMongoStorage {
       {
         $lookup: {
           from: COLLECTIONS.USERS,
-          let: { 
-            authorId: { 
-              $convert: { 
-                input: "$authorId", 
-                to: "objectId",
-                onError: null,
-                onNull: null
-              } 
-            } 
-          },
+          let: { authorId: "$authorId" },
           pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+            { 
+              $match: { 
+                $expr: { 
+                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
+                } 
+              } 
+            }
           ],
           as: "authorData"
         }
@@ -639,18 +634,15 @@ export class MongoStorage implements IMongoStorage {
       {
         $lookup: {
           from: COLLECTIONS.USERS,
-          let: { 
-            authorId: { 
-              $convert: { 
-                input: "$authorId", 
-                to: "objectId",
-                onError: null,
-                onNull: null
-              } 
-            } 
-          },
+          let: { authorId: "$authorId" },
           pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+            { 
+              $match: { 
+                $expr: { 
+                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
+                } 
+              } 
+            }
           ],
           as: "authorData"
         }
@@ -777,18 +769,15 @@ export class MongoStorage implements IMongoStorage {
       {
         $lookup: {
           from: COLLECTIONS.USERS,
-          let: { 
-            authorId: { 
-              $convert: { 
-                input: "$authorId", 
-                to: "objectId",
-                onError: null,
-                onNull: null
-              } 
-            } 
-          },
+          let: { authorId: "$authorId" },
           pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$authorId"] } } }
+            { 
+              $match: { 
+                $expr: { 
+                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
+                } 
+              } 
+            }
           ],
           as: "authorData"
         }
@@ -1094,6 +1083,34 @@ export class MongoStorage implements IMongoStorage {
     await resourcesCollection.updateOne(
       { _id: new ObjectId(resourceId) } as any,
       { $inc: { downloads: 1 } }
+    );
+  }
+
+  async rateResource(userId: string, resourceId: string, rating: number): Promise<void> {
+    const resourceRatingsCollection = await getCollection(COLLECTIONS.RESOURCE_RATINGS);
+    const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
+    
+    // Upsert the rating
+    await resourceRatingsCollection.updateOne(
+      { userId, resourceId },
+      { $set: { userId, resourceId, rating, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    
+    // Recalculate average rating
+    const ratings = await resourceRatingsCollection.find({ resourceId }).toArray();
+    const avgRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length;
+    const ratingCount = ratings.length;
+    
+    // Update resource with new average rating
+    await resourcesCollection.updateOne(
+      { _id: new ObjectId(resourceId) } as any,
+      { 
+        $set: { 
+          rating: Math.round(avgRating * 10), // Store as integer * 10 for precision
+          ratingCount 
+        } 
+      }
     );
   }
   

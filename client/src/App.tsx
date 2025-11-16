@@ -406,7 +406,19 @@ function ResourcesPage() {
               fileUrl: '',
               fileName: ''
             }}
-            onDownload={(id) => console.log('Download:', id)}
+            onDownload={async (id) => {
+              try {
+                await fetch(`/api/resources/${id}/download`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                });
+              } catch (error) {
+                console.error('Error recording download:', error);
+              }
+            }}
             onPreview={(id) => console.log('Preview:', id)}
           />
         </>

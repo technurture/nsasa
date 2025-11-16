@@ -32,6 +32,8 @@ interface LearningResourceCardProps {
     difficulty: '100l' | '200l' | '300l' | '400l';
     thumbnail?: string;
     previewAvailable: boolean;
+    fileUrl: string;
+    fileName: string;
   };
   onDownload?: (id: string) => void;
   onPreview?: (id: string) => void;
@@ -84,13 +86,24 @@ export default function LearningResourceCard({
         if (prev >= 100) {
           clearInterval(progressInterval);
           setIsDownloading(false);
-          onDownload?.(resource.id);
-          console.log(`Downloaded resource: ${resource.title}`);
           return 100;
         }
         return prev + 10;
       });
     }, 100);
+
+    // Trigger the actual file download
+    const link = document.createElement('a');
+    link.href = resource.fileUrl;
+    link.download = resource.fileName || resource.title;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Call the optional download handler (for tracking, etc.)
+    onDownload?.(resource.id);
+    console.log(`Downloaded resource: ${resource.title}`);
   };
 
   const handlePreview = (e: React.MouseEvent) => {
@@ -106,11 +119,29 @@ export default function LearningResourceCard({
     console.log(`${isFavorited ? 'Unfavorited' : 'Favorited'} resource: ${resource.title}`);
   };
 
-  const handleRating = (e: React.MouseEvent, rating: number) => {
+  const handleRating = async (e: React.MouseEvent, rating: number) => {
     e.stopPropagation();
     setUserRating(rating);
-    onRate?.(resource.id, rating);
-    console.log(`Rated resource ${resource.title}: ${rating} stars`);
+    
+    try {
+      const response = await fetch(`/api/resources/${resource.id}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ rating }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit rating');
+      }
+
+      onRate?.(resource.id, rating);
+      console.log(`Rated resource ${resource.title}: ${rating} stars`);
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+    }
   };
 
   const handleReadMore = (e: React.MouseEvent) => {

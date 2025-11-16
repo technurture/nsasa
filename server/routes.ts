@@ -618,6 +618,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resource rating
+  app.post('/api/resources/:id/rate', authenticateToken, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const { rating } = req.body;
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+      }
+      
+      await mongoStorage.rateResource(req.user.userId, req.params.id, rating);
+      res.json({ message: 'Rating submitted successfully' });
+    } catch (error: any) {
+      console.error('Rate resource error:', error);
+      res.status(500).json({ message: 'Failed to rate resource', error: error.message });
+    }
+  });
+
   app.post('/api/resources', authenticateToken, requireAdmin, async (req, res) => {
     try {
       if (!req.user) {

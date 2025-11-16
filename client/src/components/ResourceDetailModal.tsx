@@ -192,12 +192,34 @@ export default function ResourceDetailModal({
     });
   };
 
-  const handleRating = (rating: number) => {
+  const handleRating = async (rating: number) => {
     setUserRating(rating);
-    toast({
-      title: "Rating Submitted",
-      description: `You rated this resource ${rating} stars`,
-    });
+    
+    try {
+      const response = await fetch(`/api/resources/${resource.id}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ rating }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit rating');
+      }
+
+      toast({
+        title: "Rating Submitted",
+        description: `You rated this resource ${rating} stars`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit rating. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

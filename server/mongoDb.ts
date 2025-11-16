@@ -76,6 +76,7 @@ export const COLLECTIONS = {
   EVENTS: 'events',
   EVENT_REGISTRATIONS: 'eventRegistrations',
   LEARNING_RESOURCES: 'learningResources',
+  RESOURCE_RATINGS: 'resourceRatings',
   STAFF_PROFILES: 'staffProfiles',
   CONTACT_SUBMISSIONS: 'contactSubmissions',
   NEWSLETTER_SUBSCRIPTIONS: 'newsletterSubscriptions',
