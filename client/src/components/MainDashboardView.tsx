@@ -1298,19 +1298,52 @@ function ResourceFormModal({
   const form = useForm<ResourceFormData>({
     resolver: zodResolver(resourceFormSchema),
     defaultValues: {
-      title: resource?.title || "",
-      description: resource?.description || "",
-      type: resource?.type || 'pdf',
-      category: resource?.category || "",
-      fileUrl: resource?.fileUrl || "",
-      fileName: resource?.fileName || "",
-      fileSize: resource?.fileSize || "",
-      difficulty: resource?.difficulty || '100l',
-      tags: resource?.tags?.join(", ") || "",
-      previewAvailable: resource?.previewAvailable || false,
-      thumbnailUrl: resource?.thumbnailUrl || ""
+      title: "",
+      description: "",
+      type: 'pdf',
+      category: "",
+      fileUrl: "",
+      fileName: "",
+      fileSize: "",
+      difficulty: '100l',
+      tags: "",
+      previewAvailable: false,
+      thumbnailUrl: ""
     }
   });
+
+  // Reset form when resource changes (for edit mode)
+  useEffect(() => {
+    if (resource) {
+      form.reset({
+        title: resource.title || "",
+        description: resource.description || "",
+        type: resource.type || 'pdf',
+        category: resource.category || "",
+        fileUrl: resource.fileUrl || "",
+        fileName: resource.fileName || "",
+        fileSize: resource.fileSize || "",
+        difficulty: resource.difficulty || '100l',
+        tags: resource.tags?.join(", ") || "",
+        previewAvailable: resource.previewAvailable || false,
+        thumbnailUrl: resource.thumbnailUrl || ""
+      });
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        type: 'pdf',
+        category: "",
+        fileUrl: "",
+        fileName: "",
+        fileSize: "",
+        difficulty: '100l',
+        tags: "",
+        previewAvailable: false,
+        thumbnailUrl: ""
+      });
+    }
+  }, [resource, form]);
 
   const handleSubmit = (data: ResourceFormData) => {
     const submitData = {
