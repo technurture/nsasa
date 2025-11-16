@@ -196,3 +196,107 @@ export const validateFile = (
 
   return { isValid: true };
 };
+
+/**
+ * Convert a Cloudinary URL to force download with proper filename
+ * @param url - Original Cloudinary URL
+ * @param filename - Desired filename for download
+ * @returns Download URL with fl_attachment flag
+ */
+export const getDownloadUrl = (url: string, filename?: string): string => {
+  if (!url || !url.includes('cloudinary.com')) {
+    return url;
+  }
+
+  try {
+    // Parse the URL to extract resource type and public ID
+    const urlParts = url.split('/upload/');
+    if (urlParts.length !== 2) {
+      return url;
+    }
+
+    const baseUrl = urlParts[0];
+    const pathAfterUpload = urlParts[1];
+
+    // Build transformation string with download flag
+    const transformations = ['fl_attachment'];
+    
+    // Add filename if provided
+    if (filename) {
+      // Remove special characters and spaces from filename
+      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      transformations.push(`fl_attachment:${sanitizedFilename}`);
+    }
+
+    // Construct the new URL
+    const downloadUrl = `${baseUrl}/upload/${transformations.join(',')}/${pathAfterUpload}`;
+    
+    console.log('📥 Download URL generated:', downloadUrl);
+    return downloadUrl;
+  } catch (error) {
+    console.error('Error generating download URL:', error);
+    return url;
+  }
+};
+
+/**
+ * Download a file from Cloudinary with proper handling
+ * @param fileUrl - Cloudinary file URL
+ * @param fileName - Desired filename for download
+ */
+export const downloadFile = async (fileUrl: string, fileName: string): Promise<void> => {
+  try {
+    console.log(`📥 Downloading file: ${fileName}`);
+    
+    // Get the download URL with attachment flag
+    const downloadUrl = getDownloadUrl(fileUrl, fileName);
+    
+    // Fetch the file as a blob
+    const response = await fetch(downloadUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    
+    // Create a temporary link and trigger download
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+    
+    console.log('✅ Download complete:', fileName);
+  } catch (error) {
+    console.error('❌ Download error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get preview URL for a file (especially PDFs and documents)
+ * @param url - Original Cloudinary URL
+ * @returns Preview URL
+ */
+export const getPreviewUrl = (url: string): string => {
+  if (!url || !url.includes('cloudinary.com')) {
+    return url;
+  }
+
+  try {
+    // For PDFs and documents, Cloudinary's URL can be used directly for preview
+    // The URL will open the file in the browser
+    return url;
+  } catch (error) {
+    console.error('Error generating preview URL:', error);
+    return url;
+  }
+};
