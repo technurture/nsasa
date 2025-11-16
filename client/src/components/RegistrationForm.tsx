@@ -320,8 +320,8 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
                     <SelectValue placeholder="Select your location" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="on-campus">On Campus</SelectItem>
-                    <SelectItem value="off-campus">Off Campus</SelectItem>
+                    <SelectItem value="OnCampus">On Campus</SelectItem>
+                    <SelectItem value="OffCampus">Off Campus</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.location && (
@@ -362,14 +362,14 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
             
             <div className="space-y-2">
               <Label htmlFor="address">
-                {formData.location === "on-campus" ? "Hostel Address" : "Off-Campus Address"} *
+                {formData.location === "OnCampus" ? "Hostel Address" : "Off-Campus Address"} *
               </Label>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) => handleInputChange("address", e.target.value)}
                 placeholder={
-                  formData.location === "on-campus" 
+                  formData.location === "OnCampus" 
                     ? "Enter your hostel name and room number" 
                     : "Enter your off-campus address"
                 }
