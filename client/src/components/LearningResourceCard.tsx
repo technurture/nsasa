@@ -15,6 +15,8 @@ import {
   Heart
 } from "lucide-react";
 import { useState } from "react";
+import { downloadFile } from "@/lib/cloudinary";
+import { useToast } from "@/hooks/use-toast";
 
 interface LearningResourceCardProps {
   resource: {
@@ -54,6 +56,7 @@ export default function LearningResourceCard({
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [userRating, setUserRating] = useState(0);
+  const { toast } = useToast();
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -83,27 +86,30 @@ export default function LearningResourceCard({
     // Simulate download progress
     const progressInterval = setInterval(() => {
       setDownloadProgress(prev => {
-        if (prev >= 100) {
+        if (prev >= 90) {
           clearInterval(progressInterval);
-          setIsDownloading(false);
-          return 100;
+          return 90;
         }
         return prev + 10;
       });
     }, 100);
 
-    // Trigger the actual file download
-    const link = document.createElement('a');
-    link.href = resource.fileUrl;
-    link.download = resource.fileName || resource.title;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Call the optional download handler (for tracking, etc.)
-    onDownload?.(resource.id);
-    console.log(`Downloaded resource: ${resource.title}`);
+    try {
+      await downloadFile(resource.fileUrl, resource.fileName || resource.title);
+      setDownloadProgress(100);
+      onDownload?.(resource.id);
+      console.log(`Downloaded resource: ${resource.title}`);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      clearInterval(progressInterval);
+      setIsDownloading(false);
+    }
   };
 
   const handlePreview = (e: React.MouseEvent) => {

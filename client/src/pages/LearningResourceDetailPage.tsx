@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import CommentsSection from "@/components/CommentsSection";
+import { downloadFile } from "@/lib/cloudinary";
 
 export default function LearningResourceDetailPage() {
   const params = useParams();
@@ -106,6 +107,17 @@ export default function LearningResourceDetailPage() {
     setIsDownloading(true);
     setDownloadProgress(0);
 
+    // Simulate download progress
+    const progressInterval = setInterval(() => {
+      setDownloadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 100);
+
     try {
       // Record the download
       await fetch(`/api/resources/${resourceId}/download`, {
@@ -116,45 +128,19 @@ export default function LearningResourceDetailPage() {
         credentials: 'include',
       });
 
-      // Start download progress simulation
-      const progressInterval = setInterval(() => {
-        setDownloadProgress(prev => Math.min(prev + 10, 90));
-      }, 100);
-
-      // Fetch the file from Cloudinary
-      const response = await fetch(resource.fileUrl);
-      const blob = await response.blob();
-      
-      // Create a blob URL and trigger download
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = resource.fileName || `${resource.title}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up the blob URL
-      window.URL.revokeObjectURL(blobUrl);
-
-      clearInterval(progressInterval);
+      await downloadFile(resource.fileUrl, resource.fileName || resource.title);
       setDownloadProgress(100);
-
-      setTimeout(() => {
-        setIsDownloading(false);
-        toast({
-          title: "Download Complete",
-          description: `${resource.title} has been downloaded successfully`,
-        });
-      }, 500);
+      console.log(`Downloaded resource: ${resource.title}`);
     } catch (error) {
-      console.error('Download error:', error);
-      setIsDownloading(false);
+      console.error('Download failed:', error);
       toast({
         title: "Download Failed",
-        description: "There was an error downloading the file. Please try again.",
+        description: "Failed to download the file. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      clearInterval(progressInterval);
+      setIsDownloading(false);
     }
   };
 

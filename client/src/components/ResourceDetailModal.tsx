@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import {
   Download,
   Eye,
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { downloadFile } from "@/lib/cloudinary";
 
 interface Comment {
   id: string;
@@ -86,6 +88,8 @@ export default function ResourceDetailModal({
   const [newComment, setNewComment] = useState("");
   const [isFavorited, setIsFavorited] = useState(false);
   const [userRating, setUserRating] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const { toast } = useToast();
 
   const getTypeIcon = (type: string) => {
@@ -160,37 +164,35 @@ export default function ResourceDetailModal({
   };
 
   const handleDownload = async () => {
-    try {
-      // For Cloudinary URLs, we need to fetch and download properly
-      const response = await fetch(resource.fileUrl);
-      const blob = await response.blob();
-      
-      // Create a blob URL and trigger download
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = resource.fileName || `${resource.title}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up the blob URL
-      window.URL.revokeObjectURL(blobUrl);
-      
-      // Call the optional download handler (for tracking, etc.)
-      onDownload?.(resource.id);
-      
-      toast({
-        title: "Download Started",
-        description: `Downloading ${resource.title}`,
+    setIsDownloading(true);
+    setDownloadProgress(0);
+
+    // Simulate download progress
+    const progressInterval = setInterval(() => {
+      setDownloadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
       });
+    }, 100);
+
+    try {
+      await downloadFile(resource.fileUrl, resource.fileName || resource.title);
+      setDownloadProgress(100);
+      onDownload?.(resource.id);
+      console.log(`Downloaded resource: ${resource.title}`);
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('Download failed:', error);
       toast({
         title: "Download Failed",
-        description: "There was an error downloading the file. Please try again.",
+        description: "Failed to download the file. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      clearInterval(progressInterval);
+      setIsDownloading(false);
     }
   };
 
@@ -313,12 +315,23 @@ export default function ResourceDetailModal({
               </div>
             </div>
 
+            {/* Download Progress */}
+            {isDownloading && (
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span>Downloading...</span>
+                  <span>{downloadProgress}%</span>
+                </div>
+                <Progress value={downloadProgress} className="h-2" />
+              </div>
+            )}
+
             {/* Actions */}
             <div className="space-y-3">
               <div className="flex gap-2 flex-wrap">
-                <Button onClick={handleDownload} data-testid={`modal-button-download-${resource.id}`}>
+                <Button onClick={handleDownload} disabled={isDownloading} data-testid={`modal-button-download-${resource.id}`}>
                   <Download className="h-4 w-4 mr-2" />
-                  Download
+                  {isDownloading ? 'Downloading...' : 'Download'}
                 </Button>
 
                 {resource.previewAvailable && (
