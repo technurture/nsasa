@@ -282,25 +282,16 @@ function StaffPage() {
 }
 
 function ResourcesPage() {
-  // todo: remove mock functionality
-  const mockResources = [
-    {
-      id: "1",
-      title: "Advanced Statistical Methods for Social Research",
-      description: "Comprehensive guide covering advanced statistical techniques.",
-      type: 'pdf' as const,
-      category: "Research Methods",
-      size: "12.5 MB",
-      downloads: 234,
-      rating: 4.7,
-      uploadedBy: "Dr. Sarah Johnson",
-      uploadDate: "2024-01-15",
-      tags: ["statistics", "research", "SPSS"],
-      difficulty: '400l' as const,
-      thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop",
-      previewAvailable: true
-    }
-  ];
+  const [, setLocation] = useLocation();
+
+  const { data: resources, isLoading, error } = useQuery({
+    queryKey: ['/api/resources'],
+    queryFn: async () => {
+      const response = await fetch('/api/resources');
+      if (!response.ok) throw new Error('Failed to fetch resources');
+      return response.json();
+    },
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -310,11 +301,58 @@ function ResourcesPage() {
           Access our comprehensive collection of educational materials
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {mockResources.map((resource) => (
-          <LearningResourceCard key={resource.id} resource={resource} />
-        ))}
-      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-4">
+              <div className="h-48 bg-muted animate-pulse rounded-lg" />
+              <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+              <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <p className="text-destructive">Failed to load resources. Please try again later.</p>
+        </div>
+      ) : resources && resources.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {resources.map((resource: any) => {
+            const transformedResource = {
+              id: resource._id,
+              title: resource.title,
+              description: resource.description,
+              type: resource.type,
+              category: resource.category,
+              size: resource.fileSize || 'Unknown',
+              downloads: resource.downloads || 0,
+              rating: resource.rating || 0,
+              uploadedBy: resource.uploadedBy || 'Unknown',
+              uploadDate: new Date(resource.uploadedAt || resource.createdAt).toISOString().split('T')[0],
+              tags: resource.tags || [],
+              difficulty: resource.difficulty,
+              thumbnail: resource.thumbnailUrl,
+              previewAvailable: !!resource.previewUrl
+            };
+            
+            return (
+              <div 
+                key={resource._id} 
+                onClick={() => setLocation(`/resources/${resource._id}`)}
+                className="cursor-pointer"
+                data-testid={`card-resource-${resource._id}`}
+              >
+                <LearningResourceCard resource={transformedResource} />
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No learning resources available yet.</p>
+        </div>
+      )}
     </div>
   );
 }
