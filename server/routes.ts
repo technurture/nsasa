@@ -578,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Learning resources routes
-  app.get('/api/resources', authenticateToken, async (req, res) => {
+  app.get('/api/resources', optionalAuth, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
@@ -590,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/resources/:id', authenticateToken, async (req, res) => {
+  app.get('/api/resources/:id', optionalAuth, async (req, res) => {
     try {
       const resource = await mongoStorage.getLearningResource(req.params.id);
       if (!resource) {

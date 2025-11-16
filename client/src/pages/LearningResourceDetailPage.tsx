@@ -89,8 +89,8 @@ export default function LearningResourceDetailPage() {
     });
   };
 
-  const formatFileSize = (size: string) => {
-    return size.toUpperCase();
+  const formatFileSize = (size: string | undefined) => {
+    return size ? size.toUpperCase() : 'UNKNOWN';
   };
 
   const handleDownload = async () => {

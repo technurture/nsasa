@@ -37,6 +37,7 @@ interface LearningResourceCardProps {
   onPreview?: (id: string) => void;
   onRate?: (id: string, rating: number) => void;
   onFavorite?: (id: string) => void;
+  onReadMore?: (id: string) => void;
 }
 
 export default function LearningResourceCard({ 
@@ -44,7 +45,8 @@ export default function LearningResourceCard({
   onDownload, 
   onPreview, 
   onRate, 
-  onFavorite 
+  onFavorite,
+  onReadMore 
 }: LearningResourceCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -71,7 +73,8 @@ export default function LearningResourceCard({
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsDownloading(true);
     setDownloadProgress(0);
 
@@ -90,21 +93,29 @@ export default function LearningResourceCard({
     }, 100);
   };
 
-  const handlePreview = () => {
+  const handlePreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onPreview?.(resource.id);
     console.log(`Preview resource: ${resource.title}`);
   };
 
-  const handleFavorite = () => {
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsFavorited(!isFavorited);
     onFavorite?.(resource.id);
     console.log(`${isFavorited ? 'Unfavorited' : 'Favorited'} resource: ${resource.title}`);
   };
 
-  const handleRating = (rating: number) => {
+  const handleRating = (e: React.MouseEvent, rating: number) => {
+    e.stopPropagation();
     setUserRating(rating);
     onRate?.(resource.id, rating);
     console.log(`Rated resource ${resource.title}: ${rating} stars`);
+  };
+
+  const handleReadMore = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReadMore?.(resource.id);
   };
 
   const formatDate = (dateString: string) => {
@@ -207,7 +218,7 @@ export default function LearningResourceCard({
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
-              onClick={() => handleRating(star)}
+              onClick={(e) => handleRating(e, star)}
               className="p-0 border-0 bg-transparent hover:scale-110 transition-transform"
               data-testid={`star-${star}-${resource.id}`}
             >
@@ -270,6 +281,16 @@ export default function LearningResourceCard({
               Quick Preview
             </Button>
           )}
+
+          <Button 
+            variant="secondary" 
+            onClick={handleReadMore}
+            className="w-full"
+            data-testid={`button-readmore-${resource.id}`}
+          >
+            <BookOpen className="h-4 w-4 mr-2" />
+            Read More & Comment
+          </Button>
         </div>
       </CardContent>
     </Card>

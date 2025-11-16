@@ -20,6 +20,7 @@ import LoginForm from "@/components/LoginForm";
 import ContactForm from "@/components/ContactForm";
 import AdminDashboard from "@/components/AdminDashboard";
 import LearningResourceCard from "@/components/LearningResourceCard";
+import ResourceDetailModal from "@/components/ResourceDetailModal";
 import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -283,6 +284,8 @@ function StaffPage() {
 
 function ResourcesPage() {
   const [, setLocation] = useLocation();
+  const [selectedResource, setSelectedResource] = React.useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const { data: resources, isLoading, error } = useQuery({
     queryKey: ['/api/resources'],
@@ -292,6 +295,34 @@ function ResourcesPage() {
       return response.json();
     },
   });
+
+  const handleReadMore = (id: string) => {
+    const resource = resources?.find((r: any) => r._id === id);
+    if (resource) {
+      const transformedResource = {
+        id: resource._id,
+        title: resource.title,
+        description: resource.description,
+        type: resource.type,
+        category: resource.category,
+        size: resource.fileSize || 'Unknown',
+        downloads: resource.downloads || 0,
+        rating: resource.rating || 0,
+        uploadedBy: resource.uploadedBy || 'Unknown',
+        uploadDate: new Date(resource.uploadedAt || resource.createdAt).toISOString().split('T')[0],
+        tags: resource.tags || [],
+        difficulty: resource.difficulty,
+        thumbnail: resource.thumbnailUrl,
+        previewAvailable: !!resource.previewUrl
+      };
+      setSelectedResource(transformedResource);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleCardClick = (id: string) => {
+    setLocation(`/resources/${id}`);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -317,37 +348,64 @@ function ResourcesPage() {
           <p className="text-destructive">Failed to load resources. Please try again later.</p>
         </div>
       ) : resources && resources.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {resources.map((resource: any) => {
-            const transformedResource = {
-              id: resource._id,
-              title: resource.title,
-              description: resource.description,
-              type: resource.type,
-              category: resource.category,
-              size: resource.fileSize || 'Unknown',
-              downloads: resource.downloads || 0,
-              rating: resource.rating || 0,
-              uploadedBy: resource.uploadedBy || 'Unknown',
-              uploadDate: new Date(resource.uploadedAt || resource.createdAt).toISOString().split('T')[0],
-              tags: resource.tags || [],
-              difficulty: resource.difficulty,
-              thumbnail: resource.thumbnailUrl,
-              previewAvailable: !!resource.previewUrl
-            };
-            
-            return (
-              <div 
-                key={resource._id} 
-                onClick={() => setLocation(`/resources/${resource._id}`)}
-                className="cursor-pointer"
-                data-testid={`card-resource-${resource._id}`}
-              >
-                <LearningResourceCard resource={transformedResource} />
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {resources.map((resource: any) => {
+              const transformedResource = {
+                id: resource._id,
+                title: resource.title,
+                description: resource.description,
+                type: resource.type,
+                category: resource.category,
+                size: resource.fileSize || 'Unknown',
+                downloads: resource.downloads || 0,
+                rating: resource.rating || 0,
+                uploadedBy: resource.uploadedBy || 'Unknown',
+                uploadDate: new Date(resource.uploadedAt || resource.createdAt).toISOString().split('T')[0],
+                tags: resource.tags || [],
+                difficulty: resource.difficulty,
+                thumbnail: resource.thumbnailUrl,
+                previewAvailable: !!resource.previewUrl
+              };
+              
+              return (
+                <div 
+                  key={resource._id} 
+                  onClick={() => handleCardClick(resource._id)}
+                  className="cursor-pointer"
+                  data-testid={`card-resource-${resource._id}`}
+                >
+                  <LearningResourceCard 
+                    resource={transformedResource}
+                    onReadMore={handleReadMore}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <ResourceDetailModal
+            open={isModalOpen && !!selectedResource}
+            onOpenChange={setIsModalOpen}
+            resource={selectedResource || {
+              id: '',
+              title: '',
+              description: '',
+              type: 'document' as const,
+              category: '',
+              size: '',
+              downloads: 0,
+              rating: 0,
+              uploadedBy: '',
+              uploadDate: '',
+              tags: [],
+              difficulty: '100l' as const,
+              previewAvailable: false
+            }}
+            onDownload={(id) => console.log('Download:', id)}
+            onPreview={(id) => console.log('Preview:', id)}
+          />
+        </>
       ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No learning resources available yet.</p>
