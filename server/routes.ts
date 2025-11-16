@@ -627,15 +627,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate signed URL with 1 hour expiration
-      const signedUrl = cloudinary.url(publicId, {
+      const expiresAt = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const urlOptions: any = {
         resource_type: resourceType,
         type: 'authenticated',
         sign_url: true,
         secure: true,
-        flags: 'attachment',
-        attachment: filename || true,
-        format: format
-      });
+        expires_at: expiresAt
+      };
+      
+      // Only add attachment flag if filename is provided
+      if (filename) {
+        urlOptions.flags = 'attachment';
+        urlOptions.attachment = filename;
+      }
+      
+      if (format) {
+        urlOptions.format = format;
+      }
+      
+      const signedUrl = cloudinary.url(publicId, urlOptions);
       
       res.json({ url: signedUrl });
     } catch (error: any) {

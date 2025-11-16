@@ -241,6 +241,7 @@ export const getDownloadUrl = (url: string, filename?: string): string => {
 
 /**
  * Extract public ID from Cloudinary URL
+ * Cloudinary URL structure: /{resource_type}/upload/{transformations}/{version}/{public_id}
  * @param url - Cloudinary URL
  * @returns Public ID and resource type
  */
@@ -251,12 +252,26 @@ const extractCloudinaryPublicId = (url: string): { publicId: string; resourceTyp
       throw new Error('Invalid Cloudinary URL');
     }
     
-    // Extract path after upload (remove version if present)
+    // Extract path after upload
     const pathAfterUpload = urlParts[1];
     const pathParts = pathAfterUpload.split('/');
     
-    // Remove version number if present (starts with 'v' followed by digits)
-    const publicIdParts = pathParts.filter(part => !part.match(/^v\d+$/));
+    // Find the version token (v followed by digits) or start of actual path
+    // Everything after the version token is the public ID
+    let versionIndex = -1;
+    for (let i = 0; i < pathParts.length; i++) {
+      if (pathParts[i].match(/^v\d+$/)) {
+        versionIndex = i;
+        break;
+      }
+    }
+    
+    // If version found, public ID is everything after it
+    // Otherwise, assume no transformations and whole path is public ID
+    const publicIdParts = versionIndex >= 0 
+      ? pathParts.slice(versionIndex + 1)
+      : pathParts;
+    
     const publicId = publicIdParts.join('/');
     
     // Determine resource type from URL
