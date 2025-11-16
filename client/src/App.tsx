@@ -313,7 +313,9 @@ function ResourcesPage() {
         tags: resource.tags || [],
         difficulty: resource.difficulty,
         thumbnail: resource.thumbnailUrl,
-        previewAvailable: !!resource.previewUrl
+        previewAvailable: !!resource.previewUrl,
+        fileUrl: resource.fileUrl,
+        fileName: resource.fileName
       };
       setSelectedResource(transformedResource);
       setIsModalOpen(true);
@@ -400,7 +402,9 @@ function ResourcesPage() {
               uploadDate: '',
               tags: [],
               difficulty: '100l' as const,
-              previewAvailable: false
+              previewAvailable: false,
+              fileUrl: '',
+              fileName: ''
             }}
             onDownload={(id) => console.log('Download:', id)}
             onPreview={(id) => console.log('Preview:', id)}

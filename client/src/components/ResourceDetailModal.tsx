@@ -53,6 +53,8 @@ interface ResourceDetailModalProps {
     difficulty: '100l' | '200l' | '300l' | '400l';
     thumbnail?: string;
     previewAvailable: boolean;
+    fileUrl: string;
+    fileName?: string;
   };
   onDownload?: (id: string) => void;
   onPreview?: (id: string) => void;
@@ -158,7 +160,18 @@ export default function ResourceDetailModal({
   };
 
   const handleDownload = () => {
+    // Trigger the actual file download
+    const link = document.createElement('a');
+    link.href = resource.fileUrl;
+    link.download = resource.fileName || resource.title;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Call the optional download handler (for tracking, etc.)
     onDownload?.(resource.id);
+    
     toast({
       title: "Download Started",
       description: `Downloading ${resource.title}`,
@@ -189,8 +202,8 @@ export default function ResourceDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <div className="flex items-start gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
@@ -229,7 +242,7 @@ export default function ResourceDetailModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 h-0 pr-4">
           <div className="space-y-6">
             {/* Thumbnail */}
             {resource.thumbnail && (
