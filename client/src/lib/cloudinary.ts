@@ -218,18 +218,9 @@ export const getDownloadUrl = (url: string, filename?: string): string => {
     const baseUrl = urlParts[0];
     const pathAfterUpload = urlParts[1];
 
-    // Build transformation string with download flag
-    const transformations = ['fl_attachment'];
-    
-    // Add filename if provided
-    if (filename) {
-      // Remove special characters and spaces from filename
-      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-      transformations.push(`fl_attachment:${sanitizedFilename}`);
-    }
-
-    // Construct the new URL
-    const downloadUrl = `${baseUrl}/upload/${transformations.join(',')}/${pathAfterUpload}`;
+    // For public files, simply add fl_attachment flag to force download
+    // The filename will be taken from the original file name in Cloudinary
+    const downloadUrl = `${baseUrl}/upload/fl_attachment/${pathAfterUpload}`;
     
     console.log('📥 Download URL generated:', downloadUrl);
     return downloadUrl;
@@ -286,7 +277,7 @@ const extractCloudinaryPublicId = (url: string): { publicId: string; resourceTyp
 };
 
 /**
- * Download a file from Cloudinary with proper authentication
+ * Download a file from Cloudinary (for public files)
  * @param fileUrl - Cloudinary file URL
  * @param fileName - Desired filename for download
  */
@@ -294,33 +285,12 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
   try {
     console.log(`📥 Downloading file: ${fileName}`);
     
-    // Extract public ID from URL
-    const { publicId, resourceType } = extractCloudinaryPublicId(fileUrl);
-    
-    // Get signed URL from backend with attachment flag
-    const response = await fetch('/api/cloudinary/signed-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        publicId,
-        resourceType,
-        filename: fileName
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to get signed URL: ${response.statusText}`);
-    }
-    
-    const { url: signedUrl } = await response.json();
-    console.log('📥 Signed download URL generated');
+    // For public files, add fl_attachment flag directly to URL
+    const downloadUrl = getDownloadUrl(fileUrl, fileName);
     
     // Try to download using fetch and blob for better cross-origin handling
     try {
-      const fileResponse = await fetch(signedUrl);
+      const fileResponse = await fetch(downloadUrl);
       if (!fileResponse.ok) {
         throw new Error('Failed to fetch file');
       }
@@ -349,7 +319,7 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
       
       // Fallback: Use window.open for cross-origin files
       // This will open the file in a new tab if download fails
-      window.open(signedUrl, '_blank');
+      window.open(downloadUrl, '_blank');
       console.log('✅ Download initiated via window.open:', fileName);
     }
   } catch (error) {
@@ -360,9 +330,9 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
 
 /**
  * Get preview URL for a file (especially PDFs and documents)
- * Creates a signed URL for previewing protected/private Cloudinary assets
+ * For public files, returns the direct URL without attachment flag
  * @param url - Original Cloudinary URL
- * @returns Promise with signed preview URL
+ * @returns Promise with preview URL
  */
 export const getPreviewUrl = async (url: string): Promise<string> => {
   if (!url || !url.includes('cloudinary.com')) {
@@ -370,35 +340,13 @@ export const getPreviewUrl = async (url: string): Promise<string> => {
   }
 
   try {
-    // Extract public ID from URL
-    const { publicId, resourceType } = extractCloudinaryPublicId(url);
-    
-    // Get signed URL from backend WITHOUT filename parameter
-    // This ensures the file opens in browser instead of downloading
-    const response = await fetch('/api/cloudinary/signed-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        publicId,
-        resourceType
-        // Note: NO filename parameter - this prevents the attachment flag
-      })
-    });
-    
-    if (!response.ok) {
-      console.warn('Failed to get signed preview URL, using original URL');
-      return url;
-    }
-    
-    const { url: signedUrl } = await response.json();
-    console.log('✅ Signed preview URL generated');
-    return signedUrl;
+    // For public files, just return the original URL for preview
+    // No attachment flag means it will display in browser instead of downloading
+    console.log('✅ Using direct URL for preview (public file)');
+    return url;
   } catch (error) {
     console.error('Error generating preview URL:', error);
-    // Fallback to original URL if signing fails
+    // Fallback to original URL
     return url;
   }
 };
