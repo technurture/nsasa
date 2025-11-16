@@ -159,23 +159,39 @@ export default function ResourceDetailModal({
     });
   };
 
-  const handleDownload = () => {
-    // Trigger the actual file download
-    const link = document.createElement('a');
-    link.href = resource.fileUrl;
-    link.download = resource.fileName || resource.title;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Call the optional download handler (for tracking, etc.)
-    onDownload?.(resource.id);
-    
-    toast({
-      title: "Download Started",
-      description: `Downloading ${resource.title}`,
-    });
+  const handleDownload = async () => {
+    try {
+      // For Cloudinary URLs, we need to fetch and download properly
+      const response = await fetch(resource.fileUrl);
+      const blob = await response.blob();
+      
+      // Create a blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = resource.fileName || `${resource.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
+      
+      // Call the optional download handler (for tracking, etc.)
+      onDownload?.(resource.id);
+      
+      toast({
+        title: "Download Started",
+        description: `Downloading ${resource.title}`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "There was an error downloading the file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePreview = () => {
@@ -224,7 +240,7 @@ export default function ResourceDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start gap-4">
             <div className="flex-1">
@@ -264,7 +280,7 @@ export default function ResourceDetailModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 h-0 pr-4">
+        <ScrollArea className="flex-1 overflow-auto pr-4">
           <div className="space-y-6">
             {/* Thumbnail */}
             {resource.thumbnail && (

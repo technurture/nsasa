@@ -106,20 +106,56 @@ export default function LearningResourceDetailPage() {
     setIsDownloading(true);
     setDownloadProgress(0);
 
-    const progressInterval = setInterval(() => {
-      setDownloadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          setIsDownloading(false);
-          toast({
-            title: "Download Complete",
-            description: `${resource.title} has been downloaded successfully`,
-          });
-          return 100;
-        }
-        return prev + 10;
+    try {
+      // Record the download
+      await fetch(`/api/resources/${resourceId}/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
       });
-    }, 100);
+
+      // Start download progress simulation
+      const progressInterval = setInterval(() => {
+        setDownloadProgress(prev => Math.min(prev + 10, 90));
+      }, 100);
+
+      // Fetch the file from Cloudinary
+      const response = await fetch(resource.fileUrl);
+      const blob = await response.blob();
+      
+      // Create a blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = resource.fileName || `${resource.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
+
+      clearInterval(progressInterval);
+      setDownloadProgress(100);
+
+      setTimeout(() => {
+        setIsDownloading(false);
+        toast({
+          title: "Download Complete",
+          description: `${resource.title} has been downloaded successfully`,
+        });
+      }, 500);
+    } catch (error) {
+      console.error('Download error:', error);
+      setIsDownloading(false);
+      toast({
+        title: "Download Failed",
+        description: "There was an error downloading the file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePreview = () => {
@@ -298,7 +334,7 @@ export default function LearningResourceDetailPage() {
               </div>
               <div>
                 <p className="font-medium" data-testid="text-uploader">
-                  {resource.uploadedBy || 'Unknown'}
+                  {resource.uploaderName || 'Unknown'}
                 </p>
                 <p className="text-sm text-muted-foreground">Uploader</p>
               </div>

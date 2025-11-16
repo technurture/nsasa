@@ -1053,8 +1053,22 @@ export class MongoStorage implements IMongoStorage {
   
   async getLearningResource(id: string): Promise<LearningResource | undefined> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
     const resource = await resourcesCollection.findOne({ _id: new ObjectId(id) } as any);
-    return resource ? { ...resource, _id: resource._id.toString() } : undefined;
+    
+    if (!resource) {
+      return undefined;
+    }
+    
+    const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) } as any);
+    
+    return {
+      ...resource,
+      _id: resource._id.toString(),
+      uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : 'Unknown Uploader',
+      uploaderAvatar: uploader?.profileImageUrl
+    } as any;
   }
   
   async updateLearningResource(id: string, resource: Partial<LearningResource>): Promise<LearningResource> {
