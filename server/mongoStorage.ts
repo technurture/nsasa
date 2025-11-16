@@ -1004,12 +1004,41 @@ export class MongoStorage implements IMongoStorage {
     return registrations.map(reg => ({ ...reg, _id: reg._id.toString() }));
   }
   
+  // Helper function to determine if a file is previewable
+  private isFilePreviewable(fileType: string, fileName: string, fileUrl?: string): boolean {
+    // Prioritize actual file URL/fileName to get the true file extension
+    const urlToCheck = fileUrl || fileName;
+    
+    // Check actual file extension (this is the most reliable indicator)
+    // PDFs
+    if (/\.pdf$/i.test(urlToCheck)) {
+      return true;
+    }
+    
+    // Images
+    if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(urlToCheck)) {
+      return true;
+    }
+    
+    // Videos
+    if (/\.(mp4|webm|ogg|mov)$/i.test(urlToCheck)) {
+      return true;
+    }
+    
+    // If no previewable extension found, file cannot be previewed in browser
+    return false;
+  }
+
   // Learning resource operations
   async createLearningResource(uploadedById: string, resource: InsertLearningResource & { fileUrl: string; fileName: string; fileSize: string }): Promise<LearningResource> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
     
+    // Automatically determine if the file is previewable
+    const previewAvailable = this.isFilePreviewable(resource.type, resource.fileName, resource.fileUrl);
+    
     const resourceDoc: Omit<LearningResource, '_id'> = {
       ...resource,
+      previewAvailable,
       uploadedById,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1039,9 +1068,14 @@ export class MongoStorage implements IMongoStorage {
     const resourcesWithUploaderInfo = await Promise.all(
       resources.map(async (resource) => {
         const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) } as any);
+        
+        // Always recalculate previewAvailable based on actual file type to ensure accuracy
+        const previewAvailable = this.isFilePreviewable(resource.type, resource.fileName, resource.fileUrl);
+        
         return {
           ...resource,
           _id: resource._id.toString(),
+          previewAvailable,
           uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : 'Unknown Uploader',
           uploaderAvatar: uploader?.profileImageUrl
         } as any;
@@ -1063,9 +1097,13 @@ export class MongoStorage implements IMongoStorage {
     
     const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) } as any);
     
+    // Always recalculate previewAvailable based on actual file type to ensure accuracy
+    const previewAvailable = this.isFilePreviewable(resource.type, resource.fileName, resource.fileUrl);
+    
     return {
       ...resource,
       _id: resource._id.toString(),
+      previewAvailable,
       uploaderName: uploader ? `${uploader.firstName} ${uploader.lastName}` : 'Unknown Uploader',
       uploaderAvatar: uploader?.profileImageUrl
     } as any;
