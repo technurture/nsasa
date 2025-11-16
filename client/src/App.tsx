@@ -367,7 +367,9 @@ function ResourcesPage() {
                 tags: resource.tags || [],
                 difficulty: resource.difficulty,
                 thumbnail: resource.thumbnailUrl,
-                previewAvailable: !!resource.previewUrl
+                previewAvailable: !!resource.previewUrl,
+                fileUrl: resource.fileUrl,
+                fileName: resource.fileName
               };
               
               return (
