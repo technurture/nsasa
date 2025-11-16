@@ -43,6 +43,176 @@ interface CommentsSectionProps {
   onReportComment?: (commentId: string) => void;
 }
 
+// Move CommentItem outside to prevent recreation on each render
+interface CommentItemProps {
+  comment: Comment;
+  isReply?: boolean;
+  replyingTo: string | null;
+  replyContent: string;
+  currentUser?: { name: string; avatar?: string };
+  user: any;
+  onSetReplyingTo: (id: string | null) => void;
+  onSetReplyContent: (content: string) => void;
+  onHandleLike: (comment: Comment) => void;
+  onHandleSubmitReply: (parentId: string) => void;
+  onReportComment?: (commentId: string) => void;
+  formatTimestamp: (timestamp: string) => string;
+  isPending: boolean;
+}
+
+function CommentItem({ 
+  comment, 
+  isReply = false,
+  replyingTo,
+  replyContent,
+  currentUser,
+  user,
+  onSetReplyingTo,
+  onSetReplyContent,
+  onHandleLike,
+  onHandleSubmitReply,
+  onReportComment,
+  formatTimestamp,
+  isPending
+}: CommentItemProps) {
+  const isLiked = comment.isLikedByUser;
+
+  return (
+    <div className={`space-y-3 ${isReply ? 'ml-8 border-l-2 border-muted pl-4' : ''}`}>
+      <div className="flex gap-3">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={comment.author.avatar} />
+          <AvatarFallback>{comment.author.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        
+        <div className="flex-1 space-y-2">
+          {/* Author Info */}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm" data-testid={`comment-author-${comment.id}`}>
+              {comment.author.name}
+            </span>
+            <Badge variant="outline" className="text-xs">
+              {comment.author.level}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {formatTimestamp(comment.timestamp)}
+            </span>
+          </div>
+
+          {/* Comment Content */}
+          <p className="text-sm leading-relaxed" data-testid={`comment-content-${comment.id}`}>
+            {comment.content}
+          </p>
+
+          {/* Actions */}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`gap-1 h-auto p-1 ${isLiked ? 'text-red-500' : ''}`}
+              onClick={() => onHandleLike(comment)}
+              disabled={isPending}
+              data-testid={`button-like-${comment.id}`}
+            >
+              <Heart className={`h-3 w-3 ${isLiked ? 'fill-current' : ''}`} />
+              <span className="text-xs">{comment.likes}</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 h-auto p-1"
+              onClick={() => onSetReplyingTo(comment.id)}
+              data-testid={`button-reply-${comment.id}`}
+            >
+              <Reply className="h-3 w-3" />
+              <span className="text-xs">Reply</span>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-auto p-1" data-testid={`button-more-${comment.id}`}>
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onReportComment?.(comment.id)}>
+                  <Flag className="mr-2 h-3 w-3" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Reply Form */}
+          {replyingTo === comment.id && (currentUser || user) && (
+            <div className="flex gap-2 mt-3">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={(currentUser?.avatar || user?.profileImageUrl || undefined)} />
+                <AvatarFallback className="text-xs">{(currentUser?.name || user?.firstName || 'U').charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-2">
+                <Textarea
+                  placeholder={`Reply to ${comment.author.name}...`}
+                  value={replyContent}
+                  onChange={(e) => onSetReplyContent(e.target.value)}
+                  className="min-h-16 text-sm"
+                  data-testid={`textarea-reply-${comment.id}`}
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => onHandleSubmitReply(comment.id)}
+                    disabled={!replyContent.trim()}
+                    data-testid={`button-submit-reply-${comment.id}`}
+                  >
+                    Reply
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => {
+                      onSetReplyingTo(null);
+                      onSetReplyContent("");
+                    }}
+                    data-testid={`button-cancel-reply-${comment.id}`}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Nested Replies */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="space-y-3">
+          {comment.replies.map((reply) => (
+            <CommentItem 
+              key={reply.id} 
+              comment={reply} 
+              isReply={true}
+              replyingTo={replyingTo}
+              replyContent={replyContent}
+              currentUser={currentUser}
+              user={user}
+              onSetReplyingTo={onSetReplyingTo}
+              onSetReplyContent={onSetReplyContent}
+              onHandleLike={onHandleLike}
+              onHandleSubmitReply={onHandleSubmitReply}
+              onReportComment={onReportComment}
+              formatTimestamp={formatTimestamp}
+              isPending={isPending}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CommentsSection({ 
   resourceType,
   resourceId: propResourceId,
@@ -250,130 +420,7 @@ export default function CommentsSection({
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
-  const CommentItem = ({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) => {
-    const isLiked = comment.isLikedByUser;
-    const isPending = likeCommentMutation.isPending || unlikeCommentMutation.isPending;
-
-    return (
-      <div className={`space-y-3 ${isReply ? 'ml-8 border-l-2 border-muted pl-4' : ''}`}>
-        <div className="flex gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={comment.author.avatar} />
-            <AvatarFallback>{comment.author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          
-          <div className="flex-1 space-y-2">
-            {/* Author Info */}
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-sm" data-testid={`comment-author-${comment.id}`}>
-                {comment.author.name}
-              </span>
-              <Badge variant="outline" className="text-xs">
-                {comment.author.level}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {formatTimestamp(comment.timestamp)}
-              </span>
-            </div>
-
-            {/* Comment Content */}
-            <p className="text-sm leading-relaxed" data-testid={`comment-content-${comment.id}`}>
-              {comment.content}
-            </p>
-
-            {/* Actions */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`gap-1 h-auto p-1 ${isLiked ? 'text-red-500' : ''}`}
-                onClick={() => handleLike(comment)}
-                disabled={isPending}
-                data-testid={`button-like-${comment.id}`}
-              >
-                <Heart className={`h-3 w-3 ${isLiked ? 'fill-current' : ''}`} />
-                <span className="text-xs">{comment.likes}</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 h-auto p-1"
-                onClick={() => setReplyingTo(comment.id)}
-                data-testid={`button-reply-${comment.id}`}
-              >
-                <Reply className="h-3 w-3" />
-                <span className="text-xs">Reply</span>
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-auto p-1" data-testid={`button-more-${comment.id}`}>
-                    <MoreHorizontal className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onReportComment?.(comment.id)}>
-                    <Flag className="mr-2 h-3 w-3" />
-                    Report
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* Reply Form */}
-            {replyingTo === comment.id && (currentUser || user) && (
-              <div className="flex gap-2 mt-3">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={(currentUser?.avatar || user?.profileImageUrl || undefined)} />
-                  <AvatarFallback className="text-xs">{(currentUser?.name || user?.firstName || 'U').charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-2">
-                  <Textarea
-                    placeholder={`Reply to ${comment.author.name}...`}
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    className="min-h-16 text-sm"
-                    data-testid={`textarea-reply-${comment.id}`}
-                  />
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleSubmitReply(comment.id)}
-                      disabled={!replyContent.trim()}
-                      data-testid={`button-submit-reply-${comment.id}`}
-                    >
-                      Reply
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => {
-                        setReplyingTo(null);
-                        setReplyContent("");
-                      }}
-                      data-testid={`button-cancel-reply-${comment.id}`}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Nested Replies */}
-        {comment.replies && comment.replies.length > 0 && (
-          <div className="space-y-3">
-            {comment.replies.map((reply) => (
-              <CommentItem key={reply.id} comment={reply} isReply={true} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const isPending = likeCommentMutation.isPending || unlikeCommentMutation.isPending;
 
   // Show loading state
   if (isLoading) {
@@ -467,7 +514,21 @@ export default function CommentsSection({
             </div>
           ) : (
             comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem 
+                key={comment.id} 
+                comment={comment}
+                replyingTo={replyingTo}
+                replyContent={replyContent}
+                currentUser={currentUser}
+                user={user}
+                onSetReplyingTo={setReplyingTo}
+                onSetReplyContent={setReplyContent}
+                onHandleLike={handleLike}
+                onHandleSubmitReply={handleSubmitReply}
+                onReportComment={onReportComment}
+                formatTimestamp={formatTimestamp}
+                isPending={isPending}
+              />
             ))
           )}
         </div>
