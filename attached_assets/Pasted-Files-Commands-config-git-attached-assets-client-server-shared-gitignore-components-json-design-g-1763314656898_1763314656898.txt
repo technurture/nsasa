@@ -1,0 +1,98 @@
+Files
+Commands
+.config
+.git
+attached_assets
+client
+server
+shared
+.gitignore
+components.json
+design_guidelines.md
+drizzle.config.ts
+postcss.config.js
+replit.md
+tailwind.config.ts
+tsconfig.json
+vite.config.ts
+Packager files
+.upm
+node_modules
+package-lock.json
+package.json
+Config files
+.replit
+npm run dev
+12m • 13 minutes ago
+Docs
+Secrets are accessible to anyone who has access to this App. To restrict secret access, you must update App invite permissions. For more information, visit our documentation.
+SESSION_SECRET
+••••••••
+DATABASE_URL
+••••••••
+CLOUDINARY_CLOUD_NAME
+••••••••
+CLOUDINARY_API_KEY
+••••••••
+CLOUDINARY_API_SECRET
+••••••••
+JWT_SECRET
+••••••••
+VITE_CLOUDINARY_UPLOAD_PRESET
+••••••••
+VITE_CLOUDINARY_CLOUD_NAME
+••••••••
+Saved progress at the end of the loop
+Checkpoint made27 minutes ago
+Saved progress at the end of the loop
+1 minute of work
+Checkpoint made16 minutes ago
+Saved progress at the end of the loop
+
+The download and the preview of learning resources uploaded is not available for download, i can't dowlaod or preview it
+15 minutes ago
+Checkpoint made12 minutes ago
+Allow preview and download of uploaded learning resources
+2 minutes of work
+
+Looks like there’s a problem with this site
+
+https://res.cloudinary.com/dvgewacb7/raw/upload/s---pMKo8XX--/v1/resources/jiom1lk70iqcgl6x3rmt.pdf?_a=BAMAMieA0 sent back an error.
+
+Error code: 401 Unauthorized
+
+Check to make sure you’ve typed the web site address correctly.
+
+still can't download or preview the uploaded document
+
+8 minutes ago
+
+Let me investigate why the signed URLs are still returning 401 errors. I'll check the logs and the Cloudinary configuration.
+Checked console and system logs
+
+I see the signed URL is being generated (status 200), but Cloudinary is rejecting it with 401. This suggests the signature might be incorrect. Let me investigate the public ID extraction and signed URL generation:
+
+Let me check if the files are publicly accessible without signatures, and also investigate how the signed URLs are being generated:
+
+Ah! I found the root cause. The file itself is returning a 401 error even when accessed directly without any signature. This means the files are being uploaded as private/authenticated resources, not public ones.
+
+The issue is with your Cloudinary upload preset configuration. Let me help you fix this:
+The Problem
+
+When I check the file directly:
+
+https://res.cloudinary.com/dvgewacb7/raw/upload/v1763313174/resources/jiom1lk70iqcgl6x3rmt.pdf
+
+It returns: HTTP/2 401
+
+This means your upload preset Nsasa001 is configured to upload files as authenticated/private instead of public.
+The Solution
+
+You need to change your Cloudinary upload preset settings:
+Option 1: Make Uploads Public (Recommended for Learning Resources)
+
+    Log in to your Cloudinary Dashboard at https://cloudinary.com
+    Go to Settings → Upload
+    Find your upload preset "Nsasa001"
+    Change the "Resource access mode" to "Public" (not "Authenticated")
+    Save the preset
