@@ -1,8 +1,9 @@
 import { Resend } from 'resend';
+import { config } from './config';
 
 let connectionSettings: any;
 
-async function getCredentials() {
+async function getCredentialsFromReplit() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -11,33 +12,61 @@ async function getCredentials() {
     : null;
 
   if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+    return null;
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
+  try {
+    connectionSettings = await fetch(
+      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X_REPLIT_TOKEN': xReplitToken
+        }
       }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
+    ).then(res => res.json()).then(data => data.items?.[0]);
 
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
+    if (connectionSettings && connectionSettings.settings.api_key) {
+      return {
+        apiKey: connectionSettings.settings.api_key, 
+        fromEmail: connectionSettings.settings.from_email || 'onboarding@resend.dev'
+      };
+    }
+  } catch (error) {
+    console.log('Could not fetch Replit connector credentials:', error);
   }
-  return {
-    apiKey: connectionSettings.settings.api_key, 
-    fromEmail: connectionSettings.settings.from_email
-  };
+  
+  return null;
+}
+
+async function getCredentials() {
+  if (config.isReplit) {
+    const replitCreds = await getCredentialsFromReplit();
+    if (replitCreds) {
+      console.log('Using Resend credentials from Replit connector');
+      return replitCreds;
+    }
+  }
+  
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  
+  if (!apiKey) {
+    throw new Error(
+      'Email service not configured. Please set RESEND_API_KEY environment variable ' +
+      'or configure the Resend connector in Replit.'
+    );
+  }
+  
+  console.log('Using Resend credentials from environment variables');
+  return { apiKey, fromEmail };
 }
 
 async function getUncachableResendClient() {
   const { apiKey, fromEmail } = await getCredentials();
   return {
     client: new Resend(apiKey),
-    fromEmail: fromEmail || 'onboarding@resend.dev'
+    fromEmail
   };
 }
 
@@ -185,9 +214,7 @@ export function generatePasswordResetEmail(resetUrl: string, firstName: string):
 export function generateApprovalEmail(firstName: string, lastName: string, approved: boolean): string {
   const status = approved ? 'Approved' : 'Rejected';
   const statusColor = approved ? '#10b981' : '#ef4444';
-  const loginUrl = process.env.REPLIT_DOMAINS 
-    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/login`
-    : 'https://your-app-url.com/login';
+  const loginUrl = `${config.baseUrl}/login`;
 
   return `
     <!DOCTYPE html>
