@@ -183,15 +183,15 @@ export default function LoginForm({ onLogin, onForgotPassword, onSignUpRedirect 
               </Label>
             </div>
             
-            <Button
-              type="button"
-              variant="ghost"
-              className="p-0 h-auto text-sm underline"
-              onClick={handleForgotPassword}
-              data-testid="button-forgot-password"
-            >
-              Forgot password?
-            </Button>
+            <Link href="/forgot-password">
+              <button
+                type="button"
+                className="text-sm text-primary hover:text-primary/80 transition-colors"
+                data-testid="link-forgot-password"
+              >
+                Forgot password?
+              </button>
+            </Link>
           </div>
 
           {/* Submit Button */}

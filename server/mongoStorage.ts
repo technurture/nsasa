@@ -271,6 +271,19 @@ export class MongoStorage implements IMongoStorage {
     return { ...result, _id: result._id.toString() };
   }
   
+  async updateUserPassword(id: string, hashedPassword: string): Promise<void> {
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(id) } as any,
+      { $set: { passwordHash: hashedPassword, updatedAt: new Date() } }
+    );
+    
+    if (result.matchedCount === 0) {
+      throw new Error('User not found');
+    }
+  }
+  
   private calculateProfileCompletion(user: Partial<User>): number {
     const fields = ['email', 'firstName', 'lastName', 'matricNumber', 'gender', 'location', 'address', 'phoneNumber', 'level'];
     const completedFields = fields.filter(field => user[field as keyof User]);

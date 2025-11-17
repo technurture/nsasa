@@ -43,6 +43,8 @@ import BlogDetailPage from "@/pages/BlogDetailPage";
 import EventsPage from "@/pages/EventsPage";
 import EventDetailPage from "@/pages/EventDetailPage";
 import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 
 // Main Pages
 function LandingPage() {
@@ -588,6 +590,8 @@ function AuthRouter() {
     <Switch>
       <Route path="/register" component={RegisterPage} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
     </Switch>
   );
 }
@@ -739,7 +743,7 @@ function AppContent() {
   };
 
   // Check if current path is an auth page
-  const isAuthPage = location === '/login' || location === '/register';
+  const isAuthPage = location === '/login' || location === '/register' || location === '/forgot-password' || location === '/reset-password';
   
   // Check if current path is a dashboard page (should not have header/footer)
   // Don't show header/footer while loading auth or when on dashboard

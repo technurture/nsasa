@@ -7,8 +7,12 @@ import {
   userSchema,
   type RegisterUser 
 } from '@shared/mongoSchema';
+import { sendPasswordResetEmail, sendApprovalEmail } from './emailService';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 // Initialize MongoDB connection
 initializeMongoDB().catch(console.error);
@@ -229,6 +233,22 @@ router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
 
     const updatedUser = await mongoStorage.updateUserApprovalStatus(id, status);
     
+    // Send approval/rejection email
+    try {
+      if (updatedUser.email && updatedUser.firstName && updatedUser.lastName) {
+        await sendApprovalEmail(
+          updatedUser.email,
+          updatedUser.firstName,
+          updatedUser.lastName,
+          status === 'approved'
+        );
+        console.log(`${status} email sent to ${updatedUser.email}`);
+      }
+    } catch (emailError: any) {
+      console.error('Failed to send approval email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
     // Remove password hash from response
     const { passwordHash, ...userResponse } = updatedUser;
     
@@ -271,6 +291,107 @@ router.put('/admin/users/:id/role', authenticateToken, async (req, res) => {
     console.error('Update user role error:', error);
     res.status(500).json({ 
       message: 'Failed to update user role',
+      error: error.message 
+    });
+  }
+});
+
+// Forgot password endpoint
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await mongoStorage.getUserByEmail(email);
+    
+    if (!user) {
+      // Return success even if user doesn't exist (security best practice)
+      return res.json({ 
+        message: 'If an account with that email exists, a password reset link has been sent.' 
+      });
+    }
+
+    // Generate password reset token (expires in 1 hour)
+    const resetToken = jwt.sign(
+      { userId: user._id?.toString() || '', email: user.email },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Create reset URL
+    const resetUrl = process.env.REPLIT_DOMAINS 
+      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/reset-password?token=${resetToken}`
+      : `http://localhost:5000/reset-password?token=${resetToken}`;
+
+    // Send password reset email
+    try {
+      if (user.email && user.firstName) {
+        await sendPasswordResetEmail(user.email, resetUrl, user.firstName);
+        console.log(`Password reset email sent to ${user.email}`);
+      }
+    } catch (emailError: any) {
+      console.error('Failed to send password reset email:', emailError);
+      return res.status(500).json({ 
+        message: 'Failed to send password reset email. Please try again later.' 
+      });
+    }
+
+    res.json({ 
+      message: 'If an account with that email exists, a password reset link has been sent.' 
+    });
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ 
+      message: 'Failed to process password reset request',
+      error: error.message 
+    });
+  }
+});
+
+// Reset password endpoint
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+
+    // Verify token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error: any) {
+      if (error.name === 'TokenExpiredError') {
+        return res.status(400).json({ message: 'Password reset link has expired. Please request a new one.' });
+      }
+      return res.status(400).json({ message: 'Invalid password reset link' });
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const user = await mongoStorage.getUser(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await mongoStorage.updateUserPassword(decoded.userId, hashedPassword);
+
+    res.json({ message: 'Password reset successfully. You can now login with your new password.' });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ 
+      message: 'Failed to reset password',
       error: error.message 
     });
   }
