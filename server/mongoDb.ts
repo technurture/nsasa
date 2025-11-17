@@ -1,4 +1,7 @@
 import { MongoClient, Db, Collection, Document } from 'mongodb';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // MongoDB connection
 let client: MongoClient;

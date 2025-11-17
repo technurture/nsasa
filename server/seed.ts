@@ -3,6 +3,9 @@
 import bcrypt from 'bcryptjs';
 import { initializeMongoDB, getCollection, COLLECTIONS } from './mongoDb';
 import type { User } from '@shared/mongoSchema';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 interface SeedAdminData {
   email: string;
