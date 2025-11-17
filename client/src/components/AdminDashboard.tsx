@@ -6,6 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { 
   Users, 
   UserCheck, 
@@ -17,7 +25,11 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  User as UserIcon,
+  Calendar,
+  Briefcase,
+  Home
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -185,6 +197,224 @@ export default function AdminDashboard() {
   );
 }
 
+// User Details Dialog Component
+function UserDetailsDialog({ 
+  user, 
+  open, 
+  onOpenChange,
+  onApproval,
+  isUpdating,
+  showActions = false
+}: { 
+  user: User | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onApproval?: (userId: string, status: 'approved' | 'rejected') => void;
+  isUpdating?: boolean;
+  showActions?: boolean;
+}) {
+  if (!user) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-user-details">
+        <DialogHeader>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="text-lg">
+                {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <DialogTitle className="text-2xl">
+                {user.firstName} {user.lastName}
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2 mt-1">
+                <Mail className="h-4 w-4" />
+                {user.email}
+              </DialogDescription>
+            </div>
+            <Badge variant="outline" 
+              className={
+                user.approvalStatus === 'pending' 
+                  ? "text-yellow-600 border-yellow-600" 
+                  : user.approvalStatus === 'approved'
+                  ? "text-green-600 border-green-600"
+                  : "text-red-600 border-red-600"
+              }
+            >
+              {user.approvalStatus === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+              {user.approvalStatus === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
+              {user.approvalStatus === 'rejected' && <XCircle className="h-3 w-3 mr-1" />}
+              {user.approvalStatus.charAt(0).toUpperCase() + user.approvalStatus.slice(1)}
+            </Badge>
+          </div>
+        </DialogHeader>
+
+        <Separator className="my-4" />
+
+        <div className="space-y-6">
+          {/* Personal Information */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <UserIcon className="h-5 w-5" />
+              Personal Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Gender</p>
+                <p className="font-medium capitalize">{user.gender}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Phone Number</p>
+                <p className="font-medium flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  {user.phoneNumber}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Academic Information */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Academic Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {user.matricNumber && (
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Matric Number</p>
+                  <p className="font-medium flex items-center gap-2">
+                    {user.matricNumber}
+                    {user.matricNumber.toLowerCase().includes('soc') && (
+                      <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                        SOC ✓
+                      </Badge>
+                    )}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Level</p>
+                <p className="font-medium">{user.level} Level</p>
+              </div>
+              {user.occupation && (
+                <div className="space-y-1 md:col-span-2">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Briefcase className="h-4 w-4" />
+                    Occupation
+                  </p>
+                  <p className="font-medium">{user.occupation}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Location Information */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Location Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Location Type</p>
+                <p className="font-medium capitalize">{user.location.replace(/([A-Z])/g, ' $1').trim()}</p>
+              </div>
+              <div className="space-y-1 md:col-span-2">
+                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Home className="h-4 w-4" />
+                  Address
+                </p>
+                <p className="font-medium">{user.address}</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Account Information */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Account Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Profile Completion</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all" 
+                      style={{ width: `${user.profileCompletion}%` }}
+                    />
+                  </div>
+                  <span className="font-medium text-sm">{user.profileCompletion}%</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Registered On</p>
+                <p className="font-medium">{new Date(user.createdAt).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Last Updated</p>
+                <p className="font-medium">{new Date(user.updatedAt).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          {showActions && onApproval && user.approvalStatus === 'pending' && (
+            <>
+              <Separator />
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    onApproval(user._id, 'approved');
+                    onOpenChange(false);
+                  }}
+                  disabled={isUpdating}
+                  className="flex-1"
+                  data-testid={`button-approve-dialog-${user._id}`}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve User
+                </Button>
+                <Button
+                  onClick={() => {
+                    onApproval(user._id, 'rejected');
+                    onOpenChange(false);
+                  }}
+                  disabled={isUpdating}
+                  variant="destructive"
+                  className="flex-1"
+                  data-testid={`button-reject-dialog-${user._id}`}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Reject User
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Component for pending users that need approval
 function PendingUsersContent({ 
   users, 
@@ -197,6 +427,7 @@ function PendingUsersContent({
   onApproval: (userId: string, status: 'approved' | 'rejected') => void;
   isUpdating: boolean;
 }) {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   if (isLoading) {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -232,99 +463,110 @@ function PendingUsersContent({
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {users.map((user) => (
-        <Card key={user._id} className="hover:shadow-lg transition-shadow">
-          <CardHeader className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback>
-                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-lg">
-                    {user.firstName} {user.lastName}
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    {user.email}
-                  </CardDescription>
+    <>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {users.map((user) => (
+          <Card 
+            key={user._id} 
+            className="hover-elevate cursor-pointer transition-all"
+            onClick={() => setSelectedUser(user)}
+            data-testid={`card-user-${user._id}`}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar className="flex-shrink-0">
+                    <AvatarFallback>
+                      {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base truncate">
+                      {user.firstName} {user.lastName}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-1 text-xs truncate">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{user.email}</span>
+                    </CardDescription>
+                  </div>
                 </div>
+                <Badge variant="outline" className="text-yellow-600 border-yellow-600 flex-shrink-0">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending
+                </Badge>
               </div>
-              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                <Clock className="h-3 w-3 mr-1" />
-                Pending
-              </Badge>
-            </div>
-          </CardHeader>
+            </CardHeader>
 
-          <CardContent className="space-y-4">
-            <div className="grid gap-2 text-sm">
-              {user.matricNumber && (
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 text-sm">
+                {user.matricNumber && (
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">Matric:</span>
+                    <span className="font-medium truncate">{user.matricNumber}</span>
+                  </div>
+                )}
+                
                 <div className="flex items-center gap-2">
-                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Matric:</span>
-                  <span>{user.matricNumber}</span>
-                  {user.matricNumber.toLowerCase().includes('soc') && (
-                    <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
-                      SOC ✓
-                    </Badge>
-                  )}
+                  <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground">Phone:</span>
+                  <span className="font-medium">{user.phoneNumber}</span>
                 </div>
-              )}
-              
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Phone:</span>
-                <span>{user.phoneNumber}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Location:</span>
-                <span className="capitalize">{user.location.replace(/([A-Z])/g, ' $1').trim()}</span>
+                
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground">Level:</span>
+                  <span className="font-medium">{user.level}</span>
+                </div>
+
+                <div className="text-xs text-muted-foreground pt-1 border-t">
+                  Applied: {new Date(user.createdAt).toLocaleDateString()}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Level:</span>
-                <span>{user.level} Level</span>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApproval(user._id, 'approved');
+                  }}
+                  disabled={isUpdating}
+                  className="flex-1"
+                  size="sm"
+                  data-testid={`button-approve-${user._id}`}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApproval(user._id, 'rejected');
+                  }}
+                  disabled={isUpdating}
+                  variant="destructive"
+                  className="flex-1"
+                  size="sm"
+                  data-testid={`button-reject-${user._id}`}
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Reject
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-              <div className="mt-2 text-xs text-muted-foreground">
-                Applied: {new Date(user.createdAt).toLocaleDateString()}
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => onApproval(user._id, 'approved')}
-                disabled={isUpdating}
-                className="flex-1"
-                size="sm"
-                data-testid={`button-approve-${user._id}`}
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Approve
-              </Button>
-              <Button
-                onClick={() => onApproval(user._id, 'rejected')}
-                disabled={isUpdating}
-                variant="destructive"
-                className="flex-1"
-                size="sm"
-                data-testid={`button-reject-${user._id}`}
-              >
-                <XCircle className="h-4 w-4 mr-1" />
-                Reject
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+      <UserDetailsDialog
+        user={selectedUser}
+        open={!!selectedUser}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+        onApproval={onApproval}
+        isUpdating={isUpdating}
+        showActions={true}
+      />
+    </>
   );
 }
 
@@ -338,6 +580,7 @@ function UsersListContent({
   isLoading: boolean; 
   status: 'approved' | 'rejected';
 }) {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -377,57 +620,71 @@ function UsersListContent({
   }
 
   return (
-    <div className="space-y-4">
-      {users.map((user) => (
-        <Card key={user._id}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <Avatar>
-                <AvatarFallback>
-                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 space-y-1">
-                <div className="font-semibold">
-                  {user.firstName} {user.lastName}
-                </div>
-                <div className="text-sm text-muted-foreground flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    {user.email}
-                  </span>
-                  {user.matricNumber && (
+    <>
+      <div className="space-y-4">
+        {users.map((user) => (
+          <Card 
+            key={user._id}
+            className="hover-elevate cursor-pointer transition-all"
+            onClick={() => setSelectedUser(user)}
+            data-testid={`card-user-${user._id}`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="flex-shrink-0">
+                  <AvatarFallback>
+                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="flex-1 space-y-1 min-w-0">
+                  <div className="font-semibold">
+                    {user.firstName} {user.lastName}
+                  </div>
+                  <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-3">
                     <span className="flex items-center gap-1">
-                      <GraduationCap className="h-3 w-3" />
-                      {user.matricNumber}
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{user.email}</span>
                     </span>
-                  )}
+                    {user.matricNumber && (
+                      <span className="flex items-center gap-1">
+                        <GraduationCap className="h-3 w-3 flex-shrink-0" />
+                        {user.matricNumber}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="text-right space-y-1 flex-shrink-0">
+                  <Badge variant="outline" 
+                    className={status === 'approved' 
+                      ? "text-green-600 border-green-600" 
+                      : "text-red-600 border-red-600"
+                    }
+                  >
+                    {status === 'approved' ? (
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                    ) : (
+                      <XCircle className="h-3 w-3 mr-1" />
+                    )}
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </Badge>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(user.updatedAt).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
-              
-              <div className="text-right space-y-1">
-                <Badge variant="outline" 
-                  className={status === 'approved' 
-                    ? "text-green-600 border-green-600" 
-                    : "text-red-600 border-red-600"
-                  }
-                >
-                  {status === 'approved' ? (
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                  ) : (
-                    <XCircle className="h-3 w-3 mr-1" />
-                  )}
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </Badge>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(user.updatedAt).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <UserDetailsDialog
+        user={selectedUser}
+        open={!!selectedUser}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+        showActions={false}
+      />
+    </>
   );
 }
