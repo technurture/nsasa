@@ -10,7 +10,19 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Latest Update: November 15, 2025 - Complete Image Gallery & Nested Comments Rollout**
+**Latest Update: November 17, 2025 - Production-Ready Environment Configuration & Email Service**
+
+- ✅ **Dynamic Domain Handling**: Created comprehensive environment configuration system supporting local, Replit, and standalone production deployments
+- ✅ **Email Service Enhancement**: Updated email service to support both Replit Resend connector and local development with RESEND_API_KEY
+- ✅ **Production URL Support**: Added BASE_URL, FRONTEND_URL, and API_URL environment variables for standalone production deployments (AWS, Heroku, etc.)
+- ✅ **Email Link Fix**: Password reset and approval emails now correctly use frontend URLs across all deployment environments
+- ✅ **Comprehensive Documentation**: Created LOCAL_SETUP.md with detailed local development instructions
+- ✅ **Updated README**: Enhanced README.md with complete setup guide for all deployment scenarios
+- ✅ **.env.example Created**: Added complete environment variable template with detailed comments
+- ✅ **Resend Integration**: Successfully configured Resend email connector for Replit environment
+- ✅ **All Secrets Configured**: MONGODB_URL, JWT_SECRET, Cloudinary credentials, and email service credentials all set up
+
+**Previous Update: November 15, 2025 - Complete Image Gallery & Nested Comments Rollout**
 
 - ✅ **Event Detail Pages with Image Galleries**: Created EventDetailPage with full image gallery support (featured image + swipeable carousel)
 - ✅ **Learning Resource Detail Pages**: Created LearningResourceDetailPage with multi-image gallery and full-screen modal viewer
