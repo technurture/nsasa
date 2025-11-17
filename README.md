@@ -236,10 +236,13 @@ To use a custom domain:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RESEND_API_KEY` | Resend API key for emails | Uses Replit connector if available |
+| `RESEND_API_KEY` | Resend API key for emails (local dev) | Uses Replit connector if available |
 | `RESEND_FROM_EMAIL` | Email sender address | `onboarding@resend.dev` |
 | `NODE_ENV` | Environment mode | `development` |
 | `PORT` | Server port | `5000` |
+| `BASE_URL` | Base URL for standalone production (AWS, Heroku, etc.) | Auto-detected from platform |
+| `FRONTEND_URL` | Frontend URL (if different from BASE_URL) | Uses BASE_URL |
+| `API_URL` | API URL (if different from BASE_URL) | Uses BASE_URL |
 
 ### Auto-detected Variables (Replit)
 

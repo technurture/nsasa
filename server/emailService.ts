@@ -214,7 +214,7 @@ export function generatePasswordResetEmail(resetUrl: string, firstName: string):
 export function generateApprovalEmail(firstName: string, lastName: string, approved: boolean): string {
   const status = approved ? 'Approved' : 'Rejected';
   const statusColor = approved ? '#10b981' : '#ef4444';
-  const loginUrl = `${config.baseUrl}/login`;
+  const loginUrl = `${config.frontendUrl}/login`;
 
   return `
     <!DOCTYPE html>

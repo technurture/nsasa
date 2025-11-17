@@ -8,6 +8,7 @@ import {
   type RegisterUser 
 } from '@shared/mongoSchema';
 import { sendPasswordResetEmail, sendApprovalEmail } from './emailService';
+import { config } from './config';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -321,10 +322,8 @@ router.post('/forgot-password', async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    // Create reset URL
-    const resetUrl = process.env.REPLIT_DOMAINS 
-      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/reset-password?token=${resetToken}`
-      : `http://localhost:5000/reset-password?token=${resetToken}`;
+    // Create reset URL using frontend URL from config
+    const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
 
     // Send password reset email
     try {
