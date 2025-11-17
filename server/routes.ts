@@ -738,10 +738,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/staff', optionalAuth, async (req, res) => {
     try {
       const staffProfiles = await mongoStorage.getStaffProfiles();
-      res.json(staffProfiles);
+      
+      const staffWithUserData = await Promise.all(
+        staffProfiles.map(async (profile) => {
+          const user = await mongoStorage.getUser(profile.userId);
+          return {
+            ...profile,
+            name: user?.name || 'Unknown',
+            email: user?.email || '',
+            phone: user?.phone || '',
+            avatar: user?.avatar || '',
+          };
+        })
+      );
+      
+      res.json(staffWithUserData);
     } catch (error: any) {
       console.error('Get staff error:', error);
       res.status(500).json({ message: 'Failed to get staff', error: error.message });
+    }
+  });
+  
+  app.get('/api/staff/:id', optionalAuth, async (req, res) => {
+    try {
+      const profile = await mongoStorage.getStaffProfileById(req.params.id);
+      if (!profile) {
+        return res.status(404).json({ message: 'Staff profile not found' });
+      }
+      
+      const user = await mongoStorage.getUser(profile.userId);
+      const staffWithUserData = {
+        ...profile,
+        name: user?.name || 'Unknown',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        avatar: user?.avatar || '',
+      };
+      
+      res.json(staffWithUserData);
+    } catch (error: any) {
+      console.error('Get staff profile error:', error);
+      res.status(500).json({ message: 'Failed to get staff profile', error: error.message });
+    }
+  });
+  
+  app.post('/api/staff', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const { userId, ...profileData } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: 'userId is required' });
+      }
+      
+      const user = await mongoStorage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const existingProfile = await mongoStorage.getStaffProfile(userId);
+      if (existingProfile) {
+        return res.status(400).json({ message: 'Staff profile already exists for this user' });
+      }
+      
+      const profile = await mongoStorage.createStaffProfile(userId, profileData);
+      res.status(201).json(profile);
+    } catch (error: any) {
+      console.error('Create staff profile error:', error);
+      res.status(500).json({ message: 'Failed to create staff profile', error: error.message });
+    }
+  });
+  
+  app.put('/api/staff/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const profile = await mongoStorage.getStaffProfileById(req.params.id);
+      if (!profile) {
+        return res.status(404).json({ message: 'Staff profile not found' });
+      }
+      
+      const updatedProfile = await mongoStorage.updateStaffProfile(profile.userId, req.body);
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error('Update staff profile error:', error);
+      res.status(500).json({ message: 'Failed to update staff profile', error: error.message });
+    }
+  });
+  
+  app.delete('/api/staff/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      await mongoStorage.deleteStaffProfile(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Delete staff profile error:', error);
+      res.status(500).json({ message: 'Failed to delete staff profile', error: error.message });
     }
   });
 

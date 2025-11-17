@@ -74,7 +74,9 @@ export interface IMongoStorage {
   createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile>;
   getStaffProfiles(): Promise<StaffProfile[]>;
   getStaffProfile(userId: string): Promise<StaffProfile | undefined>;
+  getStaffProfileById(id: string): Promise<StaffProfile | undefined>;
   updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile>;
+  deleteStaffProfile(id: string): Promise<void>;
   
   // Contact operations
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
@@ -1212,6 +1214,12 @@ export class MongoStorage implements IMongoStorage {
     return profile ? { ...profile, _id: profile._id.toString() } : undefined;
   }
   
+  async getStaffProfileById(id: string): Promise<StaffProfile | undefined> {
+    const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
+    const profile = await staffCollection.findOne({ _id: new ObjectId(id) } as any);
+    return profile ? { ...profile, _id: profile._id.toString() } : undefined;
+  }
+  
   async updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     
@@ -1226,6 +1234,11 @@ export class MongoStorage implements IMongoStorage {
     }
     
     return { ...result, _id: result._id.toString() };
+  }
+  
+  async deleteStaffProfile(id: string): Promise<void> {
+    const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
+    await staffCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
   
   // Contact operations

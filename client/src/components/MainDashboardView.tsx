@@ -26,12 +26,14 @@ import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, Map
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { blogPostSchema, eventSchema, learningResourceSchema } from "@shared/mongoSchema";
+import { blogPostSchema, eventSchema, learningResourceSchema, staffProfileSchema, userSchema } from "@shared/mongoSchema";
 
 // Use shared types
 type BlogPost = z.infer<typeof blogPostSchema>;
 type Event = z.infer<typeof eventSchema>;
 type LearningResource = z.infer<typeof learningResourceSchema>;
+type StaffProfile = z.infer<typeof staffProfileSchema>;
+type User = z.infer<typeof userSchema>;
 
 // Form validation schema based on shared schema
 const blogFormSchema = blogPostSchema.omit({ 
@@ -80,6 +82,21 @@ const resourceFormSchema = learningResourceSchema.omit({
 });
 
 type ResourceFormData = z.infer<typeof resourceFormSchema>;
+
+// Staff Profile form validation schema
+const staffFormSchema = staffProfileSchema.omit({ 
+  _id: true, 
+  userId: true,
+  createdAt: true, 
+  updatedAt: true
+}).extend({
+  userId: z.string().min(1, "Please select a user"),
+  specializations: z.string().optional(),
+  courses: z.string().optional(),
+  education: z.string().optional()
+});
+
+type StaffFormData = z.infer<typeof staffFormSchema>;
 
 export default function MainDashboardView() {
   const { user } = useAuth();
@@ -2395,6 +2412,521 @@ export function SettingsView() {
               data-testid="button-confirm-delete-account"
             >
               Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// Staff Form Modal Component
+function StaffFormModal({ 
+  isOpen, 
+  onClose, 
+  staff, 
+  onSubmit, 
+  isLoading 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  staff: (StaffProfile & { user?: User }) | null; 
+  onSubmit: (data: any) => void; 
+  isLoading: boolean; 
+}) {
+  // Fetch approved users for selection
+  const { data: approvedUsers = [] } = useQuery<User[]>({
+    queryKey: ['/api/users/approved'],
+    enabled: isOpen && !staff
+  });
+
+  const form = useForm<StaffFormData>({
+    resolver: zodResolver(staffFormSchema),
+    defaultValues: {
+      userId: staff?.userId || "",
+      title: staff?.title || "",
+      department: staff?.department || "",
+      specializations: staff?.specializations?.join(", ") || "",
+      office: staff?.office || "",
+      bio: staff?.bio || "",
+      courses: staff?.courses?.join(", ") || "",
+      publications: staff?.publications || 0,
+      experience: staff?.experience || "",
+      education: staff?.education?.join(", ") || ""
+    }
+  });
+
+  // Reset form when staff changes
+  useEffect(() => {
+    form.reset({
+      userId: staff?.userId || "",
+      title: staff?.title || "",
+      department: staff?.department || "",
+      specializations: staff?.specializations?.join(", ") || "",
+      office: staff?.office || "",
+      bio: staff?.bio || "",
+      courses: staff?.courses?.join(", ") || "",
+      publications: staff?.publications || 0,
+      experience: staff?.experience || "",
+      education: staff?.education?.join(", ") || ""
+    });
+  }, [staff, form]);
+
+  const handleSubmit = (data: StaffFormData) => {
+    const submitData = {
+      ...data,
+      specializations: data.specializations ? data.specializations.split(",").map(s => s.trim()).filter(Boolean) : [],
+      courses: data.courses ? data.courses.split(",").map(c => c.trim()).filter(Boolean) : [],
+      education: data.education ? data.education.split(",").map(e => e.trim()).filter(Boolean) : []
+    };
+    onSubmit(submitData);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+        <DialogHeader>
+          <DialogTitle className="text-lg sm:text-xl">{staff ? "Edit Staff Profile" : "Create New Staff Profile"}</DialogTitle>
+          <DialogDescription>
+            {staff ? "Update staff member information" : "Add a new staff member from approved users"}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {!staff && (
+                <FormField
+                  control={form.control}
+                  name="userId"
+                  render={({ field }) => (
+                    <FormItem className="lg:col-span-2">
+                      <FormLabel>Select User *</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger data-testid="select-staff-user">
+                            <SelectValue placeholder="Select a user" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {approvedUsers.map((user) => (
+                              <SelectItem key={user._id} value={user._id!}>
+                                {user.firstName} {user.lastName} ({user.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Professor of Sociology" {...field} data-testid="input-staff-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Department of Sociology" {...field} data-testid="input-staff-department" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="specializations"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <FormLabel>Specializations (comma separated)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Social Psychology, Research Methods" {...field} data-testid="input-staff-specializations" />
+                    </FormControl>
+                    <FormDescription>Separate multiple specializations with commas</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="office"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Office</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Room 305, Sociology Building" {...field} data-testid="input-staff-office" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="experience"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Experience</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 15+ Years" {...field} data-testid="input-staff-experience" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="publications"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Number of Publications</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="0" 
+                        {...field} 
+                        onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                        data-testid="input-staff-publications" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="courses"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Courses (comma separated)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Introduction to Sociology, Research Methods" {...field} data-testid="input-staff-courses" />
+                  </FormControl>
+                  <FormDescription>Separate multiple courses with commas</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="education"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Education (comma separated)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Ph.D. in Sociology - Harvard University" {...field} data-testid="input-staff-education" />
+                  </FormControl>
+                  <FormDescription>Separate multiple degrees with commas</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Brief biography..." 
+                      rows={5} 
+                      {...field} 
+                      data-testid="textarea-staff-bio"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-cancel-staff-form"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isLoading} 
+                className="flex-1 sm:flex-none"
+                data-testid="button-submit-staff"
+              >
+                {isLoading ? "Saving..." : staff ? "Update Staff" : "Create Staff"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function StaffManagementView() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<(StaffProfile & { user?: User }) | null>(null);
+  const [deletingStaff, setDeletingStaff] = useState<StaffProfile | null>(null);
+
+  // Fetch staff profiles query
+  const { data: staffProfiles = [], isLoading, refetch } = useQuery<(StaffProfile & { user?: User })[]>({
+    queryKey: ['/api/staff'],
+    enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
+  });
+
+  // Create staff mutation
+  const createStaffMutation = useMutation({
+    mutationFn: (staffData: any) => apiRequest('POST', '/api/staff', staffData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+      setIsCreateModalOpen(false);
+      toast({
+        title: "Staff profile created successfully",
+        description: "The staff member has been added."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating staff profile",
+        description: error.message || "Failed to create staff profile",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update staff mutation
+  const updateStaffMutation = useMutation({
+    mutationFn: ({ id, staffData }: { id: string; staffData: any }) => apiRequest('PUT', `/api/staff/${id}`, staffData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+      setEditingStaff(null);
+      toast({
+        title: "Staff profile updated successfully",
+        description: "Your changes have been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating staff profile",
+        description: error.message || "Failed to update staff profile",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete staff mutation
+  const deleteStaffMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/staff/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
+      setDeletingStaff(null);
+      toast({
+        title: "Staff profile deleted successfully",
+        description: "The staff member has been removed."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting staff profile",
+        description: error.message || "Failed to delete staff profile",
+        variant: "destructive"
+      });
+    }
+  });
+
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You need admin privileges to manage staff profiles.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Staff Management</h2>
+          <p className="text-gray-600 dark:text-gray-400">Manage faculty and staff profiles</p>
+        </div>
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="w-full sm:w-auto"
+          data-testid="button-create-staff"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add New Staff
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full mb-4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {staffProfiles.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No staff profiles yet</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Add your first staff member to get started.
+                </p>
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)} 
+                  data-testid="button-create-first-staff"
+                  className="px-6 py-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Staff
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            staffProfiles.map((staffProfile) => (
+              <Card key={staffProfile._id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold line-clamp-2">
+                          {staffProfile.user?.firstName} {staffProfile.user?.lastName}
+                        </h3>
+                        <Badge variant="outline">{staffProfile.department}</Badge>
+                      </div>
+                      
+                      <p className="text-gray-600 dark:text-gray-400 font-medium">{staffProfile.title}</p>
+                      
+                      {staffProfile.bio && (
+                        <p className="text-gray-600 dark:text-gray-400 line-clamp-2">{staffProfile.bio}</p>
+                      )}
+                      
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        {staffProfile.office && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            {staffProfile.office}
+                          </span>
+                        )}
+                        {staffProfile.experience && (
+                          <span>{staffProfile.experience}</span>
+                        )}
+                        <span>{staffProfile.publications || 0} publications</span>
+                        {staffProfile.specializations && staffProfile.specializations.length > 0 && (
+                          <span>{staffProfile.specializations.length} specializations</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex lg:flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingStaff(staffProfile)}
+                        className="flex-1 lg:flex-none"
+                        data-testid={`button-edit-staff-${staffProfile._id}`}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Edit</span>
+                        <span className="sm:hidden">Edit</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingStaff(staffProfile)}
+                        className="flex-1 lg:flex-none text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        data-testid={`button-delete-staff-${staffProfile._id}`}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Delete</span>
+                        <span className="sm:hidden">Del</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Create/Edit Staff Modal */}
+      <StaffFormModal
+        isOpen={isCreateModalOpen || !!editingStaff}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingStaff(null);
+        }}
+        staff={editingStaff}
+        onSubmit={(staffData) => {
+          if (editingStaff) {
+            updateStaffMutation.mutate({ id: editingStaff._id!, staffData });
+          } else {
+            createStaffMutation.mutate(staffData);
+          }
+        }}
+        isLoading={createStaffMutation.isPending || updateStaffMutation.isPending}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deletingStaff} onOpenChange={() => setDeletingStaff(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the staff profile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingStaff && deleteStaffMutation.mutate(deletingStaff._id!)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteStaffMutation.isPending}
+              data-testid="button-confirm-delete-staff"
+            >
+              {deleteStaffMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
