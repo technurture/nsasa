@@ -759,6 +759,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get('/api/staff/landing-page/featured', optionalAuth, async (req, res) => {
+    try {
+      const staffProfiles = await mongoStorage.getLandingPageStaff();
+      
+      const staffWithUserData = await Promise.all(
+        staffProfiles.map(async (profile) => {
+          const user = await mongoStorage.getUser(profile.userId);
+          return {
+            ...profile,
+            name: user?.name || 'Unknown',
+            email: user?.email || '',
+            phone: user?.phone || '',
+            avatar: user?.avatar || '',
+          };
+        })
+      );
+      
+      res.json(staffWithUserData);
+    } catch (error: any) {
+      console.error('Get landing page staff error:', error);
+      res.status(500).json({ message: 'Failed to get landing page staff', error: error.message });
+    }
+  });
+  
   app.get('/api/staff/:id', optionalAuth, async (req, res) => {
     try {
       const profile = await mongoStorage.getStaffProfileById(req.params.id);

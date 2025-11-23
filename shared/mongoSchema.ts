@@ -171,6 +171,11 @@ export const staffProfileSchema = z.object({
   experience: z.string().optional(),
   education: z.array(z.string()).default([]),
   
+  // Landing page display
+  showOnLanding: z.boolean().default(false),
+  position: z.string().optional(), // e.g., "President", "V.President", "Financial Secretary"
+  displayOrder: z.number().default(999), // Lower numbers appear first
+  
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
