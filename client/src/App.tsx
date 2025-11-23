@@ -46,6 +46,121 @@ import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 
+// Featured Staff Section Component
+function FeaturedStaffSection() {
+  const { data: featuredStaff, isLoading } = useQuery<any[]>({
+    queryKey: ['/api/staff/landing-page/featured'],
+    queryFn: async () => {
+      const response = await fetch('/api/staff/landing-page/featured');
+      if (!response.ok) throw new Error('Failed to fetch featured staff');
+      return response.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <section>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-4">Our Leadership</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Meet the dedicated team leading our department
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="space-y-4">
+              <div className="h-40 bg-muted animate-pulse rounded-lg" />
+              <div className="h-4 bg-muted animate-pulse rounded w-3/4 mx-auto" />
+              <div className="h-4 bg-muted animate-pulse rounded w-1/2 mx-auto" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (!featuredStaff || featuredStaff.length === 0) {
+    return null;
+  }
+
+  return (
+    <section>
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-bold mb-4" data-testid="heading-our-leadership">Our Leadership</h2>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Meet the dedicated team leading our department
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        {featuredStaff.map((staff) => {
+          const transformedStaff = {
+            id: staff._id || '',
+            name: staff.name || 'Unknown',
+            title: staff.title,
+            department: staff.department,
+            specializations: staff.specializations || [],
+            email: staff.email || '',
+            phone: staff.phone,
+            office: staff.office || '',
+            bio: staff.bio || '',
+            avatar: staff.avatar,
+            courses: staff.courses || [],
+            publications: staff.publications || 0,
+            experience: staff.experience || '',
+            education: staff.education || [],
+          };
+
+          return (
+            <div 
+              key={staff._id} 
+              className="text-center space-y-3 group"
+              data-testid={`staff-card-${staff._id}`}
+            >
+              <div className="flex justify-center">
+                <div className="relative">
+                  <div className="h-32 w-32 rounded-full bg-muted flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
+                    {staff.avatar ? (
+                      <img 
+                        src={staff.avatar} 
+                        alt={staff.name} 
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-2xl font-semibold text-muted-foreground">
+                        {staff.name.split(' ').map((n: string) => n[0]).join('')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg" data-testid={`text-name-${staff._id}`}>
+                  {staff.name}
+                </h3>
+                {staff.position && (
+                  <p className="text-sm font-medium text-primary" data-testid={`text-position-${staff._id}`}>
+                    {staff.position}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">{staff.title}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="text-center mt-8">
+        <a 
+          href="/staff" 
+          className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
+          data-testid="link-view-all-staff"
+        >
+          View All Staff →
+        </a>
+      </div>
+    </section>
+  );
+}
+
 // Main Pages
 function LandingPage() {
   const [, setLocation] = useLocation();
@@ -157,6 +272,9 @@ function LandingPage() {
             <p className="text-center text-muted-foreground">No blog posts available yet.</p>
           )}
         </section>
+
+        {/* Featured Staff */}
+        <FeaturedStaffSection />
 
         {/* Upcoming Events */}
         <section>
