@@ -24,25 +24,34 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Star, User as UserIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Star, User as UserIcon, Check, ChevronsUpDown } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 import type { User } from "@shared/mongoSchema";
 
 const staffFormSchema = z.object({
-  userId: z.string().min(1, "Please select a user"),
+  userId: z.string().optional(),
+  customName: z.string().optional(),
   title: z.string().min(1, "Title is required"),
   department: z.string().min(1, "Department is required"),
   office: z.string().optional(),
@@ -52,16 +61,25 @@ const staffFormSchema = z.object({
   specializations: z.string().optional(),
   courses: z.string().optional(),
   education: z.string().optional(),
+  phone: z.string().optional(),
+  avatar: z.string().optional(),
   showOnLanding: z.boolean().default(false),
   position: z.string().optional(),
   displayOrder: z.coerce.number().default(999),
-});
+}).refine(
+  (data) => data.userId || data.customName,
+  {
+    message: "Either select a user or enter a custom name",
+    path: ["customName"],
+  }
+);
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
 
 interface StaffWithUser {
   _id: string;
-  userId: string;
+  userId?: string;
+  customName?: string;
   title: string;
   department: string;
   specializations: string[];
@@ -75,7 +93,7 @@ interface StaffWithUser {
   position?: string;
   displayOrder: number;
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
   avatar?: string;
 }
@@ -85,16 +103,17 @@ export function StaffManagement() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffWithUser | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   // Fetch all staff
   const { data: staffList = [], isLoading: isLoadingStaff } = useQuery<StaffWithUser[]>({
     queryKey: ['/api/staff'],
   });
 
-  // Fetch all approved users
+  // Fetch all approved users - FIXED: Use query string format
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
-    queryKey: ['/api/auth/admin/users', { status: 'approved' }],
+    queryKey: ['/api/auth/admin/users?status=approved'],
     enabled: user?.role === 'super_admin' || user?.role === 'admin',
   });
 
@@ -102,6 +121,7 @@ export function StaffManagement() {
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
       userId: "",
+      customName: "",
       title: "",
       department: "",
       office: "",
@@ -111,11 +131,17 @@ export function StaffManagement() {
       specializations: "",
       courses: "",
       education: "",
+      phone: "",
+      avatar: "",
       showOnLanding: false,
       position: "",
       displayOrder: 999,
     },
   });
+
+  // Watch the userId and customName fields to determine input mode
+  const selectedUserId = form.watch("userId");
+  const customName = form.watch("customName");
 
   // Create staff mutation
   const createStaffMutation = useMutation({
@@ -205,7 +231,8 @@ export function StaffManagement() {
   const handleEdit = (staff: StaffWithUser) => {
     setEditingStaff(staff);
     form.reset({
-      userId: staff.userId,
+      userId: staff.userId || "",
+      customName: staff.customName || "",
       title: staff.title,
       department: staff.department,
       office: staff.office || "",
@@ -215,6 +242,8 @@ export function StaffManagement() {
       specializations: staff.specializations?.join(', ') || "",
       courses: staff.courses?.join(', ') || "",
       education: staff.education?.join(', ') || "",
+      phone: staff.phone || "",
+      avatar: staff.avatar || "",
       showOnLanding: staff.showOnLanding || false,
       position: staff.position || "",
       displayOrder: staff.displayOrder || 999,
@@ -229,6 +258,20 @@ export function StaffManagement() {
     }
   };
 
+  const handleUserSelect = (userId: string) => {
+    form.setValue("userId", userId);
+    form.setValue("customName", "");
+    setOpen(false);
+  };
+
+  const handleCustomNameChange = (value: string) => {
+    form.setValue("customName", value);
+    if (value) {
+      form.setValue("userId", "");
+    }
+    setSearchValue(value);
+  };
+
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -239,6 +282,12 @@ export function StaffManagement() {
       </div>
     );
   }
+
+  // Get the selected user's display name
+  const selectedUser = users.find(u => u._id === selectedUserId);
+  const displayValue = selectedUser 
+    ? `${selectedUser.firstName} ${selectedUser.lastName}` 
+    : customName || "Select user or enter custom name";
 
   return (
     <div className="space-y-6">
@@ -290,6 +339,9 @@ export function StaffManagement() {
                   </h3>
                   <p className="text-sm text-muted-foreground font-medium">{staff.title}</p>
                   <p className="text-xs text-muted-foreground">{staff.department}</p>
+                  {staff.phone && (
+                    <p className="text-xs text-muted-foreground mt-1">{staff.phone}</p>
+                  )}
                 </div>
                 {staff.showOnLanding && (
                   <Badge variant="secondary" className="mx-auto gap-1">
@@ -340,6 +392,7 @@ export function StaffManagement() {
           setIsCreateDialogOpen(false);
           setEditingStaff(null);
           form.reset();
+          setSearchValue("");
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -350,7 +403,7 @@ export function StaffManagement() {
             <DialogDescription>
               {editingStaff 
                 ? 'Update the staff member details below.'
-                : 'Fill in the details to add a new staff member.'}
+                : 'Select an existing user or enter custom details to add a new staff member.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -361,31 +414,128 @@ export function StaffManagement() {
                   control={form.control}
                   name="userId"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select User *</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value}
-                        disabled={isLoadingUsers}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-user">
-                            <SelectValue placeholder="Select a user" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {users.map((user) => (
-                            <SelectItem key={user._id} value={user._id || ''}>
-                              {user.firstName} {user.lastName} ({user.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Select User or Enter Custom Name *</FormLabel>
+                      <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={open}
+                              className={cn(
+                                "justify-between",
+                                !selectedUserId && !customName && "text-muted-foreground"
+                              )}
+                              data-testid="button-select-user"
+                            >
+                              {displayValue}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0">
+                          <Command>
+                            <CommandInput 
+                              placeholder="Search user or type custom name..." 
+                              value={searchValue}
+                              onValueChange={handleCustomNameChange}
+                              data-testid="input-search-user"
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                <div className="p-4 text-sm">
+                                  <p className="font-medium">No user found.</p>
+                                  <p className="text-muted-foreground mt-1">
+                                    Press Enter to use "{searchValue}" as custom name
+                                  </p>
+                                </div>
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {users.map((user) => (
+                                  <CommandItem
+                                    key={user._id}
+                                    value={`${user.firstName} ${user.lastName} ${user.email}`}
+                                    onSelect={() => handleUserSelect(user._id || '')}
+                                    data-testid={`option-user-${user._id}`}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedUserId === user._id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div>
+                                      <div>{user.firstName} {user.lastName}</div>
+                                      <div className="text-xs text-muted-foreground">{user.email}</div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        Select an existing user or type a name for someone not in the system
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               )}
+
+              {/* Custom Name Field - Hidden input to store the custom name */}
+              <FormField
+                control={form.control}
+                name="customName"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Avatar Upload */}
+              <FormField
+                control={form.control}
+                name="avatar"
+                render={({ field }) => (
+                  <FormItem>
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      folder="staff-avatars"
+                      label="Avatar/Profile Picture"
+                      description="Upload a profile picture for the staff member"
+                      acceptedFormats="image"
+                      maxSize={5 * 1024 * 1024}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Phone Number */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., +234 123 456 7890" 
+                        {...field} 
+                        data-testid="input-phone"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -628,6 +778,7 @@ export function StaffManagement() {
                     setIsCreateDialogOpen(false);
                     setEditingStaff(null);
                     form.reset();
+                    setSearchValue("");
                   }}
                   data-testid="button-cancel"
                 >

@@ -71,7 +71,7 @@ export interface IMongoStorage {
   rateResource(userId: string, resourceId: string, rating: number): Promise<void>;
   
   // Staff operations
-  createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile>;
+  createStaffProfile(userId: string | undefined, profile: InsertStaffProfile): Promise<StaffProfile>;
   getStaffProfiles(): Promise<StaffProfile[]>;
   getLandingPageStaff(): Promise<StaffProfile[]>;
   getStaffProfile(userId: string): Promise<StaffProfile | undefined>;
@@ -1184,12 +1184,12 @@ export class MongoStorage implements IMongoStorage {
   }
   
   // Staff operations
-  async createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile> {
+  async createStaffProfile(userId: string | undefined, profile: InsertStaffProfile): Promise<StaffProfile> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     
     const profileDoc: Omit<StaffProfile, '_id'> = {
       ...profile,
-      userId,
+      ...(userId ? { userId } : {}), // Only include userId if provided
       createdAt: new Date(),
       updatedAt: new Date(),
     };

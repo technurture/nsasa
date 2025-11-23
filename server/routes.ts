@@ -741,14 +741,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const staffWithUserData = await Promise.all(
         staffProfiles.map(async (profile) => {
-          const user = await mongoStorage.getUser(profile.userId);
-          return {
-            ...profile,
-            name: user?.name || 'Unknown',
-            email: user?.email || '',
-            phone: user?.phone || '',
-            avatar: user?.avatar || '',
-          };
+          // Handle both userId (existing user) and customName (custom profile) scenarios
+          if (profile.userId) {
+            const user = await mongoStorage.getUser(profile.userId);
+            return {
+              ...profile,
+              name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown',
+              email: user?.email || '',
+              phone: profile.phone || user?.phoneNumber || '',
+              avatar: profile.avatar || user?.profileImageUrl || '',
+            };
+          } else {
+            // Custom staff member without userId
+            return {
+              ...profile,
+              name: profile.customName || 'Unknown',
+              email: '',
+              phone: profile.phone || '',
+              avatar: profile.avatar || '',
+            };
+          }
         })
       );
       
@@ -765,14 +777,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const staffWithUserData = await Promise.all(
         staffProfiles.map(async (profile) => {
-          const user = await mongoStorage.getUser(profile.userId);
-          return {
-            ...profile,
-            name: user?.name || 'Unknown',
-            email: user?.email || '',
-            phone: user?.phone || '',
-            avatar: user?.avatar || '',
-          };
+          // Handle both userId (existing user) and customName (custom profile) scenarios
+          if (profile.userId) {
+            const user = await mongoStorage.getUser(profile.userId);
+            return {
+              ...profile,
+              name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown',
+              email: user?.email || '',
+              phone: profile.phone || user?.phoneNumber || '',
+              avatar: profile.avatar || user?.profileImageUrl || '',
+            };
+          } else {
+            // Custom staff member without userId
+            return {
+              ...profile,
+              name: profile.customName || 'Unknown',
+              email: '',
+              phone: profile.phone || '',
+              avatar: profile.avatar || '',
+            };
+          }
         })
       );
       
@@ -790,14 +814,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Staff profile not found' });
       }
       
-      const user = await mongoStorage.getUser(profile.userId);
-      const staffWithUserData = {
-        ...profile,
-        name: user?.name || 'Unknown',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        avatar: user?.avatar || '',
-      };
+      // Handle both userId (existing user) and customName (custom profile) scenarios
+      let staffWithUserData;
+      if (profile.userId) {
+        const user = await mongoStorage.getUser(profile.userId);
+        staffWithUserData = {
+          ...profile,
+          name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown',
+          email: user?.email || '',
+          phone: profile.phone || user?.phoneNumber || '',
+          avatar: profile.avatar || user?.profileImageUrl || '',
+        };
+      } else {
+        // Custom staff member without userId
+        staffWithUserData = {
+          ...profile,
+          name: profile.customName || 'Unknown',
+          email: '',
+          phone: profile.phone || '',
+          avatar: profile.avatar || '',
+        };
+      }
       
       res.json(staffWithUserData);
     } catch (error: any) {
@@ -812,24 +849,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
       
-      const { userId, ...profileData } = req.body;
+      const { userId, customName, ...profileData } = req.body;
       
-      if (!userId) {
-        return res.status(400).json({ message: 'userId is required' });
+      // Either userId or customName must be provided
+      if (!userId && !customName) {
+        return res.status(400).json({ message: 'Either userId or customName is required' });
       }
       
-      const user = await mongoStorage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+      // If userId is provided, validate that the user exists
+      if (userId) {
+        const user = await mongoStorage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+        
+        const existingProfile = await mongoStorage.getStaffProfile(userId);
+        if (existingProfile) {
+          return res.status(400).json({ message: 'Staff profile already exists for this user' });
+        }
+        
+        // Create profile for existing user
+        const profile = await mongoStorage.createStaffProfile(userId, profileData);
+        res.status(201).json(profile);
+      } else {
+        // Create profile for custom staff member (no userId)
+        const profile = await mongoStorage.createStaffProfile(undefined, {
+          ...profileData,
+          customName,
+        });
+        res.status(201).json(profile);
       }
-      
-      const existingProfile = await mongoStorage.getStaffProfile(userId);
-      if (existingProfile) {
-        return res.status(400).json({ message: 'Staff profile already exists for this user' });
-      }
-      
-      const profile = await mongoStorage.createStaffProfile(userId, profileData);
-      res.status(201).json(profile);
     } catch (error: any) {
       console.error('Create staff profile error:', error);
       res.status(500).json({ message: 'Failed to create staff profile', error: error.message });
@@ -847,7 +896,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Staff profile not found' });
       }
       
-      const updatedProfile = await mongoStorage.updateStaffProfile(profile.userId, req.body);
+      // Update by ID instead of userId to support both userId and customName profiles
+      const updatedProfile = await mongoStorage.updateStaffProfileById(req.params.id, req.body);
       res.json(updatedProfile);
     } catch (error: any) {
       console.error('Update staff profile error:', error);
