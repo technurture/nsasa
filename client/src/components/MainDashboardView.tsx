@@ -2577,7 +2577,11 @@ function StaffFormModal({
                           <FormControl>
                             <Input 
                               placeholder="Enter staff member name" 
-                              {...field} 
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
                               data-testid="input-custom-name"
                             />
                           </FormControl>
