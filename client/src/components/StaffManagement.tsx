@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -129,10 +129,7 @@ export function StaffManagement() {
         education: education ? education.split(',').map(e => e.trim()) : [],
       };
       
-      return apiRequest('/api/staff', {
-        method: 'POST',
-        body: JSON.stringify(staffData),
-      });
+      return apiRequest('POST', '/api/staff', staffData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
@@ -164,10 +161,7 @@ export function StaffManagement() {
         education: education ? (typeof education === 'string' ? education.split(',').map(e => e.trim()) : education) : undefined,
       };
       
-      return apiRequest(`/api/staff/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(staffData),
-      });
+      return apiRequest('PUT', `/api/staff/${id}`, staffData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
@@ -190,9 +184,7 @@ export function StaffManagement() {
   // Delete staff mutation
   const deleteStaffMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/staff/${id}`, {
-        method: 'DELETE',
-      });
+      return apiRequest('DELETE', `/api/staff/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/staff'] });
