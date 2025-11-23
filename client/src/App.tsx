@@ -34,6 +34,7 @@ import MainDashboardView, {
   BlogManagementView,
   EventManagementView,
   ResourceManagementView,
+  StaffManagementView,
   SettingsView
 } from "@/components/MainDashboardView";
 
@@ -725,6 +726,7 @@ function DashboardRouter() {
           <Route path="/dashboard/blogs" component={BlogManagementView} />
           <Route path="/dashboard/events" component={EventManagementView} />
           <Route path="/dashboard/resources" component={ResourceManagementView} />
+          <Route path="/dashboard/staff" component={StaffManagementView} />
           <Route path="/dashboard/analytics" component={AnalyticsView} />
           <Route path="/dashboard/settings" component={SettingsView} />
           <Route component={MainDashboardView} />

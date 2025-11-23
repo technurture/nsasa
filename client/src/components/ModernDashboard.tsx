@@ -26,7 +26,8 @@ import {
   LogOut,
   UserCog,
   Menu,
-  X
+  X,
+  GraduationCap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ const sidebarItems = [
   { icon: FileText, label: "Blog Management", path: "/blogs", roles: ["admin", "super_admin"] },
   { icon: Calendar, label: "Events", path: "/events", roles: ["admin", "super_admin", "student"] },
   { icon: BookOpen, label: "Learning Resources", path: "/resources", roles: ["admin", "super_admin", "student"] },
+  { icon: GraduationCap, label: "Staff Management", path: "/staff", roles: ["admin", "super_admin"] },
   { icon: BarChart3, label: "Analytics", path: "/analytics", roles: ["admin", "super_admin"] },
   { icon: Award, label: "Gamification", path: "/gamification", roles: ["student"] },
   { icon: MessageSquare, label: "My Posts", path: "/my-posts", roles: ["student"] },
