@@ -95,7 +95,10 @@ const staffFormSchema = staffProfileBaseSchema.omit({
   courses: z.string().optional(),
   education: z.string().optional(),
   avatar: z.string().optional(),
-  phone: z.string().optional()
+  phone: z.string().optional(),
+  showOnLanding: z.boolean().default(false),
+  position: z.string().optional(),
+  displayOrder: z.number().default(999)
 });
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
@@ -2450,7 +2453,10 @@ function StaffFormModal({
       experience: staff?.experience || "",
       education: staff?.education?.join(", ") || "",
       avatar: staff?.avatar || "",
-      phone: staff?.phone || ""
+      phone: staff?.phone || "",
+      showOnLanding: staff?.showOnLanding || false,
+      position: staff?.position || "",
+      displayOrder: staff?.displayOrder || 999
     }
   });
 
@@ -2468,7 +2474,10 @@ function StaffFormModal({
       experience: staff?.experience || "",
       education: staff?.education?.join(", ") || "",
       avatar: staff?.avatar || "",
-      phone: staff?.phone || ""
+      phone: staff?.phone || "",
+      showOnLanding: staff?.showOnLanding || false,
+      position: staff?.position || "",
+      displayOrder: staff?.displayOrder || 999
     });
   }, [staff, form]);
 
@@ -2678,6 +2687,79 @@ function StaffFormModal({
               )}
             />
             
+            {/* Landing Page Display Settings */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-sm font-medium">Landing Page Display</h3>
+              
+              <FormField
+                control={form.control}
+                name="showOnLanding"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-md border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Show on Landing Page</FormLabel>
+                      <FormDescription>
+                        Display this staff member in the landing page footer
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-show-on-landing"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position (for landing page)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., President, Vice President" 
+                          {...field} 
+                          data-testid="input-staff-position"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Display title on landing page (optional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="displayOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Order</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="999" 
+                          {...field} 
+                          onChange={e => field.onChange(parseInt(e.target.value) || 999)}
+                          data-testid="input-staff-display-order"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Lower numbers appear first
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="bio"
