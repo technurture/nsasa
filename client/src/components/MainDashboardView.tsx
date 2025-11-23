@@ -26,7 +26,7 @@ import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, Map
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { blogPostSchema, eventSchema, learningResourceSchema, staffProfileSchema, userSchema } from "@shared/mongoSchema";
+import { blogPostSchema, eventSchema, learningResourceSchema, staffProfileSchema, staffProfileBaseSchema, userSchema } from "@shared/mongoSchema";
 
 // Use shared types
 type BlogPost = z.infer<typeof blogPostSchema>;
@@ -84,7 +84,7 @@ const resourceFormSchema = learningResourceSchema.omit({
 type ResourceFormData = z.infer<typeof resourceFormSchema>;
 
 // Staff Profile form validation schema
-const staffFormSchema = staffProfileSchema.omit({ 
+const staffFormSchema = staffProfileBaseSchema.omit({ 
   _id: true, 
   userId: true,
   createdAt: true, 
