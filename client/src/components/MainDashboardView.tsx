@@ -2575,13 +2575,13 @@ function StaffFormModal({
                       name="customName"
                       render={({ field }) => (
                         <FormItem className="lg:col-span-2">
-                          <FormControl>
-                            <Input 
-                              {...field}
-                              placeholder="Enter staff member name" 
-                              data-testid="input-custom-name"
-                            />
-                          </FormControl>
+                          <Input 
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            placeholder="Enter staff member name" 
+                            data-testid="input-custom-name"
+                            autoFocus
+                          />
                           <FormMessage />
                         </FormItem>
                       )}
