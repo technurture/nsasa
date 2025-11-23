@@ -2533,6 +2533,7 @@ function StaffFormModal({
                         onClick={() => {
                           setShowCustomName(true);
                           form.setValue("userId", "");
+                          form.setValue("customName", "");
                         }}
                         data-testid="button-enter-custom-name"
                       >
@@ -2576,12 +2577,8 @@ function StaffFormModal({
                         <FormItem className="lg:col-span-2">
                           <FormControl>
                             <Input 
+                              {...field}
                               placeholder="Enter staff member name" 
-                              value={field.value || ""}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              name={field.name}
-                              ref={field.ref}
                               data-testid="input-custom-name"
                             />
                           </FormControl>
