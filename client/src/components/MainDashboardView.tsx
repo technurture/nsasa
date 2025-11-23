@@ -85,16 +85,21 @@ type ResourceFormData = z.infer<typeof resourceFormSchema>;
 
 // Staff Profile form validation schema
 const staffFormSchema = staffProfileBaseSchema.omit({ 
-  _id: true, 
-  userId: true,
+  _id: true,
   createdAt: true, 
   updatedAt: true
 }).extend({
-  userId: z.string().min(1, "Please select a user"),
+  userId: z.string().optional(),
+  customName: z.string().optional(),
   specializations: z.string().optional(),
   courses: z.string().optional(),
-  education: z.string().optional()
-});
+  education: z.string().optional(),
+  avatar: z.string().optional(),
+  phone: z.string().optional()
+}).refine(
+  (data) => data.userId || data.customName,
+  { message: "Either select a user or enter a custom name", path: ["userId"] }
+);
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
 
@@ -2440,10 +2445,13 @@ function StaffFormModal({
     enabled: isOpen && !staff
   });
 
+  const [showCustomName, setShowCustomName] = useState(false);
+
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
       userId: staff?.userId || "",
+      customName: staff?.customName || "",
       title: staff?.title || "",
       department: staff?.department || "",
       specializations: staff?.specializations?.join(", ") || "",
@@ -2452,7 +2460,9 @@ function StaffFormModal({
       courses: staff?.courses?.join(", ") || "",
       publications: staff?.publications || 0,
       experience: staff?.experience || "",
-      education: staff?.education?.join(", ") || ""
+      education: staff?.education?.join(", ") || "",
+      avatar: staff?.avatar || "",
+      phone: staff?.phone || ""
     }
   });
 
@@ -2460,6 +2470,7 @@ function StaffFormModal({
   useEffect(() => {
     form.reset({
       userId: staff?.userId || "",
+      customName: staff?.customName || "",
       title: staff?.title || "",
       department: staff?.department || "",
       specializations: staff?.specializations?.join(", ") || "",
@@ -2468,8 +2479,11 @@ function StaffFormModal({
       courses: staff?.courses?.join(", ") || "",
       publications: staff?.publications || 0,
       experience: staff?.experience || "",
-      education: staff?.education?.join(", ") || ""
+      education: staff?.education?.join(", ") || "",
+      avatar: staff?.avatar || "",
+      phone: staff?.phone || ""
     });
+    setShowCustomName(!staff?.userId && !!staff?.customName);
   }, [staff, form]);
 
   const handleSubmit = (data: StaffFormData) => {
@@ -2496,31 +2510,123 @@ function StaffFormModal({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {!staff && (
-                <FormField
-                  control={form.control}
-                  name="userId"
-                  render={({ field }) => (
-                    <FormItem className="lg:col-span-2">
-                      <FormLabel>Select User *</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger data-testid="select-staff-user">
-                            <SelectValue placeholder="Select a user" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {approvedUsers.map((user) => (
-                              <SelectItem key={user._id} value={user._id!}>
-                                {user.firstName} {user.lastName} ({user.email})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <>
+                  <FormItem className="lg:col-span-2">
+                    <FormLabel>Staff Member Selection *</FormLabel>
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        type="button"
+                        variant={!showCustomName ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setShowCustomName(false);
+                          form.setValue("customName", "");
+                        }}
+                        data-testid="button-select-existing-user"
+                      >
+                        Select from Users
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={showCustomName ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setShowCustomName(true);
+                          form.setValue("userId", "");
+                        }}
+                        data-testid="button-enter-custom-name"
+                      >
+                        Enter Custom Name
+                      </Button>
+                    </div>
+                    <FormDescription className="mb-2">
+                      Select an existing user or enter a custom name for staff not in the system
+                    </FormDescription>
+                  </FormItem>
+
+                  {!showCustomName ? (
+                    <FormField
+                      control={form.control}
+                      name="userId"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger data-testid="select-staff-user">
+                                <SelectValue placeholder="Select a user" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {approvedUsers.map((user) => (
+                                  <SelectItem key={user._id} value={user._id!}>
+                                    {user.firstName} {user.lastName} ({user.email})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="customName"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter staff member name" 
+                              {...field} 
+                              data-testid="input-custom-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </>
               )}
+
+              {/* Avatar Upload */}
+              <FormField
+                control={form.control}
+                name="avatar"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      folder="staff-avatars"
+                      label="Avatar / Profile Picture"
+                      description="Upload a profile picture for the staff member"
+                      acceptedFormats="image"
+                      maxSize={5 * 1024 * 1024}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Phone Number */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., +234 123 456 7890" 
+                        {...field} 
+                        data-testid="input-staff-phone"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
               <FormField
                 control={form.control}
