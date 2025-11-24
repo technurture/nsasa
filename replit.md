@@ -10,7 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**Latest Update: November 17, 2025 - Production-Ready Environment Configuration & Email Service**
+**Latest Update: November 24, 2025 - Staff Card Enhancement & Detail Page Implementation**
+
+- ✅ **Enhanced FeaturedStaffSection**: Increased card size to 3-column grid (from 4-column) for better visibility
+- ✅ **Larger Staff Avatars**: Avatars now display at 192px (h-48 w-48) with enhanced borders and shadows
+- ✅ **Clickable Staff Cards**: Entire staff cards now navigate to individual staff detail pages
+- ✅ **Staff Detail Page**: Created comprehensive `/staff/:id` route with full profile information
+- ✅ **Proper Data Fetching**: Implemented queryFn for reliable staff detail data loading
+- ✅ **UX Compliance**: Removed all hover scaling effects to comply with layout guidelines (hover effects limited to opacity and border changes only)
+- ✅ **Visual Enhancements**: Added decorative corner icons, enhanced borders, and smooth transitions
+- ✅ **Field Mapping Fix**: Updated StaffPage to use correct API fields (customName, avatar, phone)
+
+**Previous Update: November 17, 2025 - Production-Ready Environment Configuration & Email Service**
 
 - ✅ **Dynamic Domain Handling**: Created comprehensive environment configuration system supporting local, Replit, and standalone production deployments
 - ✅ **Email Service Enhancement**: Updated email service to support both Replit Resend connector and local development with RESEND_API_KEY
