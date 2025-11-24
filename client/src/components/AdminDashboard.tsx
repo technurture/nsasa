@@ -627,9 +627,9 @@ function PendingUsersContent({
         user={selectedUser}
         open={!!selectedUser}
         onOpenChange={(open) => !open && setSelectedUser(null)}
-        onApproval={onApproval}
+        onApproval={isSuperAdmin ? onApproval : undefined}
         isUpdating={isUpdating}
-        showActions={true}
+        showActions={isSuperAdmin}
       />
     </>
   );
