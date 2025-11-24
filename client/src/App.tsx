@@ -4,7 +4,11 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import type { BlogPost, Event } from "@shared/mongoSchema";
 
 // Components
@@ -47,7 +51,7 @@ import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 
-// Featured Staff Section Component
+// Featured Staff Section Component with Card Design and Translation Support
 function FeaturedStaffSection() {
   const { data: featuredStaff, isLoading } = useQuery<any[]>({
     queryKey: ['/api/staff/landing-page/featured'],
@@ -69,11 +73,15 @@ function FeaturedStaffSection() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="space-y-4">
-              <div className="h-40 bg-muted animate-pulse rounded-lg" />
-              <div className="h-4 bg-muted animate-pulse rounded w-3/4 mx-auto" />
-              <div className="h-4 bg-muted animate-pulse rounded w-1/2 mx-auto" />
-            </div>
+            <Card key={i} className="overflow-hidden hover-elevate">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="h-24 w-24 mx-auto bg-muted animate-pulse rounded-full" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4 mx-auto" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2 mx-auto" />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>
@@ -94,69 +102,63 @@ function FeaturedStaffSection() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {featuredStaff.map((staff) => {
-          const transformedStaff = {
-            id: staff._id || '',
-            name: staff.name || 'Unknown',
-            title: staff.title,
-            department: staff.department,
-            specializations: staff.specializations || [],
-            email: staff.email || '',
-            phone: staff.phone,
-            office: staff.office || '',
-            bio: staff.bio || '',
-            avatar: staff.avatar,
-            courses: staff.courses || [],
-            publications: staff.publications || 0,
-            experience: staff.experience || '',
-            education: staff.education || [],
-          };
-
+          const initials = staff.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+          
           return (
-            <div 
+            <Card 
               key={staff._id} 
-              className="text-center space-y-3 group"
+              className="overflow-hidden hover-elevate transition-all duration-200 cursor-pointer"
               data-testid={`staff-card-${staff._id}`}
             >
-              <div className="flex justify-center">
-                <div className="relative">
-                  <div className="h-32 w-32 rounded-full bg-muted flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
+              <CardContent className="p-6 text-center space-y-4">
+                <div className="flex justify-center">
+                  <Avatar className="h-24 w-24 border-4 border-muted">
                     {staff.avatar ? (
-                      <img 
+                      <AvatarImage 
                         src={staff.avatar} 
-                        alt={staff.name} 
-                        className="h-full w-full object-cover"
+                        alt={staff.name}
                       />
-                    ) : (
-                      <div className="text-2xl font-semibold text-muted-foreground">
-                        {staff.name.split(' ').map((n: string) => n[0]).join('')}
-                      </div>
-                    )}
-                  </div>
+                    ) : null}
+                    <AvatarFallback className="text-lg font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg" data-testid={`text-name-${staff._id}`}>
-                  {staff.name}
-                </h3>
-                {staff.position && (
-                  <p className="text-sm font-medium text-primary" data-testid={`text-position-${staff._id}`}>
-                    {staff.position}
+                
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-lg" data-testid={`text-name-${staff._id}`}>
+                    {staff.name}
+                  </h3>
+                  {staff.position && (
+                    <p className="text-sm font-medium text-primary" data-testid={`text-position-${staff._id}`}>
+                      {staff.position}
+                    </p>
+                  )}
+                  {staff.title && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {staff.title}
+                    </p>
+                  )}
+                </div>
+                
+                {staff.bio && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">
+                    {staff.bio}
                   </p>
                 )}
-                <p className="text-sm text-muted-foreground">{staff.title}</p>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
       <div className="text-center mt-8">
-        <a 
-          href="/staff" 
-          className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
+        <Button 
+          variant="outline"
+          onClick={() => window.location.href = '/staff'}
           data-testid="link-view-all-staff"
         >
           View All Staff →
-        </a>
+        </Button>
       </div>
     </section>
   );
@@ -274,9 +276,6 @@ function LandingPage() {
           )}
         </section>
 
-        {/* Featured Staff */}
-        <FeaturedStaffSection />
-
         {/* Upcoming Events */}
         <section>
           <div className="text-center mb-12">
@@ -344,6 +343,9 @@ function LandingPage() {
             <p className="text-center text-muted-foreground">No upcoming events at the moment.</p>
           )}
         </section>
+
+        {/* Featured Staff - Moved after Upcoming Events */}
+        <FeaturedStaffSection />
 
         {/* Call to Action */}
         <section className="text-center">
@@ -838,7 +840,9 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }
