@@ -76,7 +76,7 @@ function FeaturedStaffSection() {
             <Card key={i} className="overflow-hidden hover-elevate">
               <CardContent className="p-6">
                 <div className="space-y-4">
-                  <div className="h-24 w-24 mx-auto bg-muted animate-pulse rounded-full" />
+                  <div className="h-32 w-32 mx-auto bg-muted animate-pulse rounded-full" />
                   <div className="h-4 bg-muted animate-pulse rounded w-3/4 mx-auto" />
                   <div className="h-4 bg-muted animate-pulse rounded w-1/2 mx-auto" />
                 </div>
@@ -102,35 +102,44 @@ function FeaturedStaffSection() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {featuredStaff.map((staff) => {
-          const initials = staff.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+          const staffName = staff.customName || staff.name || 'Unknown';
+          const initials = staffName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
           
           return (
             <Card 
               key={staff._id} 
-              className="overflow-hidden hover-elevate transition-all duration-200 cursor-pointer"
+              className="group overflow-hidden hover-elevate transition-all duration-300 cursor-pointer border-2"
               data-testid={`staff-card-${staff._id}`}
             >
               <CardContent className="p-6 text-center space-y-4">
-                <div className="flex justify-center">
-                  <Avatar className="h-24 w-24 border-4 border-muted">
-                    {staff.avatar ? (
-                      <AvatarImage 
-                        src={staff.avatar} 
-                        alt={staff.name}
-                      />
-                    ) : null}
-                    <AvatarFallback className="text-lg font-semibold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                <div className="flex justify-center relative">
+                  <div className="relative">
+                    <Avatar className="h-32 w-32 border-4 border-primary/20 shadow-lg group-hover:border-primary/40 transition-all duration-300 ring-4 ring-primary/10">
+                      {staff.avatar ? (
+                        <AvatarImage 
+                          src={staff.avatar} 
+                          alt={staffName}
+                          className="object-cover"
+                        />
+                      ) : null}
+                      <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-primary/20 to-primary/10">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-lg" data-testid={`text-name-${staff._id}`}>
-                    {staff.name}
+                  <h3 className="font-bold text-lg group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
+                    {staffName}
                   </h3>
                   {staff.position && (
-                    <p className="text-sm font-medium text-primary" data-testid={`text-position-${staff._id}`}>
+                    <p className="text-sm font-semibold text-primary" data-testid={`text-position-${staff._id}`}>
                       {staff.position}
                     </p>
                   )}
@@ -142,7 +151,7 @@ function FeaturedStaffSection() {
                 </div>
                 
                 {staff.bio && (
-                  <p className="text-xs text-muted-foreground line-clamp-3">
+                  <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
                     {staff.bio}
                   </p>
                 )}
@@ -156,8 +165,12 @@ function FeaturedStaffSection() {
           variant="outline"
           onClick={() => window.location.href = '/staff'}
           data-testid="link-view-all-staff"
+          className="group"
         >
-          View All Staff →
+          View All Staff
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
         </Button>
       </div>
     </section>
