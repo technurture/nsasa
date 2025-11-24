@@ -46,6 +46,7 @@ interface User {
   phoneNumber: string;
   level: string;
   occupation?: string;
+  role: 'student' | 'admin' | 'super_admin';
   approvalStatus: 'pending' | 'approved' | 'rejected';
   profileCompletion: number;
   createdAt: string;
@@ -55,6 +56,22 @@ interface User {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('pending');
   const { toast } = useToast();
+
+  // Fetch current user to check if they're a super_admin
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/user'],
+    queryFn: async () => {
+      const response = await fetch('/api/auth/user', {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Not authenticated');
+      }
+      return response.json();
+    },
+  });
+
+  const isSuperAdmin = currentUser?.role === 'super_admin';
 
   // Fetch users by approval status
   const { data: users = [], isLoading, error } = useQuery({
@@ -100,8 +117,44 @@ export default function AdminDashboard() {
     },
   });
 
+  // Mutation for updating user role
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: 'student' | 'admin' }) => {
+      const response = await fetch(`/api/auth/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ role }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update user role');
+      }
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/admin/users'] });
+      toast({
+        title: 'Success',
+        description: `User role updated to ${variables.role} successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user role',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleApproval = (userId: string, status: 'approved' | 'rejected') => {
     updateApprovalMutation.mutate({ userId, status });
+  };
+
+  const handleRoleToggle = (userId: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'student' : 'admin';
+    updateRoleMutation.mutate({ userId, role: newRole });
   };
 
   const getStatusBadge = (status: string) => {
@@ -181,11 +234,19 @@ export default function AdminDashboard() {
               isLoading={isLoading} 
               onApproval={handleApproval}
               isUpdating={updateApprovalMutation.isPending}
+              isSuperAdmin={isSuperAdmin}
             />
           </TabsContent>
 
           <TabsContent value="approved" className="space-y-6">
-            <UsersListContent users={users} isLoading={isLoading} status="approved" />
+            <UsersListContent 
+              users={users} 
+              isLoading={isLoading} 
+              status="approved"
+              isSuperAdmin={isSuperAdmin}
+              onRoleToggle={handleRoleToggle}
+              isUpdatingRole={updateRoleMutation.isPending}
+            />
           </TabsContent>
 
           <TabsContent value="rejected" className="space-y-6">
@@ -420,12 +481,14 @@ function PendingUsersContent({
   users, 
   isLoading, 
   onApproval, 
-  isUpdating 
+  isUpdating,
+  isSuperAdmin
 }: { 
   users: User[]; 
   isLoading: boolean; 
   onApproval: (userId: string, status: 'approved' | 'rejected') => void;
   isUpdating: boolean;
+  isSuperAdmin: boolean;
 }) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   if (isLoading) {
@@ -524,35 +587,37 @@ function PendingUsersContent({
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApproval(user._id, 'approved');
-                  }}
-                  disabled={isUpdating}
-                  className="flex-1"
-                  size="sm"
-                  data-testid={`button-approve-${user._id}`}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Approve
-                </Button>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApproval(user._id, 'rejected');
-                  }}
-                  disabled={isUpdating}
-                  variant="destructive"
-                  className="flex-1"
-                  size="sm"
-                  data-testid={`button-reject-${user._id}`}
-                >
-                  <XCircle className="h-4 w-4 mr-1" />
-                  Reject
-                </Button>
-              </div>
+              {isSuperAdmin && (
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApproval(user._id, 'approved');
+                    }}
+                    disabled={isUpdating}
+                    className="flex-1"
+                    size="sm"
+                    data-testid={`button-approve-${user._id}`}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApproval(user._id, 'rejected');
+                    }}
+                    disabled={isUpdating}
+                    variant="destructive"
+                    className="flex-1"
+                    size="sm"
+                    data-testid={`button-reject-${user._id}`}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Reject
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -574,11 +639,17 @@ function PendingUsersContent({
 function UsersListContent({ 
   users, 
   isLoading, 
-  status 
+  status,
+  isSuperAdmin,
+  onRoleToggle,
+  isUpdatingRole
 }: { 
   users: User[]; 
   isLoading: boolean; 
   status: 'approved' | 'rejected';
+  isSuperAdmin?: boolean;
+  onRoleToggle?: (userId: string, currentRole: string) => void;
+  isUpdatingRole?: boolean;
 }) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   if (isLoading) {
@@ -655,7 +726,7 @@ function UsersListContent({
                   </div>
                 </div>
                 
-                <div className="text-right space-y-1 flex-shrink-0">
+                <div className="text-right space-y-2 flex-shrink-0">
                   <Badge variant="outline" 
                     className={status === 'approved' 
                       ? "text-green-600 border-green-600" 
@@ -669,6 +740,34 @@ function UsersListContent({
                     )}
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </Badge>
+                  
+                  {/* Role Badge */}
+                  <div className="flex justify-end">
+                    <Badge 
+                      variant={user.role === 'admin' ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </Badge>
+                  </div>
+                  
+                  {/* Role Toggle Button - Only for approved users and super_admins */}
+                  {status === 'approved' && isSuperAdmin && onRoleToggle && user.role !== 'super_admin' && (
+                    <Button
+                      size="sm"
+                      variant={user.role === 'admin' ? 'destructive' : 'default'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRoleToggle(user._id, user.role);
+                      }}
+                      disabled={isUpdatingRole}
+                      data-testid={`button-toggle-role-${user._id}`}
+                      className="w-full text-xs"
+                    >
+                      {user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                    </Button>
+                  )}
+                  
                   <div className="text-xs text-muted-foreground">
                     {new Date(user.updatedAt).toLocaleDateString()}
                   </div>
