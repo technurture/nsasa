@@ -197,7 +197,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
       <CardFooter className="flex items-center justify-between pt-0">
         {/* Engagement Actions */}
         <div className="flex items-center gap-1">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center">
             <Button 
               variant="ghost" 
               size="sm" 
@@ -207,17 +207,17 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
               data-testid={`button-like-${blog.id}`}
             >
               <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowLikesDialog(true);
-                }}
-                className="text-sm"
-                data-testid={`button-likes-count-${blog.id}`}
-              >
-                {likesCount}
-              </button>
             </Button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLikesDialog(true);
+              }}
+              className="text-sm hover-elevate px-2 py-1 rounded-md -ml-1"
+              data-testid={`button-likes-count-${blog.id}`}
+            >
+              {likesCount}
+            </button>
           </div>
 
           <Button 
