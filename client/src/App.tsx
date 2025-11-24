@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -47,12 +48,15 @@ import BlogsPage from "@/pages/BlogsPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
 import EventsPage from "@/pages/EventsPage";
 import EventDetailPage from "@/pages/EventDetailPage";
+import StaffPage from "@/pages/StaffPage";
+import StaffDetailPage from "@/pages/StaffDetailPage";
 import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 
 // Featured Staff Section Component with Card Design and Translation Support
 function FeaturedStaffSection() {
+  const [, setLocation] = useLocation();
   const { data: featuredStaff, isLoading } = useQuery<any[]>({
     queryKey: ['/api/staff/landing-page/featured'],
     queryFn: async () => {
@@ -71,13 +75,13 @@ function FeaturedStaffSection() {
             Meet the dedicated team leading our department
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[1, 2, 3].map((i) => (
             <Card key={i} className="overflow-hidden hover-elevate">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="h-32 w-32 mx-auto bg-muted animate-pulse rounded-full" />
-                  <div className="h-4 bg-muted animate-pulse rounded w-3/4 mx-auto" />
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="h-48 w-48 mx-auto bg-muted animate-pulse rounded-full" />
+                  <div className="h-6 bg-muted animate-pulse rounded w-3/4 mx-auto" />
                   <div className="h-4 bg-muted animate-pulse rounded w-1/2 mx-auto" />
                 </div>
               </CardContent>
@@ -100,7 +104,7 @@ function FeaturedStaffSection() {
           Meet the dedicated team leading our department
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
         {featuredStaff.map((staff) => {
           const staffName = staff.customName || staff.name || 'Unknown';
           const initials = staffName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
@@ -108,13 +112,14 @@ function FeaturedStaffSection() {
           return (
             <Card 
               key={staff._id} 
-              className="group overflow-hidden hover-elevate transition-all duration-300 cursor-pointer border-2"
+              className="group overflow-hidden hover-elevate transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-xl"
               data-testid={`staff-card-${staff._id}`}
+              onClick={() => setLocation(`/staff/${staff._id}`)}
             >
-              <CardContent className="p-6 text-center space-y-4">
+              <CardContent className="p-8 text-center space-y-6">
                 <div className="flex justify-center relative">
                   <div className="relative">
-                    <Avatar className="h-32 w-32 border-4 border-primary/20 shadow-lg group-hover:border-primary/40 transition-all duration-300 ring-4 ring-primary/10">
+                    <Avatar className="h-48 w-48 border-4 border-primary/20 shadow-2xl group-hover:border-primary/50 group-hover:scale-105 transition-all duration-300 ring-8 ring-primary/5">
                       {staff.avatar ? (
                         <AvatarImage 
                           src={staff.avatar} 
@@ -122,48 +127,52 @@ function FeaturedStaffSection() {
                           className="object-cover"
                         />
                       ) : null}
-                      <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-primary/20 to-primary/10">
+                      <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-primary/20 to-primary/10">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-3 shadow-2xl opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
                       </svg>
                     </div>
                   </div>
                 </div>
                 
-                <div className="space-y-1">
-                  <h3 className="font-bold text-lg group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
+                <div className="space-y-2">
+                  <h3 className="font-bold text-2xl group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
                     {staffName}
                   </h3>
                   {staff.position && (
-                    <p className="text-sm font-semibold text-primary" data-testid={`text-position-${staff._id}`}>
+                    <Badge className="text-sm font-semibold px-4 py-1" data-testid={`text-position-${staff._id}`}>
                       {staff.position}
-                    </p>
+                    </Badge>
                   )}
                   {staff.title && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-base text-muted-foreground line-clamp-2 mt-2">
                       {staff.title}
                     </p>
                   )}
                 </div>
                 
                 {staff.bio && (
-                  <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                  <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed">
                     {staff.bio}
                   </p>
                 )}
+                
+                <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <p className="text-xs text-primary font-semibold">Click to view full profile →</p>
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
-      <div className="text-center mt-8">
+      <div className="text-center mt-10">
         <Button 
           variant="outline"
-          onClick={() => window.location.href = '/staff'}
+          onClick={() => setLocation('/staff')}
           data-testid="link-view-all-staff"
           className="group"
         >
@@ -376,44 +385,6 @@ function LandingPage() {
             </button>
           </div>
         </section>
-      </div>
-    </div>
-  );
-}
-
-function StaffPage() {
-  // todo: remove mock functionality
-  const mockStaff = [
-    {
-      id: "1",
-      name: "Dr. Sarah Johnson",
-      title: "Professor of Social Psychology",
-      department: "Department of Sociology",
-      specializations: ["Social Psychology", "Behavioral Research", "Community Studies"],
-      email: "s.johnson@university.edu",
-      phone: "+1 (555) 123-4567",
-      office: "Room 305, Sociology Building",
-      bio: "Dr. Johnson is a renowned expert in social psychology with over 15 years of experience.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-prof",
-      courses: ["Introduction to Social Psychology", "Research Methods"],
-      publications: 47,
-      experience: "15+ Years",
-      education: ["Ph.D. in Social Psychology, Harvard University"]
-    }
-  ];
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Our Faculty</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Meet our dedicated faculty members who are experts in their fields
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {mockStaff.map((staff) => (
-          <StaffProfileCard key={staff.id} staff={staff} />
-        ))}
       </div>
     </div>
   );
@@ -774,6 +745,7 @@ function MainRouter() {
           <Route path="/events/:id" component={EventDetailPage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/resources/:id" component={LearningResourceDetailPage} />
+          <Route path="/staff/:id" component={StaffDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
@@ -799,6 +771,7 @@ function MainRouter() {
           <Route path="/events/:id" component={EventDetailPage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/resources/:id" component={LearningResourceDetailPage} />
+          <Route path="/staff/:id" component={StaffDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
           <Route path="/about" component={AboutPage} />
