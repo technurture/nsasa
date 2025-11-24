@@ -58,9 +58,9 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
       <CardHeader className="text-center space-y-4">
         {/* Avatar */}
         <div className="flex justify-center">
-          <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+          <Avatar className="!h-40 !w-40 border-4 border-background shadow-lg">
             <AvatarImage src={staff.avatar} alt={staff.name} />
-            <AvatarFallback className="text-2xl font-semibold">
+            <AvatarFallback className="text-3xl font-semibold">
               {staff.name.split(' ').map(n => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
