@@ -27,12 +27,14 @@ interface StaffProfileCardProps {
 
 export default function StaffProfileCard({ staff, onContact, onViewProfile }: StaffProfileCardProps) {
   
-  const handleEmailContact = () => {
+  const handleEmailContact = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onContact?.(staff.id, 'email');
     console.log(`Email contact for: ${staff.name}`);
   };
 
-  const handlePhoneContact = () => {
+  const handlePhoneContact = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onContact?.(staff.id, 'phone');
     console.log(`Phone contact for: ${staff.name}`);
   };
@@ -42,14 +44,23 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
     console.log(`View profile for: ${staff.name}`);
   };
 
+  const handleViewFullProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewProfile?.(staff.id);
+  };
+
   return (
-    <Card className="group overflow-hidden hover-elevate transition-all duration-200">
+    <Card 
+      className="group overflow-hidden hover-elevate transition-all duration-200 cursor-pointer" 
+      onClick={handleViewProfile}
+      data-testid={`card-staff-${staff.id}`}
+    >
       <CardHeader className="text-center space-y-4">
         {/* Avatar */}
         <div className="flex justify-center">
-          <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+          <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
             <AvatarImage src={staff.avatar} alt={staff.name} />
-            <AvatarFallback className="text-lg font-semibold">
+            <AvatarFallback className="text-2xl font-semibold">
               {staff.name.split(' ').map(n => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
@@ -190,7 +201,7 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
           variant="ghost" 
           size="sm" 
           className="w-full gap-1"
-          onClick={handleViewProfile}
+          onClick={handleViewFullProfile}
           data-testid={`button-profile-${staff.id}`}
         >
           <ExternalLink className="h-3 w-3" />
