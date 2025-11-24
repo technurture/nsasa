@@ -44,7 +44,7 @@ export interface IMongoStorage {
   updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost>;
   deleteBlogPost(id: string): Promise<void>;
   getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]>;
-  incrementBlogViews(id: string): Promise<void>;
+  incrementBlogViews(id: string, userId?: string): Promise<void>;
   
   // Comment operations
   createBlogComment(authorId: string, blogPostId: string, comment: InsertComment): Promise<Comment>;
@@ -104,6 +104,8 @@ export interface IMongoStorage {
   unlikeBlogPost(userId: string, blogPostId: string): Promise<void>;
   getBlogLikesCount(blogPostId: string): Promise<number>;
   isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean>;
+  getBlogLikedByUsers(blogPostId: string): Promise<User[]>;
+  getBlogViewedByUsers(blogPostId: string): Promise<User[]>;
   likeComment(userId: string, commentId: string): Promise<void>;
   unlikeComment(userId: string, commentId: string): Promise<void>;
   getCommentLikesCount(commentId: string): Promise<number>;
@@ -459,12 +461,38 @@ export class MongoStorage implements IMongoStorage {
     })) as BlogPost[];
   }
   
-  async incrementBlogViews(id: string): Promise<void> {
+  async incrementBlogViews(id: string, userId?: string): Promise<void> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    await blogPostsCollection.updateOne(
-      { _id: new ObjectId(id) } as any,
-      { $inc: { views: 1 } }
-    );
+    const viewsCollection = await getCollection(COLLECTIONS.BLOG_VIEWS);
+    
+    // If userId is provided, track the view for authenticated users
+    if (userId) {
+      const existingView = await viewsCollection.findOne({ userId, blogPostId: id });
+      
+      if (!existingView) {
+        // Track this user viewed the blog
+        await viewsCollection.insertOne({
+          userId,
+          blogPostId: id,
+          createdAt: new Date(),
+        });
+        
+        // Increment view counter only if user hasn't viewed before
+        await blogPostsCollection.updateOne(
+          { _id: new ObjectId(id) } as any,
+          { $inc: { views: 1 } }
+        );
+      }
+      // If user already viewed, don't increment counter (prevent double counting)
+    } else {
+      // For anonymous users, always increment (basic analytics)
+      // Note: This means anonymous views are counted every time, which may inflate numbers
+      // but maintains backward compatibility and ensures anonymous traffic is tracked
+      await blogPostsCollection.updateOne(
+        { _id: new ObjectId(id) } as any,
+        { $inc: { views: 1 } }
+      );
+    }
   }
   
   // Comment operations
@@ -1580,6 +1608,44 @@ export class MongoStorage implements IMongoStorage {
     const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
     const like = await likesCollection.findOne({ userId, blogPostId });
     return !!like;
+  }
+  
+  async getBlogLikedByUsers(blogPostId: string): Promise<User[]> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
+    // Get all likes for this blog post
+    const likes = await likesCollection.find({ blogPostId }).toArray();
+    const userIds = likes.map(like => like.userId);
+    
+    // Get user details
+    const users = await usersCollection.find({
+      _id: { $in: userIds.map(id => new ObjectId(id) as any) }
+    }).toArray();
+    
+    return users.map(user => ({
+      ...user,
+      _id: user._id.toString(),
+    })) as User[];
+  }
+  
+  async getBlogViewedByUsers(blogPostId: string): Promise<User[]> {
+    const viewsCollection = await getCollection(COLLECTIONS.BLOG_VIEWS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
+    // Get all views for this blog post
+    const views = await viewsCollection.find({ blogPostId }).toArray();
+    const userIds = views.map(view => view.userId);
+    
+    // Get user details
+    const users = await usersCollection.find({
+      _id: { $in: userIds.map(id => new ObjectId(id) as any) }
+    }).toArray();
+    
+    return users.map(user => ({
+      ...user,
+      _id: user._id.toString(),
+    })) as User[];
   }
   
   async likeComment(userId: string, commentId: string): Promise<void> {

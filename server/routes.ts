@@ -154,11 +154,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Blog not found' });
       }
       
-      // Increment views
-      await mongoStorage.incrementBlogViews(req.params.id);
+      // Increment views and track user if authenticated
+      const userId = req.user?.userId;
+      await mongoStorage.incrementBlogViews(req.params.id, userId as string | undefined);
       
       // Add isLikedByUser field
-      const userId = req.user?.userId;
       const isLikedByUser = userId
         ? await mongoStorage.isPostLikedByUser(userId as string, blog._id)
         : false;
@@ -329,6 +329,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Unlike blog error:', error);
       res.status(500).json({ message: 'Failed to unlike blog', error: error.message });
+    }
+  });
+
+  // Get users who liked a blog (requires authentication)
+  app.get('/api/blogs/:id/likes/users', authenticateToken, async (req, res) => {
+    try {
+      const users = await mongoStorage.getBlogLikedByUsers(req.params.id);
+      
+      // Only return safe public data
+      const safeUsers = users.map(user => ({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        level: user.level,
+      }));
+      
+      res.json(safeUsers);
+    } catch (error: any) {
+      console.error('Get blog likes users error:', error);
+      res.status(500).json({ message: 'Failed to get users who liked the blog', error: error.message });
+    }
+  });
+
+  // Get users who viewed a blog (requires authentication)
+  app.get('/api/blogs/:id/views/users', authenticateToken, async (req, res) => {
+    try {
+      const users = await mongoStorage.getBlogViewedByUsers(req.params.id);
+      
+      // Only return safe public data
+      const safeUsers = users.map(user => ({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        level: user.level,
+      }));
+      
+      res.json(safeUsers);
+    } catch (error: any) {
+      console.error('Get blog views users error:', error);
+      res.status(500).json({ message: 'Failed to get users who viewed the blog', error: error.message });
     }
   });
 

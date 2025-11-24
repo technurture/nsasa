@@ -8,6 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import BlogEngagementDialog from "@/components/BlogEngagementDialog";
 
 interface BlogCardProps {
   blog: {
@@ -41,6 +42,8 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
   const [isLiked, setIsLiked] = useState(isLikedByUser);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [likesCount, setLikesCount] = useState(blog.likes);
+  const [showLikesDialog, setShowLikesDialog] = useState(false);
+  const [showViewsDialog, setShowViewsDialog] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
 
@@ -143,10 +146,14 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
           <Badge variant="secondary" data-testid={`badge-category-${blog.id}`}>
             {blog.category}
           </Badge>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <button
+            onClick={() => setShowViewsDialog(true)}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover-elevate px-2 py-1 rounded-md transition-colors"
+            data-testid={`button-views-${blog.id}`}
+          >
             <Eye className="h-3 w-3" />
             <span data-testid={`text-views-${blog.id}`}>{blog.views}</span>
-          </div>
+          </button>
         </div>
 
         {/* Title */}
@@ -190,17 +197,28 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
       <CardFooter className="flex items-center justify-between pt-0">
         {/* Engagement Actions */}
         <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`gap-1 ${isLiked ? 'text-red-500' : ''}`}
-            onClick={handleLike}
-            disabled={likeMutation.isPending || unlikeMutation.isPending}
-            data-testid={`button-like-${blog.id}`}
-          >
-            <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-            <span>{likesCount}</span>
-          </Button>
+          <div className="flex items-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`gap-1 ${isLiked ? 'text-red-500' : ''}`}
+              onClick={handleLike}
+              disabled={likeMutation.isPending || unlikeMutation.isPending}
+              data-testid={`button-like-${blog.id}`}
+            >
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+            </Button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLikesDialog(true);
+              }}
+              className="text-sm hover-elevate px-2 py-1 rounded-md transition-colors"
+              data-testid={`button-likes-count-${blog.id}`}
+            >
+              {likesCount}
+            </button>
+          </div>
 
           <Button 
             variant="ghost" 
@@ -244,6 +262,20 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
           </Button>
         </div>
       </CardFooter>
+      
+      <BlogEngagementDialog
+        open={showLikesDialog}
+        onOpenChange={setShowLikesDialog}
+        blogId={blog.id}
+        type="likes"
+      />
+      
+      <BlogEngagementDialog
+        open={showViewsDialog}
+        onOpenChange={setShowViewsDialog}
+        blogId={blog.id}
+        type="views"
+      />
     </Card>
   );
 }

@@ -74,6 +74,7 @@ export const COLLECTIONS = {
   USERS: 'users',
   BLOG_POSTS: 'blogPosts',
   BLOG_LIKES: 'blogLikes',
+  BLOG_VIEWS: 'blogViews',
   COMMENT_LIKES: 'commentLikes',
   COMMENTS: 'comments', 
   EVENTS: 'events',
@@ -112,6 +113,8 @@ export async function initializeMongoDB(): Promise<void> {
       await database.collection(COLLECTIONS.BLOG_POSTS).createIndex({ published: 1, createdAt: -1 });
       await database.collection(COLLECTIONS.BLOG_LIKES).createIndex({ userId: 1, blogPostId: 1 }, { unique: true });
       await database.collection(COLLECTIONS.BLOG_LIKES).createIndex({ blogPostId: 1 });
+      await database.collection(COLLECTIONS.BLOG_VIEWS).createIndex({ userId: 1, blogPostId: 1 }, { unique: true });
+      await database.collection(COLLECTIONS.BLOG_VIEWS).createIndex({ blogPostId: 1 });
       await database.collection(COLLECTIONS.COMMENT_LIKES).createIndex({ userId: 1, commentId: 1 }, { unique: true });
       await database.collection(COLLECTIONS.COMMENT_LIKES).createIndex({ commentId: 1 });
       await database.collection(COLLECTIONS.COMMENTS).createIndex({ blogPostId: 1 });
