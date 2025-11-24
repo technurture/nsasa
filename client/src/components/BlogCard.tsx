@@ -36,9 +36,10 @@ interface BlogCardProps {
   onShare?: (id: string) => void;
   onBookmark?: (id: string) => void;
   isLikedByUser?: boolean;
+  disableEngagementDialogs?: boolean;
 }
 
-export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookmark, isLikedByUser = false }: BlogCardProps) {
+export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookmark, isLikedByUser = false, disableEngagementDialogs = false }: BlogCardProps) {
   const [isLiked, setIsLiked] = useState(isLikedByUser);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [likesCount, setLikesCount] = useState(blog.likes);
@@ -146,14 +147,21 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
           <Badge variant="secondary" data-testid={`badge-category-${blog.id}`}>
             {blog.category}
           </Badge>
-          <button
-            onClick={() => setShowViewsDialog(true)}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover-elevate px-2 py-1 rounded-md transition-colors"
-            data-testid={`button-views-${blog.id}`}
-          >
-            <Eye className="h-3 w-3" />
-            <span data-testid={`text-views-${blog.id}`}>{blog.views}</span>
-          </button>
+          {disableEngagementDialogs ? (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-1 rounded-md">
+              <Eye className="h-3 w-3" />
+              <span data-testid={`text-views-${blog.id}`}>{blog.views}</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowViewsDialog(true)}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover-elevate px-2 py-1 rounded-md transition-colors"
+              data-testid={`button-views-${blog.id}`}
+            >
+              <Eye className="h-3 w-3" />
+              <span data-testid={`text-views-${blog.id}`}>{blog.views}</span>
+            </button>
+          )}
         </div>
 
         {/* Title */}
@@ -194,7 +202,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
         </div>
       </CardContent>
 
-      <CardFooter className="flex items-center justify-between pt-0">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-3 pt-0">
         {/* Engagement Actions */}
         <div className="flex items-center gap-1">
           <div className="flex items-center">
@@ -208,31 +216,44 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
             >
               <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
             </Button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowLikesDialog(true);
-              }}
-              className="text-sm hover-elevate px-2 py-1 rounded-md -ml-1"
-              data-testid={`button-likes-count-${blog.id}`}
-            >
-              {likesCount}
-            </button>
+            {disableEngagementDialogs ? (
+              <span className="text-sm px-2 py-1 -ml-1" data-testid={`text-likes-count-${blog.id}`}>
+                {likesCount}
+              </span>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLikesDialog(true);
+                }}
+                className="text-sm hover-elevate px-2 py-1 rounded-md -ml-1"
+                data-testid={`button-likes-count-${blog.id}`}
+              >
+                {likesCount}
+              </button>
+            )}
           </div>
 
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="gap-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowViewsDialog(true);
-            }}
-            data-testid={`button-views-${blog.id}`}
-          >
-            <Eye className="h-4 w-4" />
-            <span>{blog.views}</span>
-          </Button>
+          {disableEngagementDialogs ? (
+            <div className="flex items-center gap-1 px-2" data-testid={`text-views-bottom-${blog.id}`}>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{blog.views}</span>
+            </div>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowViewsDialog(true);
+              }}
+              data-testid={`button-views-${blog.id}`}
+            >
+              <Eye className="h-4 w-4" />
+              <span>{blog.views}</span>
+            </Button>
+          )}
 
           <Button 
             variant="ghost" 
@@ -267,29 +288,35 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
             <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
           </Button>
 
-          <Button 
-            size="sm"
-            onClick={() => onReadMore?.(blog.id)}
-            data-testid={`button-read-more-${blog.id}`}
-          >
-            Read More
-          </Button>
+          {onReadMore && (
+            <Button 
+              size="sm"
+              onClick={() => onReadMore(blog.id)}
+              data-testid={`button-read-more-${blog.id}`}
+            >
+              Read More
+            </Button>
+          )}
         </div>
       </CardFooter>
       
-      <BlogEngagementDialog
-        open={showLikesDialog}
-        onOpenChange={setShowLikesDialog}
-        blogId={blog.id}
-        type="likes"
-      />
-      
-      <BlogEngagementDialog
-        open={showViewsDialog}
-        onOpenChange={setShowViewsDialog}
-        blogId={blog.id}
-        type="views"
-      />
+      {!disableEngagementDialogs && (
+        <>
+          <BlogEngagementDialog
+            open={showLikesDialog}
+            onOpenChange={setShowLikesDialog}
+            blogId={blog.id}
+            type="likes"
+          />
+          
+          <BlogEngagementDialog
+            open={showViewsDialog}
+            onOpenChange={setShowViewsDialog}
+            blogId={blog.id}
+            type="views"
+          />
+        </>
+      )}
     </Card>
   );
 }

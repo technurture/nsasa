@@ -279,6 +279,7 @@ function LandingPage() {
                       isLikedByUser={blog.isLikedByUser || false}
                       onReadMore={(id) => setLocation(`/blogs/${id}`)}
                       onComment={(id) => setLocation(`/blogs/${id}#comments`)}
+                      disableEngagementDialogs={true}
                     />
                   );
                 })}

@@ -16,6 +16,7 @@ import {
   Users,
   FileText
 } from "lucide-react";
+import PollVoter from "./PollVoter";
 
 interface StudentDashboardProps {
   student: {
@@ -315,6 +316,9 @@ export default function StudentDashboard({
           </CardContent>
         </Card>
       </div>
+
+      {/* Polls Section */}
+      <PollVoter showOnlyActive={true} />
 
       {/* Quick Actions */}
       <Card>

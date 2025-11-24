@@ -29,10 +29,12 @@ import {
   User as UserIcon,
   Calendar,
   Briefcase,
-  Home
+  Home,
+  BarChart3
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import PollManagement from './PollManagement';
 
 interface User {
   _id: string;
@@ -213,7 +215,7 @@ export default function AdminDashboard() {
 
         {/* Tabs for different user statuses */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Pending Approval
@@ -225,6 +227,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="rejected" className="flex items-center gap-2">
               <UserX className="h-4 w-4" />
               Rejected Users
+            </TabsTrigger>
+            <TabsTrigger value="polls" className="flex items-center gap-2" data-testid="tab-polls">
+              <BarChart3 className="h-4 w-4" />
+              Polls
             </TabsTrigger>
           </TabsList>
 
@@ -251,6 +257,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="rejected" className="space-y-6">
             <UsersListContent users={users} isLoading={isLoading} status="rejected" />
+          </TabsContent>
+
+          <TabsContent value="polls" className="space-y-6">
+            <PollManagement />
           </TabsContent>
         </Tabs>
       </div>

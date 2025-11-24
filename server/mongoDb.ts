@@ -124,6 +124,10 @@ export async function initializeMongoDB(): Promise<void> {
       await database.collection(COLLECTIONS.EVENT_REGISTRATIONS).createIndex({ userId: 1, eventId: 1 }, { unique: true });
       await database.collection(COLLECTIONS.LEARNING_RESOURCES).createIndex({ category: 1, createdAt: -1 });
       await database.collection(COLLECTIONS.STAFF_PROFILES).createIndex({ userId: 1 }, { unique: true });
+      await database.collection(COLLECTIONS.POLLS).createIndex({ createdById: 1, createdAt: -1 });
+      await database.collection(COLLECTIONS.POLLS).createIndex({ status: 1, createdAt: -1 });
+      await database.collection(COLLECTIONS.POLL_VOTES).createIndex({ pollId: 1, userId: 1, optionId: 1 });
+      await database.collection(COLLECTIONS.POLL_VOTES).createIndex({ userId: 1 });
       
       console.log('MongoDB indexes created successfully');
     } catch (indexError: any) {
