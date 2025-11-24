@@ -6,8 +6,10 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BlogEngagementDialogProps {
   open: boolean;
@@ -30,9 +32,11 @@ export default function BlogEngagementDialog({
   blogId,
   type,
 }: BlogEngagementDialogProps) {
-  const { data: users, isLoading } = useQuery<User[]>({
+  const { isAuthenticated } = useAuth();
+  
+  const { data: users, isLoading, error } = useQuery<User[]>({
     queryKey: [`/api/blogs/${blogId}/${type}/users`],
-    enabled: open,
+    enabled: open && isAuthenticated,
   });
 
   const getDisplayName = (user: User) => {
@@ -63,10 +67,24 @@ export default function BlogEngagementDialog({
         </DialogHeader>
         
         <ScrollArea className="max-h-[400px] pr-4">
-          {isLoading ? (
+          {!isAuthenticated ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please log in to see who {type === 'likes' ? 'liked' : 'viewed'} this blog post.
+              </AlertDescription>
+            </Alert>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Failed to load {type === 'likes' ? 'likes' : 'views'}. Please try again.
+              </AlertDescription>
+            </Alert>
           ) : users && users.length > 0 ? (
             <div className="space-y-3">
               {users.map((user) => (
