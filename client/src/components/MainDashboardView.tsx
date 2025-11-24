@@ -61,7 +61,8 @@ const eventFormSchema = eventSchema.omit({
 }).extend({
   date: z.string().min(1, "Date is required"), // Transform Date to string for form input
   tags: z.string().optional(), // Transform array to comma-separated string for form input
-  imageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  videoUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
 });
 
 type EventFormData = z.infer<typeof eventFormSchema>;
@@ -465,7 +466,8 @@ function EventFormModal({
       capacity: event?.capacity || 50,
       price: event?.price || 0,
       tags: event?.tags?.join(", ") || "",
-      imageUrl: event?.imageUrl || ""
+      imageUrl: event?.imageUrl || "",
+      videoUrl: event?.videoUrl || ""
     }
   });
 
@@ -481,7 +483,8 @@ function EventFormModal({
       capacity: event?.capacity || 50,
       price: event?.price || 0,
       tags: event?.tags?.join(", ") || "",
-      imageUrl: event?.imageUrl || ""
+      imageUrl: event?.imageUrl || "",
+      videoUrl: event?.videoUrl || ""
     });
   }, [event, form]);
 
@@ -490,7 +493,8 @@ function EventFormModal({
       ...data,
       date: new Date(data.date),
       tags: data.tags ? data.tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
-      imageUrl: data.imageUrl || undefined
+      imageUrl: data.imageUrl || undefined,
+      videoUrl: data.videoUrl || undefined
     };
     onSubmit(submitData);
   };
@@ -643,6 +647,27 @@ function EventFormModal({
                       folder="events"
                       label="Upload Event Image"
                       description="Upload an image for your event (optional)"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="videoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Video</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      acceptedFormats="video"
+                      folder="events/videos"
+                      label="Upload Event Video"
+                      description="Upload a video of your event (optional)"
                     />
                   </FormControl>
                   <FormMessage />

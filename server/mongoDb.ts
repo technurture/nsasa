@@ -84,6 +84,8 @@ export const COLLECTIONS = {
   STAFF_PROFILES: 'staffProfiles',
   CONTACT_SUBMISSIONS: 'contactSubmissions',
   NEWSLETTER_SUBSCRIPTIONS: 'newsletterSubscriptions',
+  POLLS: 'polls',
+  POLL_VOTES: 'pollVotes',
 } as const;
 
 // Close connection (for cleanup)
