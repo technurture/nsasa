@@ -26,7 +26,7 @@ import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, Map
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { blogPostSchema, eventSchema, learningResourceSchema, staffProfileSchema, userSchema } from "@shared/mongoSchema";
+import { blogPostSchema, eventSchema, learningResourceSchema, staffProfileSchema, staffProfileBaseSchema, userSchema } from "@shared/mongoSchema";
 
 // Use shared types
 type BlogPost = z.infer<typeof blogPostSchema>;
@@ -84,16 +84,21 @@ const resourceFormSchema = learningResourceSchema.omit({
 type ResourceFormData = z.infer<typeof resourceFormSchema>;
 
 // Staff Profile form validation schema
-const staffFormSchema = staffProfileSchema.omit({ 
-  _id: true, 
-  userId: true,
+const staffFormSchema = staffProfileBaseSchema.omit({ 
+  _id: true,
   createdAt: true, 
-  updatedAt: true
+  updatedAt: true,
+  userId: true
 }).extend({
-  userId: z.string().min(1, "Please select a user"),
+  customName: z.string().min(1, "Staff member name is required"),
   specializations: z.string().optional(),
   courses: z.string().optional(),
-  education: z.string().optional()
+  education: z.string().optional(),
+  avatar: z.string().optional(),
+  phone: z.string().optional(),
+  showOnLanding: z.boolean().default(false),
+  position: z.string().optional(),
+  displayOrder: z.number().default(999)
 });
 
 type StaffFormData = z.infer<typeof staffFormSchema>;
@@ -2434,16 +2439,10 @@ function StaffFormModal({
   onSubmit: (data: any) => void; 
   isLoading: boolean; 
 }) {
-  // Fetch approved users for selection
-  const { data: approvedUsers = [] } = useQuery<User[]>({
-    queryKey: ['/api/users/approved'],
-    enabled: isOpen && !staff
-  });
-
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
     defaultValues: {
-      userId: staff?.userId || "",
+      customName: staff?.customName || "",
       title: staff?.title || "",
       department: staff?.department || "",
       specializations: staff?.specializations?.join(", ") || "",
@@ -2452,14 +2451,19 @@ function StaffFormModal({
       courses: staff?.courses?.join(", ") || "",
       publications: staff?.publications || 0,
       experience: staff?.experience || "",
-      education: staff?.education?.join(", ") || ""
+      education: staff?.education?.join(", ") || "",
+      avatar: staff?.avatar || "",
+      phone: staff?.phone || "",
+      showOnLanding: staff?.showOnLanding || false,
+      position: staff?.position || "",
+      displayOrder: staff?.displayOrder || 999
     }
   });
 
   // Reset form when staff changes
   useEffect(() => {
     form.reset({
-      userId: staff?.userId || "",
+      customName: staff?.customName || "",
       title: staff?.title || "",
       department: staff?.department || "",
       specializations: staff?.specializations?.join(", ") || "",
@@ -2468,7 +2472,12 @@ function StaffFormModal({
       courses: staff?.courses?.join(", ") || "",
       publications: staff?.publications || 0,
       experience: staff?.experience || "",
-      education: staff?.education?.join(", ") || ""
+      education: staff?.education?.join(", ") || "",
+      avatar: staff?.avatar || "",
+      phone: staff?.phone || "",
+      showOnLanding: staff?.showOnLanding || false,
+      position: staff?.position || "",
+      displayOrder: staff?.displayOrder || 999
     });
   }, [staff, form]);
 
@@ -2498,29 +2507,63 @@ function StaffFormModal({
               {!staff && (
                 <FormField
                   control={form.control}
-                  name="userId"
+                  name="customName"
                   render={({ field }) => (
                     <FormItem className="lg:col-span-2">
-                      <FormLabel>Select User *</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger data-testid="select-staff-user">
-                            <SelectValue placeholder="Select a user" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {approvedUsers.map((user) => (
-                              <SelectItem key={user._id} value={user._id!}>
-                                {user.firstName} {user.lastName} ({user.email})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
+                      <FormLabel>Staff Member Name *</FormLabel>
+                      <Input 
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value)}
+                        placeholder="Enter staff member name (e.g., Dr. John Smith)" 
+                        data-testid="input-staff-name"
+                      />
+                      <FormDescription>
+                        Enter the full name of the staff member
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               )}
+
+              {/* Avatar Upload */}
+              <FormField
+                control={form.control}
+                name="avatar"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      folder="staff-avatars"
+                      label="Avatar / Profile Picture"
+                      description="Upload a profile picture for the staff member"
+                      acceptedFormats="image"
+                      maxSize={5 * 1024 * 1024}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Phone Number */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem className="lg:col-span-2">
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., +234 123 456 7890" 
+                        {...field} 
+                        data-testid="input-staff-phone"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
               <FormField
                 control={form.control}
@@ -2644,6 +2687,79 @@ function StaffFormModal({
               )}
             />
             
+            {/* Landing Page Display Settings */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-sm font-medium">Landing Page Display</h3>
+              
+              <FormField
+                control={form.control}
+                name="showOnLanding"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-md border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Show on Landing Page</FormLabel>
+                      <FormDescription>
+                        Display this staff member in the landing page footer
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-show-on-landing"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position (for landing page)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., President, Vice President" 
+                          {...field} 
+                          data-testid="input-staff-position"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Display title on landing page (optional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="displayOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Order</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="999" 
+                          {...field} 
+                          onChange={e => field.onChange(parseInt(e.target.value) || 999)}
+                          data-testid="input-staff-display-order"
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Lower numbers appear first
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="bio"

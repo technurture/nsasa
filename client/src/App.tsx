@@ -4,7 +4,12 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import type { BlogPost, Event } from "@shared/mongoSchema";
 
 // Components
@@ -34,6 +39,7 @@ import MainDashboardView, {
   BlogManagementView,
   EventManagementView,
   ResourceManagementView,
+  StaffManagementView,
   SettingsView
 } from "@/components/MainDashboardView";
 
@@ -42,9 +48,143 @@ import BlogsPage from "@/pages/BlogsPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
 import EventsPage from "@/pages/EventsPage";
 import EventDetailPage from "@/pages/EventDetailPage";
+import StaffPage from "@/pages/StaffPage";
+import StaffDetailPage from "@/pages/StaffDetailPage";
 import LearningResourceDetailPage from "@/pages/LearningResourceDetailPage";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+
+// Featured Staff Section Component with Card Design and Translation Support
+function FeaturedStaffSection() {
+  const [, setLocation] = useLocation();
+  const { data: featuredStaff, isLoading } = useQuery<any[]>({
+    queryKey: ['/api/staff/landing-page/featured'],
+    queryFn: async () => {
+      const response = await fetch('/api/staff/landing-page/featured');
+      if (!response.ok) throw new Error('Failed to fetch featured staff');
+      return response.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <section>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-4">Our Leadership</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Meet the dedicated team leading our department
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="overflow-hidden hover-elevate">
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="h-48 w-48 mx-auto bg-muted animate-pulse rounded-full" />
+                  <div className="h-6 bg-muted animate-pulse rounded w-3/4 mx-auto" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2 mx-auto" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (!featuredStaff || featuredStaff.length === 0) {
+    return null;
+  }
+
+  return (
+    <section>
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-bold mb-4" data-testid="heading-our-leadership">Our Leadership</h2>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Meet the dedicated team leading our department
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        {featuredStaff.map((staff) => {
+          const staffName = staff.customName || staff.name || 'Unknown';
+          const initials = staffName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+          
+          return (
+            <Card 
+              key={staff._id} 
+              className="group overflow-hidden hover-elevate transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-xl"
+              data-testid={`staff-card-${staff._id}`}
+              onClick={() => setLocation(`/staff/${staff._id}`)}
+            >
+              <CardContent className="p-8 text-center space-y-6">
+                <div className="flex justify-center relative">
+                  <div className="relative">
+                    <Avatar className="h-48 w-48 border-4 border-primary/20 shadow-2xl group-hover:border-primary/50 transition-all duration-300 ring-8 ring-primary/5">
+                      {staff.avatar ? (
+                        <AvatarImage 
+                          src={staff.avatar} 
+                          alt={staffName}
+                          className="object-cover"
+                        />
+                      ) : null}
+                      <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-primary/20 to-primary/10">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-3 shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="font-bold text-2xl group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
+                    {staffName}
+                  </h3>
+                  {staff.position && (
+                    <Badge className="text-sm font-semibold px-4 py-1" data-testid={`text-position-${staff._id}`}>
+                      {staff.position}
+                    </Badge>
+                  )}
+                  {staff.title && (
+                    <p className="text-base text-muted-foreground line-clamp-2 mt-2">
+                      {staff.title}
+                    </p>
+                  )}
+                </div>
+                
+                {staff.bio && (
+                  <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed">
+                    {staff.bio}
+                  </p>
+                )}
+                
+                <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <p className="text-xs text-primary font-semibold">Click to view full profile →</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      <div className="text-center mt-10">
+        <Button 
+          variant="outline"
+          onClick={() => setLocation('/staff')}
+          data-testid="link-view-all-staff"
+          className="group"
+        >
+          View All Staff
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 // Main Pages
 function LandingPage() {
@@ -226,6 +366,9 @@ function LandingPage() {
           )}
         </section>
 
+        {/* Featured Staff - Moved after Upcoming Events */}
+        <FeaturedStaffSection />
+
         {/* Call to Action */}
         <section className="text-center">
           <div className="bg-primary/5 rounded-xl p-12">
@@ -242,44 +385,6 @@ function LandingPage() {
             </button>
           </div>
         </section>
-      </div>
-    </div>
-  );
-}
-
-function StaffPage() {
-  // todo: remove mock functionality
-  const mockStaff = [
-    {
-      id: "1",
-      name: "Dr. Sarah Johnson",
-      title: "Professor of Social Psychology",
-      department: "Department of Sociology",
-      specializations: ["Social Psychology", "Behavioral Research", "Community Studies"],
-      email: "s.johnson@university.edu",
-      phone: "+1 (555) 123-4567",
-      office: "Room 305, Sociology Building",
-      bio: "Dr. Johnson is a renowned expert in social psychology with over 15 years of experience.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah-prof",
-      courses: ["Introduction to Social Psychology", "Research Methods"],
-      publications: 47,
-      experience: "15+ Years",
-      education: ["Ph.D. in Social Psychology, Harvard University"]
-    }
-  ];
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Our Faculty</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Meet our dedicated faculty members who are experts in their fields
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {mockStaff.map((staff) => (
-          <StaffProfileCard key={staff.id} staff={staff} />
-        ))}
       </div>
     </div>
   );
@@ -607,6 +712,7 @@ function DashboardRouter() {
           <Route path="/dashboard/blogs" component={BlogManagementView} />
           <Route path="/dashboard/events" component={EventManagementView} />
           <Route path="/dashboard/resources" component={ResourceManagementView} />
+          <Route path="/dashboard/staff" component={StaffManagementView} />
           <Route path="/dashboard/analytics" component={AnalyticsView} />
           <Route path="/dashboard/settings" component={SettingsView} />
           <Route component={MainDashboardView} />
@@ -639,6 +745,7 @@ function MainRouter() {
           <Route path="/events/:id" component={EventDetailPage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/resources/:id" component={LearningResourceDetailPage} />
+          <Route path="/staff/:id" component={StaffDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/about" component={AboutPage} />
           <Route path="/contact" component={ContactPage} />
@@ -664,6 +771,7 @@ function MainRouter() {
           <Route path="/events/:id" component={EventDetailPage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/resources/:id" component={LearningResourceDetailPage} />
+          <Route path="/staff/:id" component={StaffDetailPage} />
           <Route path="/staff" component={StaffPage} />
           <Route path="/resources" component={ResourcesPage} />
           <Route path="/about" component={AboutPage} />
@@ -718,7 +826,9 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

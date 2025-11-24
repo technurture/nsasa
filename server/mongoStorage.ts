@@ -71,11 +71,13 @@ export interface IMongoStorage {
   rateResource(userId: string, resourceId: string, rating: number): Promise<void>;
   
   // Staff operations
-  createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile>;
+  createStaffProfile(userId: string | undefined, profile: InsertStaffProfile): Promise<StaffProfile>;
   getStaffProfiles(): Promise<StaffProfile[]>;
+  getLandingPageStaff(): Promise<StaffProfile[]>;
   getStaffProfile(userId: string): Promise<StaffProfile | undefined>;
   getStaffProfileById(id: string): Promise<StaffProfile | undefined>;
   updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile>;
+  updateStaffProfileById(id: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile>;
   deleteStaffProfile(id: string): Promise<void>;
   
   // Contact operations
@@ -1182,12 +1184,12 @@ export class MongoStorage implements IMongoStorage {
   }
   
   // Staff operations
-  async createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile> {
+  async createStaffProfile(userId: string | undefined, profile: InsertStaffProfile): Promise<StaffProfile> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     
     const profileDoc: Omit<StaffProfile, '_id'> = {
       ...profile,
-      userId,
+      ...(userId ? { userId } : {}), // Only include userId if provided
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -1208,6 +1210,15 @@ export class MongoStorage implements IMongoStorage {
     return profiles.map(profile => ({ ...profile, _id: profile._id.toString() }));
   }
   
+  async getLandingPageStaff(): Promise<StaffProfile[]> {
+    const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
+    const profiles = await staffCollection
+      .find({ showOnLanding: true } as any)
+      .sort({ displayOrder: 1 })
+      .toArray();
+    return profiles.map(profile => ({ ...profile, _id: profile._id.toString() }));
+  }
+  
   async getStaffProfile(userId: string): Promise<StaffProfile | undefined> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     const profile = await staffCollection.findOne({ userId });
@@ -1225,6 +1236,22 @@ export class MongoStorage implements IMongoStorage {
     
     const result = await staffCollection.findOneAndUpdate(
       { userId },
+      { $set: { ...profile, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    
+    if (!result) {
+      throw new Error('Staff profile not found');
+    }
+    
+    return { ...result, _id: result._id.toString() };
+  }
+  
+  async updateStaffProfileById(id: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile> {
+    const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
+    
+    const result = await staffCollection.findOneAndUpdate(
+      { _id: new ObjectId(id) } as any,
       { $set: { ...profile, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );

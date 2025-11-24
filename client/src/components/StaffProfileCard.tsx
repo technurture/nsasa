@@ -27,12 +27,14 @@ interface StaffProfileCardProps {
 
 export default function StaffProfileCard({ staff, onContact, onViewProfile }: StaffProfileCardProps) {
   
-  const handleEmailContact = () => {
+  const handleEmailContact = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onContact?.(staff.id, 'email');
     console.log(`Email contact for: ${staff.name}`);
   };
 
-  const handlePhoneContact = () => {
+  const handlePhoneContact = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onContact?.(staff.id, 'phone');
     console.log(`Phone contact for: ${staff.name}`);
   };
@@ -42,19 +44,35 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
     console.log(`View profile for: ${staff.name}`);
   };
 
-  return (
-    <Card className="group overflow-hidden hover-elevate transition-all duration-200">
-      <CardHeader className="text-center space-y-4">
-        {/* Avatar */}
-        <div className="flex justify-center">
-          <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-            <AvatarImage src={staff.avatar} alt={staff.name} />
-            <AvatarFallback className="text-lg font-semibold">
-              {staff.name.split(' ').map(n => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
-        </div>
+  const handleViewFullProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewProfile?.(staff.id);
+  };
 
+  return (
+    <Card 
+      className="group overflow-hidden hover-elevate transition-all duration-200 cursor-pointer" 
+      onClick={handleViewProfile}
+      data-testid={`card-staff-${staff.id}`}
+    >
+      {/* Profile Image Header */}
+      <div className="relative w-full h-56 overflow-hidden bg-muted">
+        {staff.avatar ? (
+          <img 
+            src={staff.avatar} 
+            alt={staff.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <span className="text-6xl font-bold text-muted-foreground">
+              {staff.name.split(' ').map(n => n[0]).join('')}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <CardHeader className="text-center space-y-2 pt-4 pb-4">
         {/* Name and Title */}
         <div>
           <h3 className="text-xl font-semibold group-hover:text-primary transition-colors" data-testid={`text-name-${staff.id}`}>
@@ -65,102 +83,34 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
           </p>
           <p className="text-sm text-muted-foreground">{staff.department}</p>
         </div>
-
-        {/* Experience Badge */}
-        <Badge variant="outline" className="mx-auto">
-          {staff.experience} Experience
-        </Badge>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Bio */}
-        <p className="text-sm text-muted-foreground line-clamp-3" data-testid={`text-bio-${staff.id}`}>
-          {staff.bio}
-        </p>
+      <CardContent className="space-y-4 pt-0">
+        {/* Bio - Shortened */}
+        {staff.bio && (
+          <p className="text-sm text-muted-foreground line-clamp-2 text-center" data-testid={`text-bio-${staff.id}`}>
+            {staff.bio}
+          </p>
+        )}
 
-        {/* Specializations */}
-        <div>
-          <h4 className="font-medium text-sm mb-2">Specializations</h4>
-          <div className="flex flex-wrap gap-1">
-            {staff.specializations.slice(0, 3).map((spec, index) => (
+        {/* Specializations - Limited to 2 */}
+        {staff.specializations.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-center">
+            {staff.specializations.slice(0, 2).map((spec, index) => (
               <Badge key={index} variant="secondary" className="text-xs">
                 {spec}
               </Badge>
             ))}
-            {staff.specializations.length > 3 && (
+            {staff.specializations.length > 2 && (
               <Badge variant="outline" className="text-xs">
-                +{staff.specializations.length - 3} more
+                +{staff.specializations.length - 2}
               </Badge>
             )}
           </div>
-        </div>
-
-        {/* Courses */}
-        <div>
-          <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            Current Courses
-          </h4>
-          <div className="space-y-1">
-            {staff.courses.slice(0, 2).map((course, index) => (
-              <p key={index} className="text-xs text-muted-foreground">
-                • {course}
-              </p>
-            ))}
-            {staff.courses.length > 2 && (
-              <p className="text-xs text-muted-foreground">
-                +{staff.courses.length - 2} more courses
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Publications */}
-        <div className="flex items-center gap-2">
-          <Award className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">
-            <span className="font-medium" data-testid={`text-publications-${staff.id}`}>
-              {staff.publications}
-            </span> Publications
-          </span>
-        </div>
-
-        {/* Contact Information */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="truncate" data-testid={`text-email-${staff.id}`}>
-              {staff.email}
-            </span>
-          </div>
-          
-          {staff.phone && (
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span data-testid={`text-phone-${staff.id}`}>{staff.phone}</span>
-            </div>
-          )}
-          
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span data-testid={`text-office-${staff.id}`}>{staff.office}</span>
-          </div>
-        </div>
-
-        {/* Education */}
-        <div>
-          <h4 className="font-medium text-sm mb-2">Education</h4>
-          <div className="space-y-1">
-            {staff.education.slice(0, 2).map((edu, index) => (
-              <p key={index} className="text-xs text-muted-foreground">
-                • {edu}
-              </p>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -187,10 +137,10 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
         </div>
 
         <Button 
-          variant="ghost" 
+          variant="default" 
           size="sm" 
           className="w-full gap-1"
-          onClick={handleViewProfile}
+          onClick={handleViewFullProfile}
           data-testid={`button-profile-${staff.id}`}
         >
           <ExternalLink className="h-3 w-3" />

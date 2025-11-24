@@ -153,11 +153,13 @@ export const learningResourceSchema = z.object({
   updatedAt: z.date().default(() => new Date()),
 });
 
-// Staff profile schema
-export const staffProfileSchema = z.object({
+// Staff profile schema (base without refinement for omit)
+export const staffProfileBaseSchema = z.object({
   _id: z.string().optional(),
   
-  userId: z.string(),
+  // Either userId (existing user) OR customName (custom profile) must be provided
+  userId: z.string().optional(),
+  customName: z.string().optional(), // For staff members not in the user system
   
   title: z.string(),
   department: z.string(),
@@ -171,9 +173,24 @@ export const staffProfileSchema = z.object({
   experience: z.string().optional(),
   education: z.array(z.string()).default([]),
   
+  // Additional fields for custom profiles
+  phone: z.string().optional(),
+  avatar: z.string().optional(),
+  
+  // Landing page display
+  showOnLanding: z.boolean().default(false),
+  position: z.string().optional(), // e.g., "President", "V.President", "Financial Secretary"
+  displayOrder: z.number().default(999), // Lower numbers appear first
+  
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
+
+// Add refinement for validation
+export const staffProfileSchema = staffProfileBaseSchema.refine(
+  (data) => data.userId || data.customName,
+  { message: "Either userId or customName must be provided" }
+);
 
 // Contact submission schema
 export const contactSubmissionSchema = z.object({
@@ -204,7 +221,13 @@ export const insertBlogPostSchema = blogPostSchema.omit({ _id: true, createdAt: 
 export const insertCommentSchema = baseCommentSchema.omit({ _id: true, createdAt: true, updatedAt: true, authorId: true, blogPostId: true });
 export const insertEventSchema = eventSchema.omit({ _id: true, createdAt: true, updatedAt: true, organizerId: true });
 export const insertLearningResourceSchema = learningResourceSchema.omit({ _id: true, createdAt: true, updatedAt: true, uploadedById: true });
-export const insertStaffProfileSchema = staffProfileSchema.omit({ _id: true, createdAt: true, updatedAt: true, userId: true });
+// Use base schema for omit, then add refinement
+export const insertStaffProfileSchema = staffProfileBaseSchema
+  .omit({ _id: true, createdAt: true, updatedAt: true })
+  .refine(
+    (data) => data.userId || data.customName,
+    { message: "Either userId or customName must be provided" }
+  );
 export const insertContactSubmissionSchema = contactSubmissionSchema.omit({ _id: true, createdAt: true });
 
 // Type exports

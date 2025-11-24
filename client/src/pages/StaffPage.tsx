@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import StaffProfileCard from "@/components/StaffProfileCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ type StaffProfile = z.infer<typeof staffProfileSchema>;
 type User = z.infer<typeof userSchema>;
 
 export default function StaffPage() {
+  const [, setLocation] = useLocation();
   const { data: staffProfiles = [], isLoading } = useQuery<(StaffProfile & { user?: User })[]>({
     queryKey: ['/api/staff']
   });
@@ -50,15 +52,15 @@ export default function StaffPage() {
   // Transform API data to match StaffProfileCard props
   const transformedStaff = staffProfiles.map((profile) => ({
     id: profile._id || "",
-    name: `${profile.user?.firstName || ""} ${profile.user?.lastName || ""}`.trim(),
+    name: (profile as any).customName || `${profile.user?.firstName || ""} ${profile.user?.lastName || ""}`.trim() || "Unknown",
     title: profile.title,
     department: profile.department,
     specializations: profile.specializations || [],
-    email: profile.user?.email || "",
-    phone: profile.user?.phoneNumber,
+    email: (profile as any).email || profile.user?.email || "",
+    phone: (profile as any).phone || profile.user?.phoneNumber,
     office: profile.office || "",
     bio: profile.bio || "",
-    avatar: profile.user?.avatar,
+    avatar: (profile as any).avatar || profile.user?.profileImageUrl,
     courses: profile.courses || [],
     publications: profile.publications || 0,
     experience: profile.experience || "",
@@ -103,6 +105,9 @@ export default function StaffPage() {
                     } else if (method === 'phone' && staff.phone) {
                       window.location.href = `tel:${staff.phone}`;
                     }
+                  }}
+                  onViewProfile={(id) => {
+                    setLocation(`/staff/${id}`);
                   }}
                 />
               </div>
