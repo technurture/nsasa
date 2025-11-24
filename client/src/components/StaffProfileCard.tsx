@@ -55,17 +55,24 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
       onClick={handleViewProfile}
       data-testid={`card-staff-${staff.id}`}
     >
-      <CardHeader className="text-center space-y-3 pb-4">
-        {/* Avatar */}
-        <div className="flex justify-center">
-          <Avatar className="!h-40 !w-40 border-4 border-background shadow-lg">
-            <AvatarImage src={staff.avatar} alt={staff.name} />
-            <AvatarFallback className="text-3xl font-semibold">
+      {/* Profile Image Header */}
+      <div className="relative w-full h-56 overflow-hidden bg-muted">
+        {staff.avatar ? (
+          <img 
+            src={staff.avatar} 
+            alt={staff.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <span className="text-6xl font-bold text-muted-foreground">
               {staff.name.split(' ').map(n => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
-        </div>
+            </span>
+          </div>
+        )}
+      </div>
 
+      <CardHeader className="text-center space-y-2 pt-4 pb-4">
         {/* Name and Title */}
         <div>
           <h3 className="text-xl font-semibold group-hover:text-primary transition-colors" data-testid={`text-name-${staff.id}`}>
