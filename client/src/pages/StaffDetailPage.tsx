@@ -23,6 +23,11 @@ export default function StaffDetailPage() {
 
   const { data: staff, isLoading, error } = useQuery<any>({
     queryKey: ['/api/staff', id],
+    queryFn: async () => {
+      const response = await fetch(`/api/staff/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch staff details');
+      return response.json();
+    },
     enabled: !!id,
   });
 

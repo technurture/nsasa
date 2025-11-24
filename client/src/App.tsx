@@ -119,7 +119,7 @@ function FeaturedStaffSection() {
               <CardContent className="p-8 text-center space-y-6">
                 <div className="flex justify-center relative">
                   <div className="relative">
-                    <Avatar className="h-48 w-48 border-4 border-primary/20 shadow-2xl group-hover:border-primary/50 group-hover:scale-105 transition-all duration-300 ring-8 ring-primary/5">
+                    <Avatar className="h-48 w-48 border-4 border-primary/20 shadow-2xl group-hover:border-primary/50 transition-all duration-300 ring-8 ring-primary/5">
                       {staff.avatar ? (
                         <AvatarImage 
                           src={staff.avatar} 
@@ -131,7 +131,7 @@ function FeaturedStaffSection() {
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-3 shadow-2xl opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
+                    <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-3 shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
                       </svg>
