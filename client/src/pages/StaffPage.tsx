@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import StaffProfileCard from "@/components/StaffProfileCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ type StaffProfile = z.infer<typeof staffProfileSchema>;
 type User = z.infer<typeof userSchema>;
 
 export default function StaffPage() {
+  const [, setLocation] = useLocation();
   const { data: staffProfiles = [], isLoading } = useQuery<(StaffProfile & { user?: User })[]>({
     queryKey: ['/api/staff']
   });
@@ -103,6 +105,9 @@ export default function StaffPage() {
                     } else if (method === 'phone' && staff.phone) {
                       window.location.href = `tel:${staff.phone}`;
                     }
+                  }}
+                  onViewProfile={(id) => {
+                    setLocation(`/staff/${id}`);
                   }}
                 />
               </div>
