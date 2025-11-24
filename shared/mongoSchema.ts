@@ -106,6 +106,7 @@ export const eventSchema = z.object({
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional().default([]),
+  videoUrl: z.string().optional(), // Video URL for event recordings
   
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
@@ -215,6 +216,40 @@ export const newsletterSubscriptionSchema = z.object({
   createdAt: z.date().default(() => new Date()),
 });
 
+// Poll option schema
+export const pollOptionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  votes: z.number().default(0),
+});
+
+// Poll schema
+export const pollSchema = z.object({
+  _id: z.string().optional(),
+  question: z.string().min(1, "Poll question is required"),
+  options: z.array(pollOptionSchema).min(2, "At least 2 options are required"),
+  
+  createdById: z.string(),
+  
+  allowMultipleVotes: z.boolean().default(false),
+  expiresAt: z.date().optional(),
+  
+  status: z.enum(['active', 'closed']).default('active'),
+  
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date()),
+});
+
+// Poll vote schema - tracks who voted for which options
+export const pollVoteSchema = z.object({
+  _id: z.string().optional(),
+  pollId: z.string(),
+  userId: z.string(),
+  optionId: z.string(),
+  
+  createdAt: z.date().default(() => new Date()),
+});
+
 // Insert schemas (for validation)
 export const insertUserSchema = userSchema.omit({ _id: true, createdAt: true, updatedAt: true });
 export const insertBlogPostSchema = blogPostSchema.omit({ _id: true, createdAt: true, updatedAt: true, authorId: true });
@@ -229,6 +264,8 @@ export const insertStaffProfileSchema = staffProfileBaseSchema
     { message: "Either userId or customName must be provided" }
   );
 export const insertContactSubmissionSchema = contactSubmissionSchema.omit({ _id: true, createdAt: true });
+export const insertPollSchema = pollSchema.omit({ _id: true, createdAt: true, updatedAt: true, createdById: true });
+export const insertPollVoteSchema = pollVoteSchema.omit({ _id: true, createdAt: true });
 
 // Type exports
 export type User = z.infer<typeof userSchema>;
@@ -256,3 +293,10 @@ export type ContactSubmission = z.infer<typeof contactSubmissionSchema>;
 export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
 
 export type NewsletterSubscription = z.infer<typeof newsletterSubscriptionSchema>;
+
+export type Poll = z.infer<typeof pollSchema>;
+export type InsertPoll = z.infer<typeof insertPollSchema>;
+export type PollOption = z.infer<typeof pollOptionSchema>;
+
+export type PollVote = z.infer<typeof pollVoteSchema>;
+export type InsertPollVote = z.infer<typeof insertPollVoteSchema>;

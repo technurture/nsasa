@@ -331,6 +331,43 @@ export default function EventDetailPage() {
             </div>
           </div>
 
+          {/* Event Video */}
+          {event.videoUrl && (
+            <div className="mb-12">
+              <h2 className="text-2xl font-semibold mb-4">Event Recording</h2>
+              <div className="space-y-4">
+                <div className="rounded-md overflow-hidden bg-black">
+                  <video 
+                    controls 
+                    className="w-full"
+                    data-testid="video-event"
+                    preload="metadata"
+                  >
+                    <source src={event.videoUrl} type="video/mp4" />
+                    <source src={event.videoUrl} type="video/webm" />
+                    <source src={event.videoUrl} type="video/ogg" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = event.videoUrl;
+                    link.download = `${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_event.mp4`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  data-testid="button-download-video"
+                >
+                  Download Video
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Additional Images Gallery - Swipeable Carousel */}
           {galleryImages.length > 0 && (
             <div className="mb-12">

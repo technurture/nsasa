@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,8 @@ const eventFormSchema = eventSchema.omit({
 }).extend({
   date: z.string().min(1, "Date is required"), // Transform Date to string for form input
   tags: z.string().optional(), // Transform array to comma-separated string for form input
-  imageUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  videoUrl: z.string().url("Invalid URL").optional().or(z.literal(""))
 });
 
 type EventFormData = z.infer<typeof eventFormSchema>;
@@ -439,6 +441,111 @@ function BlogFormModal({
   );
 }
 
+// User Engagement Modal Component - Shows users who liked or viewed a blog
+interface UserEngagementData {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  profileImageUrl?: string;
+  level?: number;
+}
+
+function UserEngagementModal({
+  isOpen,
+  onClose,
+  type,
+  blogId,
+  blogTitle
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  type: 'likes' | 'views';
+  blogId: string | null;
+  blogTitle: string;
+}) {
+  // Fetch users who liked or viewed the blog
+  const { data: users = [], isLoading } = useQuery<UserEngagementData[]>({
+    queryKey: ['/api/blogs', blogId, type, 'users'],
+    enabled: !!blogId && isOpen,
+  });
+
+  const title = type === 'likes' ? 'Users who liked this blog' : 'Users who viewed this blog';
+  const emptyMessage = type === 'likes' 
+    ? 'No likes yet. Be the first to like this blog!' 
+    : 'No views yet.';
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md" data-testid={`dialog-blog-${type}`}>
+        <DialogHeader>
+          <DialogTitle data-testid={`title-blog-${type}`}>{title}</DialogTitle>
+          <DialogDescription className="line-clamp-1" data-testid={`description-blog-${type}`}>
+            {blogTitle}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="max-h-[400px] overflow-y-auto">
+          {isLoading ? (
+            <div className="space-y-3" data-testid={`loading-blog-${type}`}>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-1" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8" data-testid={`empty-blog-${type}`}>
+              {type === 'likes' ? (
+                <Heart className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              ) : (
+                <Eye className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              )}
+              <p className="text-gray-600 dark:text-gray-400">{emptyMessage}</p>
+            </div>
+          ) : (
+            <div className="space-y-2" data-testid={`list-blog-${type}`}>
+              {users.map((user, index) => (
+                <div
+                  key={user._id}
+                  className="flex items-center gap-3 p-2 rounded-md hover-elevate"
+                  data-testid={`user-${type}-${index}`}
+                >
+                  <Avatar className="h-10 w-10">
+                    {user.profileImageUrl ? (
+                      <AvatarImage 
+                        src={user.profileImageUrl} 
+                        alt={`${user.firstName} ${user.lastName}`}
+                        data-testid={`avatar-img-${type}-${index}`}
+                      />
+                    ) : null}
+                    <AvatarFallback data-testid={`avatar-fallback-${type}-${index}`}>
+                      {user.firstName?.[0]}{user.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-medium" data-testid={`name-${type}-${index}`}>
+                      {user.firstName} {user.lastName}
+                    </p>
+                    {user.level !== undefined && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400" data-testid={`level-${type}-${index}`}>
+                        Level {user.level}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Event Form Modal Component
 function EventFormModal({ 
   isOpen, 
@@ -465,7 +572,8 @@ function EventFormModal({
       capacity: event?.capacity || 50,
       price: event?.price || 0,
       tags: event?.tags?.join(", ") || "",
-      imageUrl: event?.imageUrl || ""
+      imageUrl: event?.imageUrl || "",
+      videoUrl: event?.videoUrl || ""
     }
   });
 
@@ -481,7 +589,8 @@ function EventFormModal({
       capacity: event?.capacity || 50,
       price: event?.price || 0,
       tags: event?.tags?.join(", ") || "",
-      imageUrl: event?.imageUrl || ""
+      imageUrl: event?.imageUrl || "",
+      videoUrl: event?.videoUrl || ""
     });
   }, [event, form]);
 
@@ -490,7 +599,8 @@ function EventFormModal({
       ...data,
       date: new Date(data.date),
       tags: data.tags ? data.tags.split(",").map(tag => tag.trim()).filter(Boolean) : [],
-      imageUrl: data.imageUrl || undefined
+      imageUrl: data.imageUrl || undefined,
+      videoUrl: data.videoUrl || undefined
     };
     onSubmit(submitData);
   };
@@ -652,6 +762,27 @@ function EventFormModal({
             
             <FormField
               control={form.control}
+              name="videoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Event Video</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      acceptedFormats="video"
+                      folder="events/videos"
+                      label="Upload Event Video"
+                      description="Upload a video of your event (optional)"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
@@ -702,6 +833,9 @@ export function BlogManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [deletingBlog, setDeletingBlog] = useState<BlogPost | null>(null);
+  const [engagementModalType, setEngagementModalType] = useState<'likes' | 'views' | null>(null);
+  const [engagementBlogId, setEngagementBlogId] = useState<string | null>(null);
+  const [engagementBlogTitle, setEngagementBlogTitle] = useState<string>("");
 
   // Fetch blogs query
   const { data: blogs = [], isLoading, refetch } = useQuery<BlogPost[]>({
@@ -858,14 +992,30 @@ export function BlogManagementView() {
                           <Calendar className="w-4 h-4" />
                           {new Date(blog.createdAt).toLocaleDateString()}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <button
+                          className="flex items-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          onClick={() => {
+                            setEngagementModalType('views');
+                            setEngagementBlogId(blog._id || null);
+                            setEngagementBlogTitle(blog.title);
+                          }}
+                          data-testid={`button-views-${blog._id}`}
+                        >
                           <Eye className="w-4 h-4" />
                           {blog.views || 0} views
-                        </span>
-                        <span className="flex items-center gap-1">
+                        </button>
+                        <button
+                          className="flex items-center gap-1 cursor-pointer hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                          onClick={() => {
+                            setEngagementModalType('likes');
+                            setEngagementBlogId(blog._id || null);
+                            setEngagementBlogTitle(blog.title);
+                          }}
+                          data-testid={`button-likes-${blog._id}`}
+                        >
                           <Heart className="w-4 h-4" />
                           {blog.likes || 0} likes
-                        </span>
+                        </button>
                         <Badge variant="outline">{blog.category}</Badge>
                       </div>
                     </div>
@@ -942,6 +1092,21 @@ export function BlogManagementView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Engagement Modal - Shows users who liked or viewed a blog */}
+      {engagementModalType && (
+        <UserEngagementModal
+          isOpen={!!engagementModalType}
+          onClose={() => {
+            setEngagementModalType(null);
+            setEngagementBlogId(null);
+            setEngagementBlogTitle("");
+          }}
+          type={engagementModalType}
+          blogId={engagementBlogId}
+          blogTitle={engagementBlogTitle}
+        />
+      )}
     </div>
   );
 }

@@ -19,6 +19,10 @@ import {
   InsertStaffProfile,
   ContactSubmission,
   InsertContactSubmission,
+  Poll,
+  InsertPoll,
+  PollVote,
+  InsertPollVote,
 } from '@shared/mongoSchema';
 
 // Interface for MongoDB storage operations
@@ -44,7 +48,7 @@ export interface IMongoStorage {
   updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost>;
   deleteBlogPost(id: string): Promise<void>;
   getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]>;
-  incrementBlogViews(id: string): Promise<void>;
+  incrementBlogViews(id: string, userId?: string): Promise<void>;
   
   // Comment operations
   createBlogComment(authorId: string, blogPostId: string, comment: InsertComment): Promise<Comment>;
@@ -104,10 +108,22 @@ export interface IMongoStorage {
   unlikeBlogPost(userId: string, blogPostId: string): Promise<void>;
   getBlogLikesCount(blogPostId: string): Promise<number>;
   isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean>;
+  getBlogLikedByUsers(blogPostId: string): Promise<User[]>;
+  getBlogViewedByUsers(blogPostId: string): Promise<User[]>;
   likeComment(userId: string, commentId: string): Promise<void>;
   unlikeComment(userId: string, commentId: string): Promise<void>;
   getCommentLikesCount(commentId: string): Promise<number>;
   isCommentLikedByUser(userId: string, commentId: string): Promise<boolean>;
+  
+  // Poll operations
+  createPoll(createdById: string, poll: InsertPoll): Promise<Poll>;
+  getPolls(status?: 'active' | 'closed'): Promise<Poll[]>;
+  getPoll(id: string): Promise<Poll | undefined>;
+  closePoll(id: string): Promise<Poll>;
+  deletePoll(id: string): Promise<void>;
+  votePoll(userId: string, pollId: string, optionId: string): Promise<void>;
+  hasUserVoted(userId: string, pollId: string): Promise<boolean>;
+  getUserVote(userId: string, pollId: string): Promise<PollVote | undefined>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -459,12 +475,38 @@ export class MongoStorage implements IMongoStorage {
     })) as BlogPost[];
   }
   
-  async incrementBlogViews(id: string): Promise<void> {
+  async incrementBlogViews(id: string, userId?: string): Promise<void> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    await blogPostsCollection.updateOne(
-      { _id: new ObjectId(id) } as any,
-      { $inc: { views: 1 } }
-    );
+    const viewsCollection = await getCollection(COLLECTIONS.BLOG_VIEWS);
+    
+    // If userId is provided, track the view for authenticated users
+    if (userId) {
+      const existingView = await viewsCollection.findOne({ userId, blogPostId: id });
+      
+      if (!existingView) {
+        // Track this user viewed the blog
+        await viewsCollection.insertOne({
+          userId,
+          blogPostId: id,
+          createdAt: new Date(),
+        });
+        
+        // Increment view counter only if user hasn't viewed before
+        await blogPostsCollection.updateOne(
+          { _id: new ObjectId(id) } as any,
+          { $inc: { views: 1 } }
+        );
+      }
+      // If user already viewed, don't increment counter (prevent double counting)
+    } else {
+      // For anonymous users, always increment (basic analytics)
+      // Note: This means anonymous views are counted every time, which may inflate numbers
+      // but maintains backward compatibility and ensures anonymous traffic is tracked
+      await blogPostsCollection.updateOne(
+        { _id: new ObjectId(id) } as any,
+        { $inc: { views: 1 } }
+      );
+    }
   }
   
   // Comment operations
@@ -1582,6 +1624,44 @@ export class MongoStorage implements IMongoStorage {
     return !!like;
   }
   
+  async getBlogLikedByUsers(blogPostId: string): Promise<User[]> {
+    const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
+    // Get all likes for this blog post
+    const likes = await likesCollection.find({ blogPostId }).toArray();
+    const userIds = likes.map(like => like.userId);
+    
+    // Get user details
+    const users = await usersCollection.find({
+      _id: { $in: userIds.map(id => new ObjectId(id) as any) }
+    }).toArray();
+    
+    return users.map(user => ({
+      ...user,
+      _id: user._id.toString(),
+    })) as User[];
+  }
+  
+  async getBlogViewedByUsers(blogPostId: string): Promise<User[]> {
+    const viewsCollection = await getCollection(COLLECTIONS.BLOG_VIEWS);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    
+    // Get all views for this blog post
+    const views = await viewsCollection.find({ blogPostId }).toArray();
+    const userIds = views.map(view => view.userId);
+    
+    // Get user details
+    const users = await usersCollection.find({
+      _id: { $in: userIds.map(id => new ObjectId(id) as any) }
+    }).toArray();
+    
+    return users.map(user => ({
+      ...user,
+      _id: user._id.toString(),
+    })) as User[];
+  }
+  
   async likeComment(userId: string, commentId: string): Promise<void> {
     const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
@@ -1625,6 +1705,180 @@ export class MongoStorage implements IMongoStorage {
     const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
     const like = await likesCollection.findOne({ userId, commentId });
     return !!like;
+  }
+
+  // Poll operations
+  async createPoll(createdById: string, poll: InsertPoll): Promise<Poll> {
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    
+    const pollDoc: Omit<Poll, '_id'> = {
+      ...poll,
+      createdById,
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    const result = await pollsCollection.insertOne(pollDoc as any);
+    const newPoll = await pollsCollection.findOne({ _id: result.insertedId });
+    
+    if (!newPoll) {
+      throw new Error('Failed to create poll');
+    }
+    
+    return { ...newPoll, _id: newPoll._id.toString() };
+  }
+  
+  async getPolls(status?: 'active' | 'closed'): Promise<Poll[]> {
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    
+    const query = status ? { status } : {};
+    const polls = await pollsCollection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    // For each poll, get vote counts for each option
+    const pollsWithVotes = await Promise.all(
+      polls.map(async (poll) => {
+        const pollId = poll._id.toString();
+        const votes = await votesCollection.find({ pollId }).toArray();
+        
+        // Count votes for each option
+        const optionsWithVotes = poll.options.map(option => {
+          const voteCount = votes.filter(v => v.optionId === option.id).length;
+          return {
+            ...option,
+            votes: voteCount
+          };
+        });
+        
+        return {
+          ...poll,
+          _id: pollId,
+          options: optionsWithVotes,
+          totalVotes: votes.length
+        };
+      })
+    );
+    
+    return pollsWithVotes as Poll[];
+  }
+  
+  async getPoll(id: string): Promise<Poll | undefined> {
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    
+    const poll = await pollsCollection.findOne({ _id: new ObjectId(id) } as any);
+    
+    if (!poll) {
+      return undefined;
+    }
+    
+    const pollId = poll._id.toString();
+    const votes = await votesCollection.find({ pollId }).toArray();
+    
+    // Count votes for each option
+    const optionsWithVotes = poll.options.map(option => {
+      const voteCount = votes.filter(v => v.optionId === option.id).length;
+      return {
+        ...option,
+        votes: voteCount
+      };
+    });
+    
+    return {
+      ...poll,
+      _id: pollId,
+      options: optionsWithVotes,
+      totalVotes: votes.length
+    } as any;
+  }
+  
+  async closePoll(id: string): Promise<Poll> {
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    
+    const result = await pollsCollection.findOneAndUpdate(
+      { _id: new ObjectId(id) } as any,
+      { $set: { status: 'closed', updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    
+    if (!result) {
+      throw new Error('Poll not found');
+    }
+    
+    return { ...result, _id: result._id.toString() };
+  }
+  
+  async deletePoll(id: string): Promise<void> {
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    
+    // Delete all votes for this poll
+    await votesCollection.deleteMany({ pollId: id });
+    
+    // Delete the poll
+    await pollsCollection.deleteOne({ _id: new ObjectId(id) } as any);
+  }
+  
+  async votePoll(userId: string, pollId: string, optionId: string): Promise<void> {
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    
+    // Check if poll exists and is active
+    const poll = await pollsCollection.findOne({ _id: new ObjectId(pollId) } as any);
+    
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+    
+    if (poll.status === 'closed') {
+      throw new Error('Poll is closed');
+    }
+    
+    // Verify option exists in poll
+    const optionExists = poll.options.some(opt => opt.id === optionId);
+    if (!optionExists) {
+      throw new Error('Invalid option - option does not belong to this poll');
+    }
+    
+    // Check if user has already voted on this specific option (always prevent duplicates)
+    const existingVoteOnOption = await votesCollection.findOne({ userId, pollId, optionId });
+    if (existingVoteOnOption) {
+      throw new Error('You have already voted on this option');
+    }
+    
+    // If allowMultipleVotes is false, check if user has voted on ANY option in the poll
+    if (!poll.allowMultipleVotes) {
+      const existingVote = await votesCollection.findOne({ userId, pollId });
+      if (existingVote) {
+        throw new Error('You have already voted on this poll. Multiple votes are not allowed.');
+      }
+    }
+    
+    // Create vote
+    const voteDoc: Omit<PollVote, '_id'> = {
+      userId,
+      pollId,
+      optionId,
+      createdAt: new Date(),
+    };
+    
+    await votesCollection.insertOne(voteDoc as any);
+  }
+  
+  async hasUserVoted(userId: string, pollId: string): Promise<boolean> {
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    const vote = await votesCollection.findOne({ userId, pollId });
+    return !!vote;
+  }
+  
+  async getUserVote(userId: string, pollId: string): Promise<PollVote | undefined> {
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    const vote = await votesCollection.findOne({ userId, pollId });
+    return vote ? { ...vote, _id: vote._id.toString() } : undefined;
   }
 
   private calculateUserBadges(blogCount: number, commentCount: number, eventCount: number): any[] {

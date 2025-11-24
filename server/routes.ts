@@ -1,11 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from 'cookie-parser';
+import { randomUUID } from 'crypto';
 import { mongoStorage } from "./mongoStorage";
 import { authenticateToken, requireAdmin, requireSuperAdmin, requireRole, optionalAuth } from "./customAuth";
 import authRoutes from "./authRoutes";
 import { initializeMongoDB } from "./mongoDb";
-import { insertBlogPostSchema, insertCommentSchema } from "../shared/mongoSchema";
+import { insertBlogPostSchema, insertCommentSchema, insertPollSchema, pollOptionSchema } from "../shared/mongoSchema";
 import { z } from "zod";
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -26,6 +27,14 @@ const eventCommentRequestSchema = insertCommentSchema.extend({
 const resourceCommentRequestSchema = insertCommentSchema.extend({
   content: z.string().min(1),
   parentCommentId: z.string().optional()
+});
+
+// Poll creation schema that accepts only option text from client
+const pollCreationSchema = z.object({
+  question: z.string().min(1, "Poll question is required"),
+  options: z.array(z.string().min(1, "Option text cannot be empty")).min(2, "At least 2 options are required"),
+  allowMultipleVotes: z.boolean().optional().default(false),
+  expiresAt: z.coerce.date().optional(),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -154,11 +163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Blog not found' });
       }
       
-      // Increment views
-      await mongoStorage.incrementBlogViews(req.params.id);
+      // Increment views and track user if authenticated
+      const userId = req.user?.userId;
+      await mongoStorage.incrementBlogViews(req.params.id, userId as string | undefined);
       
       // Add isLikedByUser field
-      const userId = req.user?.userId;
       const isLikedByUser = userId
         ? await mongoStorage.isPostLikedByUser(userId as string, blog._id)
         : false;
@@ -329,6 +338,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Unlike blog error:', error);
       res.status(500).json({ message: 'Failed to unlike blog', error: error.message });
+    }
+  });
+
+  // Get users who liked a blog (requires authentication)
+  app.get('/api/blogs/:id/likes/users', authenticateToken, async (req, res) => {
+    try {
+      const users = await mongoStorage.getBlogLikedByUsers(req.params.id);
+      
+      // Only return safe public data
+      const safeUsers = users.map(user => ({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        level: user.level,
+      }));
+      
+      res.json(safeUsers);
+    } catch (error: any) {
+      console.error('Get blog likes users error:', error);
+      res.status(500).json({ message: 'Failed to get users who liked the blog', error: error.message });
+    }
+  });
+
+  // Get users who viewed a blog (requires authentication)
+  app.get('/api/blogs/:id/views/users', authenticateToken, async (req, res) => {
+    try {
+      const users = await mongoStorage.getBlogViewedByUsers(req.params.id);
+      
+      // Only return safe public data
+      const safeUsers = users.map(user => ({
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        level: user.level,
+      }));
+      
+      res.json(safeUsers);
+    } catch (error: any) {
+      console.error('Get blog views users error:', error);
+      res.status(500).json({ message: 'Failed to get users who viewed the blog', error: error.message });
     }
   });
 
@@ -930,6 +981,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Contact submission error:', error);
       res.status(500).json({ message: 'Failed to submit contact form', error: error.message });
+    }
+  });
+
+  // Poll routes
+  // Create a new poll (admin only)
+  app.post('/api/polls', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      // Validate request body using pollCreationSchema
+      const validationResult = pollCreationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: 'Invalid poll data', 
+          errors: validationResult.error.issues 
+        });
+      }
+      
+      const { question, options, allowMultipleVotes, expiresAt } = validationResult.data;
+      
+      // Transform option strings into option objects with server-generated UUIDs
+      const optionsWithIds = options.map(text => ({
+        id: randomUUID(),
+        text,
+        votes: 0
+      }));
+      
+      // Create poll with properly formatted options
+      const poll = await mongoStorage.createPoll(req.user!.userId, {
+        question,
+        options: optionsWithIds,
+        allowMultipleVotes,
+        expiresAt
+      });
+      
+      res.status(201).json(poll);
+    } catch (error: any) {
+      console.error('Create poll error:', error);
+      res.status(400).json({ message: 'Failed to create poll', error: error.message });
+    }
+  });
+  
+  // Get all polls (optionally filter by status)
+  app.get('/api/polls', optionalAuth, async (req, res) => {
+    try {
+      const status = req.query.status as 'active' | 'closed' | undefined;
+      const polls = await mongoStorage.getPolls(status);
+      
+      // If user is authenticated, add hasVoted flag for each poll
+      if (req.user?.userId) {
+        const pollsWithVoteStatus = await Promise.all(
+          polls.map(async (poll) => {
+            const hasVoted = await mongoStorage.hasUserVoted(req.user!.userId, poll._id!);
+            const userVote = hasVoted ? await mongoStorage.getUserVote(req.user!.userId, poll._id!) : undefined;
+            return {
+              ...poll,
+              hasVoted,
+              userVoteOptionId: userVote?.optionId
+            };
+          })
+        );
+        return res.json(pollsWithVoteStatus);
+      }
+      
+      res.json(polls);
+    } catch (error: any) {
+      console.error('Get polls error:', error);
+      res.status(500).json({ message: 'Failed to get polls', error: error.message });
+    }
+  });
+  
+  // Get a specific poll
+  app.get('/api/polls/:id', optionalAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const poll = await mongoStorage.getPoll(id);
+      
+      if (!poll) {
+        return res.status(404).json({ message: 'Poll not found' });
+      }
+      
+      // If user is authenticated, add hasVoted flag
+      if (req.user?.userId) {
+        const hasVoted = await mongoStorage.hasUserVoted(req.user.userId, id);
+        const userVote = hasVoted ? await mongoStorage.getUserVote(req.user.userId, id) : undefined;
+        return res.json({
+          ...poll,
+          hasVoted,
+          userVoteOptionId: userVote?.optionId
+        });
+      }
+      
+      res.json(poll);
+    } catch (error: any) {
+      console.error('Get poll error:', error);
+      res.status(500).json({ message: 'Failed to get poll', error: error.message });
+    }
+  });
+  
+  // Vote on a poll (authenticated users only)
+  app.post('/api/polls/:id/vote', authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { optionId } = req.body;
+      
+      if (!optionId) {
+        return res.status(400).json({ message: 'Option ID is required' });
+      }
+      
+      await mongoStorage.votePoll(req.user!.userId, id, optionId);
+      
+      // Get updated poll with vote counts
+      const updatedPoll = await mongoStorage.getPoll(id);
+      
+      res.json({ 
+        message: 'Vote recorded successfully',
+        poll: updatedPoll
+      });
+    } catch (error: any) {
+      console.error('Vote poll error:', error);
+      res.status(400).json({ message: error.message || 'Failed to vote on poll' });
+    }
+  });
+  
+  // Close a poll (admin only)
+  app.put('/api/polls/:id/close', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const poll = await mongoStorage.closePoll(id);
+      
+      res.json({
+        message: 'Poll closed successfully',
+        poll
+      });
+    } catch (error: any) {
+      console.error('Close poll error:', error);
+      res.status(400).json({ message: 'Failed to close poll', error: error.message });
+    }
+  });
+  
+  // Delete a poll (admin only)
+  app.delete('/api/polls/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await mongoStorage.deletePoll(id);
+      
+      res.json({ message: 'Poll deleted successfully' });
+    } catch (error: any) {
+      console.error('Delete poll error:', error);
+      res.status(500).json({ message: 'Failed to delete poll', error: error.message });
     }
   });
 

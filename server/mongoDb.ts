@@ -74,6 +74,7 @@ export const COLLECTIONS = {
   USERS: 'users',
   BLOG_POSTS: 'blogPosts',
   BLOG_LIKES: 'blogLikes',
+  BLOG_VIEWS: 'blogViews',
   COMMENT_LIKES: 'commentLikes',
   COMMENTS: 'comments', 
   EVENTS: 'events',
@@ -83,6 +84,8 @@ export const COLLECTIONS = {
   STAFF_PROFILES: 'staffProfiles',
   CONTACT_SUBMISSIONS: 'contactSubmissions',
   NEWSLETTER_SUBSCRIPTIONS: 'newsletterSubscriptions',
+  POLLS: 'polls',
+  POLL_VOTES: 'pollVotes',
 } as const;
 
 // Close connection (for cleanup)
@@ -112,6 +115,8 @@ export async function initializeMongoDB(): Promise<void> {
       await database.collection(COLLECTIONS.BLOG_POSTS).createIndex({ published: 1, createdAt: -1 });
       await database.collection(COLLECTIONS.BLOG_LIKES).createIndex({ userId: 1, blogPostId: 1 }, { unique: true });
       await database.collection(COLLECTIONS.BLOG_LIKES).createIndex({ blogPostId: 1 });
+      await database.collection(COLLECTIONS.BLOG_VIEWS).createIndex({ userId: 1, blogPostId: 1 }, { unique: true });
+      await database.collection(COLLECTIONS.BLOG_VIEWS).createIndex({ blogPostId: 1 });
       await database.collection(COLLECTIONS.COMMENT_LIKES).createIndex({ userId: 1, commentId: 1 }, { unique: true });
       await database.collection(COLLECTIONS.COMMENT_LIKES).createIndex({ commentId: 1 });
       await database.collection(COLLECTIONS.COMMENTS).createIndex({ blogPostId: 1 });
@@ -119,6 +124,10 @@ export async function initializeMongoDB(): Promise<void> {
       await database.collection(COLLECTIONS.EVENT_REGISTRATIONS).createIndex({ userId: 1, eventId: 1 }, { unique: true });
       await database.collection(COLLECTIONS.LEARNING_RESOURCES).createIndex({ category: 1, createdAt: -1 });
       await database.collection(COLLECTIONS.STAFF_PROFILES).createIndex({ userId: 1 }, { unique: true });
+      await database.collection(COLLECTIONS.POLLS).createIndex({ createdById: 1, createdAt: -1 });
+      await database.collection(COLLECTIONS.POLLS).createIndex({ status: 1, createdAt: -1 });
+      await database.collection(COLLECTIONS.POLL_VOTES).createIndex({ pollId: 1, userId: 1, optionId: 1 });
+      await database.collection(COLLECTIONS.POLL_VOTES).createIndex({ userId: 1 });
       
       console.log('MongoDB indexes created successfully');
     } catch (indexError: any) {

@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import CommentsSection from "@/components/CommentsSection";
+import BlogEngagementDialog from "@/components/BlogEngagementDialog";
 import type { BlogPost } from "@shared/mongoSchema";
 
 export default function BlogDetailPage() {
@@ -27,6 +28,8 @@ export default function BlogDetailPage() {
   const [likesCount, setLikesCount] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [showLikesDialog, setShowLikesDialog] = useState(false);
+  const [showViewsDialog, setShowViewsDialog] = useState(false);
 
   const { data: blog, isLoading, error } = useQuery<any>({
     queryKey: ['/api/blogs', blogId],
@@ -254,10 +257,17 @@ export default function BlogDetailPage() {
             </div>
 
             {/* Views */}
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowViewsDialog(true);
+              }}
+              className="flex items-center gap-2 text-muted-foreground hover-elevate px-2 py-1 rounded-md transition-colors"
+              data-testid="button-views-detail"
+            >
               <Eye className="h-4 w-4" />
               <span className="text-sm" data-testid="text-views">{blog.views}</span>
-            </div>
+            </button>
           </div>
 
           {/* Excerpt */}
@@ -331,7 +341,16 @@ export default function BlogDetailPage() {
               data-testid="button-like"
             >
               <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
-              <span>{likesCount}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLikesDialog(true);
+                }}
+                className="text-sm"
+                data-testid="button-likes-count-detail"
+              >
+                {likesCount}
+              </button>
             </Button>
 
             <Button
@@ -425,6 +444,20 @@ export default function BlogDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      <BlogEngagementDialog
+        open={showLikesDialog}
+        onOpenChange={setShowLikesDialog}
+        blogId={blogId!}
+        type="likes"
+      />
+      
+      <BlogEngagementDialog
+        open={showViewsDialog}
+        onOpenChange={setShowViewsDialog}
+        blogId={blogId!}
+        type="views"
+      />
     </div>
   );
 }
