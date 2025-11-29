@@ -234,6 +234,9 @@ export const pollSchema = z.object({
   allowMultipleVotes: z.boolean().default(false),
   expiresAt: z.date().optional(),
   
+  // Target specific levels (e.g., ["100", "200", "300", "400"]) - empty array means all levels
+  targetLevels: z.array(z.string()).default([]),
+  
   status: z.enum(['active', 'closed']).default('active'),
   
   createdAt: z.date().default(() => new Date()),

@@ -35,6 +35,7 @@ const pollCreationSchema = z.object({
   options: z.array(z.string().min(1, "Option text cannot be empty")).min(2, "At least 2 options are required"),
   allowMultipleVotes: z.boolean().optional().default(false),
   expiresAt: z.coerce.date().optional(),
+  targetLevels: z.array(z.string()).optional().default([]),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -997,7 +998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { question, options, allowMultipleVotes, expiresAt } = validationResult.data;
+      const { question, options, allowMultipleVotes, expiresAt, targetLevels } = validationResult.data;
       
       // Transform option strings into option objects with server-generated UUIDs
       const optionsWithIds = options.map(text => ({
@@ -1011,7 +1012,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         question,
         options: optionsWithIds,
         allowMultipleVotes,
-        expiresAt
+        expiresAt,
+        targetLevels
       });
       
       res.status(201).json(poll);
@@ -1129,6 +1131,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Delete poll error:', error);
       res.status(500).json({ message: 'Failed to delete poll', error: error.message });
+    }
+  });
+
+  // Get poll voters (admin only)
+  app.get('/api/polls/:id/voters', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const voters = await mongoStorage.getPollVoters(id);
+      res.json(voters);
+    } catch (error: any) {
+      console.error('Get poll voters error:', error);
+      res.status(500).json({ message: 'Failed to get poll voters', error: error.message });
     }
   });
 
