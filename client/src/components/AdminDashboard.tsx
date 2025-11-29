@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -30,11 +38,70 @@ import {
   Calendar,
   Briefcase,
   Home,
-  BarChart3
+  BarChart3,
+  Search,
+  Filter,
+  X
 } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import PollManagement from './PollManagement';
+
+interface FilterState {
+  searchTerm: string;
+  levelFilter: string;
+  roleFilter: string;
+  dateFilter: string;
+}
+
+const LEVEL_OPTIONS = [
+  { value: 'all', label: 'All Levels' },
+  { value: '100', label: '100 Level' },
+  { value: '200', label: '200 Level' },
+  { value: '300', label: '300 Level' },
+  { value: '400', label: '400 Level' },
+  { value: '500', label: '500 Level' },
+  { value: 'Graduated/Alumni', label: 'Graduated/Alumni' },
+];
+
+const ROLE_OPTIONS = [
+  { value: 'all', label: 'All Roles' },
+  { value: 'student', label: 'Student' },
+  { value: 'admin', label: 'Admin' },
+];
+
+const DATE_OPTIONS = [
+  { value: 'all', label: 'All Time' },
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+];
+
+function isWithinDateRange(dateString: string, filter: string): boolean {
+  if (filter === 'all') return true;
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  switch (filter) {
+    case 'today': {
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return date >= startOfDay;
+    }
+    case 'week': {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      return date >= startOfWeek;
+    }
+    case 'month': {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return date >= startOfMonth;
+    }
+    default:
+      return true;
+  }
+}
 
 interface User {
   _id: string;
@@ -58,6 +125,27 @@ interface User {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('pending');
   const { toast } = useToast();
+  
+  const [pendingFilters, setPendingFilters] = useState<FilterState>({
+    searchTerm: '',
+    levelFilter: 'all',
+    roleFilter: 'all',
+    dateFilter: 'all',
+  });
+  
+  const [approvedFilters, setApprovedFilters] = useState<FilterState>({
+    searchTerm: '',
+    levelFilter: 'all',
+    roleFilter: 'all',
+    dateFilter: 'all',
+  });
+  
+  const [rejectedFilters, setRejectedFilters] = useState<FilterState>({
+    searchTerm: '',
+    levelFilter: 'all',
+    roleFilter: 'all',
+    dateFilter: 'all',
+  });
 
   // Fetch current user to check if they're a super_admin
   const { data: currentUser } = useQuery({
@@ -241,6 +329,8 @@ export default function AdminDashboard() {
               onApproval={handleApproval}
               isUpdating={updateApprovalMutation.isPending}
               isSuperAdmin={isSuperAdmin}
+              filters={pendingFilters}
+              onFiltersChange={setPendingFilters}
             />
           </TabsContent>
 
@@ -252,11 +342,20 @@ export default function AdminDashboard() {
               isSuperAdmin={isSuperAdmin}
               onRoleToggle={handleRoleToggle}
               isUpdatingRole={updateRoleMutation.isPending}
+              filters={approvedFilters}
+              onFiltersChange={setApprovedFilters}
+              showRoleFilter={true}
             />
           </TabsContent>
 
           <TabsContent value="rejected" className="space-y-6">
-            <UsersListContent users={users} isLoading={isLoading} status="rejected" />
+            <UsersListContent 
+              users={users} 
+              isLoading={isLoading} 
+              status="rejected"
+              filters={rejectedFilters}
+              onFiltersChange={setRejectedFilters}
+            />
           </TabsContent>
 
           <TabsContent value="polls" className="space-y-6">
@@ -486,46 +585,208 @@ function UserDetailsDialog({
   );
 }
 
+function UserFilterBar({ 
+  filters, 
+  onFiltersChange, 
+  showRoleFilter = false,
+  totalCount,
+  filteredCount,
+  isLoading
+}: { 
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
+  showRoleFilter?: boolean;
+  totalCount: number;
+  filteredCount: number;
+  isLoading: boolean;
+}) {
+  const hasActiveFilters = filters.searchTerm || 
+    filters.levelFilter !== 'all' || 
+    filters.roleFilter !== 'all' || 
+    filters.dateFilter !== 'all';
+
+  const clearFilters = () => {
+    onFiltersChange({
+      searchTerm: '',
+      levelFilter: 'all',
+      roleFilter: 'all',
+      dateFilter: 'all',
+    });
+  };
+
+  return (
+    <div className="space-y-4" data-testid="container-user-filters">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, or matric number..."
+            value={filters.searchTerm}
+            onChange={(e) => onFiltersChange({ ...filters, searchTerm: e.target.value })}
+            className="pl-9"
+            data-testid="input-user-search"
+          />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Select 
+            value={filters.levelFilter} 
+            onValueChange={(value) => onFiltersChange({ ...filters, levelFilter: value })}
+          >
+            <SelectTrigger className="w-[140px]" data-testid="select-level-filter">
+              <SelectValue placeholder="Level" />
+            </SelectTrigger>
+            <SelectContent data-testid="select-level-content">
+              {LEVEL_OPTIONS.map((option) => (
+                <SelectItem 
+                  key={option.value} 
+                  value={option.value}
+                  data-testid={`option-level-${option.value}`}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {showRoleFilter && (
+            <Select 
+              value={filters.roleFilter} 
+              onValueChange={(value) => onFiltersChange({ ...filters, roleFilter: value })}
+            >
+              <SelectTrigger className="w-[120px]" data-testid="select-role-filter">
+                <SelectValue placeholder="Role" />
+              </SelectTrigger>
+              <SelectContent data-testid="select-role-content">
+                {ROLE_OPTIONS.map((option) => (
+                  <SelectItem 
+                    key={option.value} 
+                    value={option.value}
+                    data-testid={`option-role-${option.value}`}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Select 
+            value={filters.dateFilter} 
+            onValueChange={(value) => onFiltersChange({ ...filters, dateFilter: value })}
+          >
+            <SelectTrigger className="w-[130px]" data-testid="select-date-filter">
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent data-testid="select-date-content">
+              {DATE_OPTIONS.map((option) => (
+                <SelectItem 
+                  key={option.value} 
+                  value={option.value}
+                  data-testid={`option-date-${option.value}`}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={clearFilters}
+              data-testid="button-clear-filters"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!isLoading && (
+        <p className="text-sm text-muted-foreground" data-testid="text-filter-results">
+          Showing {filteredCount} of {totalCount} users
+          {hasActiveFilters && " (filtered)"}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Component for pending users that need approval
 function PendingUsersContent({ 
   users, 
   isLoading, 
   onApproval, 
   isUpdating,
-  isSuperAdmin
+  isSuperAdmin,
+  filters,
+  onFiltersChange
 }: { 
   users: User[]; 
   isLoading: boolean; 
   onApproval: (userId: string, status: 'approved' | 'rejected') => void;
   isUpdating: boolean;
   isSuperAdmin: boolean;
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
 }) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const searchLower = filters.searchTerm.toLowerCase();
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      
+      const matchesSearch = !filters.searchTerm ||
+        fullName.includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        (user.matricNumber?.toLowerCase().includes(searchLower) ?? false);
+      
+      const matchesLevel = filters.levelFilter === 'all' || 
+        user.level === filters.levelFilter;
+      
+      const matchesDate = isWithinDateRange(user.createdAt, filters.dateFilter);
+      
+      return matchesSearch && matchesLevel && matchesDate;
+    });
+  }, [users, filters]);
+
   if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="space-y-2">
-              <div className="h-4 bg-muted rounded w-3/4"></div>
-              <div className="h-3 bg-muted rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="h-3 bg-muted rounded"></div>
-                <div className="h-3 bg-muted rounded"></div>
-                <div className="h-3 bg-muted rounded w-2/3"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        <UserFilterBar
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          totalCount={0}
+          filteredCount={0}
+          isLoading={true}
+        />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="space-y-2">
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (users.length === 0) {
     return (
-      <Card className="text-center p-12">
+      <Card className="text-center p-12" data-testid="empty-state-no-users">
         <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Pending Registrations</h3>
         <p className="text-muted-foreground">
@@ -535,103 +796,140 @@ function PendingUsersContent({
     );
   }
 
+  const hasActiveFilters = filters.searchTerm || 
+    filters.levelFilter !== 'all' || 
+    filters.dateFilter !== 'all';
+
   return (
     <>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {users.map((user) => (
-          <Card 
-            key={user._id} 
-            className="hover-elevate cursor-pointer transition-all"
-            onClick={() => setSelectedUser(user)}
-            data-testid={`card-user-${user._id}`}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar className="flex-shrink-0">
-                    <AvatarFallback>
-                      {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <CardTitle className="text-base truncate">
-                      {user.firstName} {user.lastName}
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-1 text-xs truncate">
-                      <Mail className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{user.email}</span>
-                    </CardDescription>
+      <UserFilterBar
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        totalCount={users.length}
+        filteredCount={filteredUsers.length}
+        isLoading={false}
+      />
+
+      {filteredUsers.length === 0 ? (
+        <Card className="text-center p-12" data-testid="empty-state-no-results">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Results Found</h3>
+          <p className="text-muted-foreground mb-4">
+            No users match your current search and filter criteria.
+          </p>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              onClick={() => onFiltersChange({
+                searchTerm: '',
+                levelFilter: 'all',
+                roleFilter: 'all',
+                dateFilter: 'all',
+              })}
+              data-testid="button-clear-filters-empty"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredUsers.map((user) => (
+            <Card 
+              key={user._id} 
+              className="hover-elevate cursor-pointer transition-all"
+              onClick={() => setSelectedUser(user)}
+              data-testid={`card-user-${user._id}`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar className="flex-shrink-0">
+                      <AvatarFallback>
+                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base truncate">
+                        {user.firstName} {user.lastName}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-1 text-xs truncate">
+                        <Mail className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{user.email}</span>
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-yellow-600 border-yellow-600 flex-shrink-0">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Pending
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                <div className="grid gap-2 text-sm">
+                  {user.matricNumber && (
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground">Matric:</span>
+                      <span className="font-medium truncate">{user.matricNumber}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="font-medium">{user.phoneNumber}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-muted-foreground">Level:</span>
+                    <span className="font-medium">{user.level}</span>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground pt-1 border-t">
+                    Applied: {new Date(user.createdAt).toLocaleDateString()}
                   </div>
                 </div>
-                <Badge variant="outline" className="text-yellow-600 border-yellow-600 flex-shrink-0">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Pending
-                </Badge>
-              </div>
-            </CardHeader>
 
-            <CardContent className="space-y-3">
-              <div className="grid gap-2 text-sm">
-                {user.matricNumber && (
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-muted-foreground">Matric:</span>
-                    <span className="font-medium truncate">{user.matricNumber}</span>
+                {isSuperAdmin && (
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApproval(user._id, 'approved');
+                      }}
+                      disabled={isUpdating}
+                      className="flex-1"
+                      size="sm"
+                      data-testid={`button-approve-${user._id}`}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApproval(user._id, 'rejected');
+                      }}
+                      disabled={isUpdating}
+                      variant="destructive"
+                      className="flex-1"
+                      size="sm"
+                      data-testid={`button-reject-${user._id}`}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Reject
+                    </Button>
                   </div>
                 )}
-                
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-muted-foreground">Phone:</span>
-                  <span className="font-medium">{user.phoneNumber}</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-muted-foreground">Level:</span>
-                  <span className="font-medium">{user.level}</span>
-                </div>
-
-                <div className="text-xs text-muted-foreground pt-1 border-t">
-                  Applied: {new Date(user.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-
-              {isSuperAdmin && (
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onApproval(user._id, 'approved');
-                    }}
-                    disabled={isUpdating}
-                    className="flex-1"
-                    size="sm"
-                    data-testid={`button-approve-${user._id}`}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onApproval(user._id, 'rejected');
-                    }}
-                    disabled={isUpdating}
-                    variant="destructive"
-                    className="flex-1"
-                    size="sm"
-                    data-testid={`button-reject-${user._id}`}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Reject
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <UserDetailsDialog
         user={selectedUser}
@@ -652,7 +950,10 @@ function UsersListContent({
   status,
   isSuperAdmin,
   onRoleToggle,
-  isUpdatingRole
+  isUpdatingRole,
+  filters,
+  onFiltersChange,
+  showRoleFilter = false
 }: { 
   users: User[]; 
   isLoading: boolean; 
@@ -660,25 +961,61 @@ function UsersListContent({
   isSuperAdmin?: boolean;
   onRoleToggle?: (userId: string, currentRole: string) => void;
   isUpdatingRole?: boolean;
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
+  showRoleFilter?: boolean;
 }) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const searchLower = filters.searchTerm.toLowerCase();
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      
+      const matchesSearch = !filters.searchTerm ||
+        fullName.includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower) ||
+        (user.matricNumber?.toLowerCase().includes(searchLower) ?? false);
+      
+      const matchesLevel = filters.levelFilter === 'all' || 
+        user.level === filters.levelFilter;
+      
+      const matchesRole = filters.roleFilter === 'all' || 
+        user.role === filters.roleFilter;
+      
+      const matchesDate = isWithinDateRange(user.createdAt, filters.dateFilter);
+      
+      return matchesSearch && matchesLevel && matchesRole && matchesDate;
+    });
+  }, [users, filters]);
+
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 bg-muted rounded-full"></div>
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-muted rounded w-1/3"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
+      <div className="space-y-6">
+        <UserFilterBar
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          showRoleFilter={showRoleFilter}
+          totalCount={0}
+          filteredCount={0}
+          isLoading={true}
+        />
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 bg-muted rounded-full"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-muted rounded w-1/3"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </div>
+                  <div className="h-6 bg-muted rounded w-16"></div>
                 </div>
-                <div className="h-6 bg-muted rounded w-16"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -688,7 +1025,7 @@ function UsersListContent({
     const IconComponent = icon;
     
     return (
-      <Card className="text-center p-12">
+      <Card className="text-center p-12" data-testid="empty-state-no-users">
         <IconComponent className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">
           No {status.charAt(0).toUpperCase() + status.slice(1)} Users
@@ -700,93 +1037,132 @@ function UsersListContent({
     );
   }
 
+  const hasActiveFilters = filters.searchTerm || 
+    filters.levelFilter !== 'all' || 
+    filters.roleFilter !== 'all' ||
+    filters.dateFilter !== 'all';
+
   return (
     <>
-      <div className="space-y-4">
-        {users.map((user) => (
-          <Card 
-            key={user._id}
-            className="hover-elevate cursor-pointer transition-all"
-            onClick={() => setSelectedUser(user)}
-            data-testid={`card-user-${user._id}`}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="flex-shrink-0">
-                  <AvatarFallback>
-                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 space-y-1 min-w-0">
-                  <div className="font-semibold">
-                    {user.firstName} {user.lastName}
-                  </div>
-                  <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{user.email}</span>
-                    </span>
-                    {user.matricNumber && (
+      <UserFilterBar
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        showRoleFilter={showRoleFilter}
+        totalCount={users.length}
+        filteredCount={filteredUsers.length}
+        isLoading={false}
+      />
+
+      {filteredUsers.length === 0 ? (
+        <Card className="text-center p-12" data-testid="empty-state-no-results">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Results Found</h3>
+          <p className="text-muted-foreground mb-4">
+            No users match your current search and filter criteria.
+          </p>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              onClick={() => onFiltersChange({
+                searchTerm: '',
+                levelFilter: 'all',
+                roleFilter: 'all',
+                dateFilter: 'all',
+              })}
+              data-testid="button-clear-filters-empty"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          )}
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredUsers.map((user) => (
+            <Card 
+              key={user._id}
+              className="hover-elevate cursor-pointer transition-all"
+              onClick={() => setSelectedUser(user)}
+              data-testid={`card-user-${user._id}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="flex-shrink-0">
+                    <AvatarFallback>
+                      {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <div className="font-semibold">
+                      {user.firstName} {user.lastName}
+                    </div>
+                    <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-3">
                       <span className="flex items-center gap-1">
-                        <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                        {user.matricNumber}
+                        <Mail className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{user.email}</span>
                       </span>
-                    )}
+                      {user.matricNumber && (
+                        <span className="flex items-center gap-1">
+                          <GraduationCap className="h-3 w-3 flex-shrink-0" />
+                          {user.matricNumber}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                <div className="text-right space-y-2 flex-shrink-0">
-                  <Badge variant="outline" 
-                    className={status === 'approved' 
-                      ? "text-green-600 border-green-600" 
-                      : "text-red-600 border-red-600"
-                    }
-                  >
-                    {status === 'approved' ? (
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                    ) : (
-                      <XCircle className="h-3 w-3 mr-1" />
-                    )}
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </Badge>
                   
-                  {/* Role Badge */}
-                  <div className="flex justify-end">
-                    <Badge 
-                      variant={user.role === 'admin' ? 'default' : 'secondary'}
-                      className="text-xs"
+                  <div className="text-right space-y-2 flex-shrink-0">
+                    <Badge variant="outline" 
+                      className={status === 'approved' 
+                        ? "text-green-600 border-green-600" 
+                        : "text-red-600 border-red-600"
+                      }
                     >
-                      {user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      {status === 'approved' ? (
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                      ) : (
+                        <XCircle className="h-3 w-3 mr-1" />
+                      )}
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
                     </Badge>
-                  </div>
-                  
-                  {/* Role Toggle Button - Only for approved users and super_admins */}
-                  {status === 'approved' && isSuperAdmin && onRoleToggle && user.role !== 'super_admin' && (
-                    <Button
-                      size="sm"
-                      variant={user.role === 'admin' ? 'destructive' : 'default'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRoleToggle(user._id, user.role);
-                      }}
-                      disabled={isUpdatingRole}
-                      data-testid={`button-toggle-role-${user._id}`}
-                      className="w-full text-xs"
-                    >
-                      {user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
-                    </Button>
-                  )}
-                  
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(user.updatedAt).toLocaleDateString()}
+                    
+                    {/* Role Badge */}
+                    <div className="flex justify-end">
+                      <Badge 
+                        variant={user.role === 'admin' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      </Badge>
+                    </div>
+                    
+                    {/* Role Toggle Button - Only for approved users and super_admins */}
+                    {status === 'approved' && isSuperAdmin && onRoleToggle && user.role !== 'super_admin' && (
+                      <Button
+                        size="sm"
+                        variant={user.role === 'admin' ? 'destructive' : 'default'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRoleToggle(user._id, user.role);
+                        }}
+                        disabled={isUpdatingRole}
+                        data-testid={`button-toggle-role-${user._id}`}
+                        className="w-full text-xs"
+                      >
+                        {user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                      </Button>
+                    )}
+                    
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(user.updatedAt).toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <UserDetailsDialog
         user={selectedUser}

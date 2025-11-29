@@ -1942,12 +1942,58 @@ export function ResourceManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<LearningResource | null>(null);
   const [deletingResource, setDeletingResource] = useState<LearningResource | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
 
   // Fetch resources query
   const { data: resources = [], isLoading, refetch } = useQuery<LearningResource[]>({
     queryKey: ['/api/resources'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
   });
+
+  // Extract unique categories from resources for the filter dropdown
+  const uniqueCategories = useMemo(() => {
+    const categories = resources.map(r => r.category).filter(Boolean);
+    return Array.from(new Set(categories)).sort();
+  }, [resources]);
+
+  // Filter resources based on search query and filters
+  const filteredResources = useMemo(() => {
+    return resources.filter((resource) => {
+      // Search filter - matches title or category
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchQuery === "" || 
+        resource.title.toLowerCase().includes(searchLower) ||
+        resource.category.toLowerCase().includes(searchLower) ||
+        resource.description?.toLowerCase().includes(searchLower);
+      
+      // Category filter
+      const matchesCategory = categoryFilter === "all" || resource.category === categoryFilter;
+      
+      // Type filter
+      const matchesType = typeFilter === "all" || resource.type === typeFilter;
+      
+      // Difficulty filter
+      const matchesDifficulty = difficultyFilter === "all" || resource.difficulty === difficultyFilter;
+      
+      return matchesSearch && matchesCategory && matchesType && matchesDifficulty;
+    });
+  }, [resources, searchQuery, categoryFilter, typeFilter, difficultyFilter]);
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery !== "" || categoryFilter !== "all" || typeFilter !== "all" || difficultyFilter !== "all";
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setTypeFilter("all");
+    setDifficultyFilter("all");
+  };
 
   // Create resource mutation
   const createResourceMutation = useMutation({
@@ -2050,6 +2096,57 @@ export function ResourceManagementView() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by title, category, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-resources"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-resource-category">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {uniqueCategories.map((category) => (
+                <SelectItem key={category} value={category}>{category}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]" data-testid="select-filter-resource-type">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="pdf">PDF</SelectItem>
+              <SelectItem value="video">Video</SelectItem>
+              <SelectItem value="image">Image</SelectItem>
+              <SelectItem value="document">Document</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]" data-testid="select-filter-resource-difficulty">
+              <SelectValue placeholder="All Levels" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="100l">100 Level</SelectItem>
+              <SelectItem value="200l">200 Level</SelectItem>
+              <SelectItem value="300l">300 Level</SelectItem>
+              <SelectItem value="400l">400 Level</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -2083,8 +2180,25 @@ export function ResourceManagementView() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredResources.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center" data-testid="no-resources-results">
+                <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No resources found</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No resources match your current filters. Try adjusting your search or filter criteria.
+                </p>
+                <Button 
+                  onClick={clearFilters} 
+                  variant="outline"
+                  data-testid="button-clear-resource-filters"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            resources.map((resource: LearningResource) => (
+            filteredResources.map((resource: LearningResource) => (
               <Card key={resource._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
