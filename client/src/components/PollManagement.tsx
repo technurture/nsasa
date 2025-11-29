@@ -8,30 +8,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, X, BarChart3, Lock, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, X, BarChart3, Lock, CheckCircle2, Users, ChevronDown, ChevronUp } from "lucide-react";
 import type { Poll } from "@shared/mongoSchema";
 
-interface PollWithVotes extends Poll {
+interface PollWithVotes extends Omit<Poll, 'targetLevels'> {
   totalVotes?: number;
   hasVoted?: boolean;
   userVoteOptionId?: string;
+  targetLevels?: string[];
 }
+
+interface PollVoter {
+  optionId: string;
+  optionText: string;
+  votedAt: string;
+  user: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    level: string;
+    matricNumber: string;
+  };
+}
+
+const AVAILABLE_LEVELS = ["100", "200", "300", "400", "500", "600"];
 
 export default function PollManagement() {
   const { toast } = useToast();
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
+  const [targetLevels, setTargetLevels] = useState<string[]>([]);
   const [pollToDelete, setPollToDelete] = useState<string | null>(null);
+  const [expandedPollId, setExpandedPollId] = useState<string | null>(null);
 
   // Fetch all polls
   const { data: polls, isLoading } = useQuery<PollWithVotes[]>({
     queryKey: ['/api/polls'],
   });
 
+  // Fetch voters for expanded poll
+  const { data: voters, isLoading: votersLoading } = useQuery<PollVoter[]>({
+    queryKey: ['/api/polls', expandedPollId, 'voters'],
+    enabled: !!expandedPollId,
+  });
+
   // Create poll mutation
   const createPollMutation = useMutation({
-    mutationFn: async (data: { question: string; options: string[] }) => {
+    mutationFn: async (data: { question: string; options: string[]; targetLevels: string[] }) => {
       const response = await apiRequest('POST', '/api/polls', data);
       return response.json();
     },
@@ -43,6 +70,7 @@ export default function PollManagement() {
       });
       setQuestion("");
       setOptions(["", ""]);
+      setTargetLevels([]);
     },
     onError: (error: Error) => {
       toast({
@@ -141,9 +169,18 @@ export default function PollManagement() {
     const pollData = {
       question: question.trim(),
       options: validOptions.map(text => text.trim()),
+      targetLevels,
     };
 
     createPollMutation.mutate(pollData);
+  };
+
+  const handleLevelToggle = (level: string) => {
+    setTargetLevels(prev => 
+      prev.includes(level) 
+        ? prev.filter(l => l !== level) 
+        : [...prev, level]
+    );
   };
 
   const calculatePercentage = (votes: number, total: number) => {
@@ -210,6 +247,33 @@ export default function PollManagement() {
             ))}
           </div>
 
+          <div className="space-y-2">
+            <Label>Target Levels (leave empty for all levels)</Label>
+            <div className="flex flex-wrap gap-3">
+              {AVAILABLE_LEVELS.map((level) => (
+                <div key={level} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`level-${level}`}
+                    checked={targetLevels.includes(level)}
+                    onCheckedChange={() => handleLevelToggle(level)}
+                    data-testid={`checkbox-level-${level}`}
+                  />
+                  <label
+                    htmlFor={`level-${level}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Level {level}
+                  </label>
+                </div>
+              ))}
+            </div>
+            {targetLevels.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Only students in levels {targetLevels.join(", ")} can vote
+              </p>
+            )}
+          </div>
+
           <Button
             onClick={handleCreatePoll}
             disabled={createPollMutation.isPending}
@@ -259,12 +323,18 @@ export default function PollManagement() {
                           </Badge>
                         )}
                       </div>
-                      <CardDescription>
-                        Total Votes: {poll.totalVotes || 0}
+                      <CardDescription className="flex flex-wrap items-center gap-2">
+                        <span>Total Votes: {poll.totalVotes || 0}</span>
+                        {poll.targetLevels && poll.targetLevels.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <span className="text-muted-foreground">|</span>
+                            <span>Levels: {poll.targetLevels.join(", ")}</span>
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {poll.status === 'active' && (
                         <Button
                           size="sm"
@@ -310,6 +380,70 @@ export default function PollManagement() {
                       </div>
                     );
                   })}
+                  
+                  {/* View Voters Section */}
+                  {(poll.totalVotes || 0) > 0 && (
+                    <Collapsible 
+                      open={expandedPollId === poll._id}
+                      onOpenChange={(open) => setExpandedPollId(open ? poll._id! : null)}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full mt-4"
+                          data-testid={`button-view-voters-${poll._id}`}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          {expandedPollId === poll._id ? 'Hide Voters' : 'View Voters'}
+                          {expandedPollId === poll._id ? (
+                            <ChevronUp className="h-4 w-4 ml-2" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 ml-2" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-4">
+                        {votersLoading ? (
+                          <div className="text-center py-4 text-muted-foreground">
+                            Loading voters...
+                          </div>
+                        ) : voters && voters.length > 0 ? (
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            <div className="grid grid-cols-4 gap-2 text-sm font-medium text-muted-foreground border-b pb-2">
+                              <span>Name</span>
+                              <span>Matric No.</span>
+                              <span>Level</span>
+                              <span>Voted For</span>
+                            </div>
+                            {voters.map((voter, idx) => (
+                              <div 
+                                key={idx} 
+                                className="grid grid-cols-4 gap-2 text-sm py-2 border-b border-muted last:border-b-0"
+                                data-testid={`voter-row-${idx}`}
+                              >
+                                <span className="font-medium">
+                                  {voter.user.firstName} {voter.user.lastName}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {voter.user.matricNumber || 'N/A'}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {voter.user.level || 'N/A'}
+                                </span>
+                                <Badge variant="secondary" className="w-fit">
+                                  {voter.optionText}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-muted-foreground">
+                            No voter details available
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
                 </CardContent>
               </Card>
             ))}

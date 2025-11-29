@@ -267,7 +267,7 @@ export const insertStaffProfileSchema = staffProfileBaseSchema
     { message: "Either userId or customName must be provided" }
   );
 export const insertContactSubmissionSchema = contactSubmissionSchema.omit({ _id: true, createdAt: true });
-export const insertPollSchema = pollSchema.omit({ _id: true, createdAt: true, updatedAt: true, createdById: true });
+export const insertPollSchema = pollSchema.omit({ _id: true, createdAt: true, updatedAt: true, createdById: true, status: true });
 export const insertPollVoteSchema = pollVoteSchema.omit({ _id: true, createdAt: true });
 
 // Type exports
