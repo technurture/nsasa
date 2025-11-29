@@ -3251,12 +3251,59 @@ export function StaffManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<(StaffProfile & { user?: User }) | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<StaffProfile | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [showOnLandingFilter, setShowOnLandingFilter] = useState<string>("all");
 
   // Fetch staff profiles query
   const { data: staffProfiles = [], isLoading, refetch } = useQuery<(StaffProfile & { user?: User })[]>({
     queryKey: ['/api/staff'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
   });
+
+  // Get unique departments for filter
+  const uniqueDepartments = useMemo(() => {
+    const departments = staffProfiles
+      .map(staff => staff.department)
+      .filter((dept): dept is string => !!dept);
+    return [...new Set(departments)].sort();
+  }, [staffProfiles]);
+
+  // Filter staff profiles based on search and filters
+  const filteredStaffProfiles = useMemo(() => {
+    return staffProfiles.filter((staff) => {
+      // Search filter - matches name, title, department, or specializations
+      const searchLower = searchQuery.toLowerCase();
+      const staffName = staff.customName || `${staff.user?.firstName || ''} ${staff.user?.lastName || ''}`;
+      const matchesSearch = searchQuery === "" || 
+        staffName.toLowerCase().includes(searchLower) ||
+        (staff.title?.toLowerCase().includes(searchLower) ?? false) ||
+        (staff.department?.toLowerCase().includes(searchLower) ?? false) ||
+        (staff.specializations?.some(s => s.toLowerCase().includes(searchLower)) ?? false);
+      
+      // Department filter
+      const matchesDepartment = departmentFilter === "all" || staff.department === departmentFilter;
+      
+      // Show on landing filter
+      const matchesLanding = showOnLandingFilter === "all" || 
+        (showOnLandingFilter === "yes" && staff.showOnLanding) ||
+        (showOnLandingFilter === "no" && !staff.showOnLanding);
+      
+      return matchesSearch && matchesDepartment && matchesLanding;
+    });
+  }, [staffProfiles, searchQuery, departmentFilter, showOnLandingFilter]);
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery !== "" || departmentFilter !== "all" || showOnLandingFilter !== "all";
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDepartmentFilter("all");
+    setShowOnLandingFilter("all");
+  };
 
   // Create staff mutation
   const createStaffMutation = useMutation({
@@ -3346,6 +3393,53 @@ export function StaffManagementView() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by name, title, department, or specialization..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-staff"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-filter-staff-department">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {uniqueDepartments.map((dept) => (
+                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={showOnLandingFilter} onValueChange={setShowOnLandingFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-staff-landing">
+              <SelectValue placeholder="Landing Page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Staff</SelectItem>
+              <SelectItem value="yes">On Landing Page</SelectItem>
+              <SelectItem value="no">Not on Landing</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+              className="w-full sm:w-auto"
+              data-testid="button-clear-staff-filters"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -3379,17 +3473,37 @@ export function StaffManagementView() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredStaffProfiles.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center" data-testid="no-staff-results">
+                <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No staff members found</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No staff members match your current filters. Try adjusting your search or filter criteria.
+                </p>
+                <Button 
+                  onClick={clearFilters} 
+                  variant="outline"
+                  data-testid="button-clear-staff-filters-empty"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            staffProfiles.map((staffProfile) => (
+            filteredStaffProfiles.map((staffProfile) => (
               <Card key={staffProfile._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                     <div className="flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-semibold line-clamp-2">
-                          {staffProfile.user?.firstName} {staffProfile.user?.lastName}
+                          {staffProfile.customName || `${staffProfile.user?.firstName || ''} ${staffProfile.user?.lastName || ''}`}
                         </h3>
                         <Badge variant="outline">{staffProfile.department}</Badge>
+                        {staffProfile.showOnLanding && (
+                          <Badge variant="secondary" className="text-xs">On Landing</Badge>
+                        )}
                       </div>
                       
                       <p className="text-gray-600 dark:text-gray-400 font-medium">{staffProfile.title}</p>
