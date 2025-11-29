@@ -3275,20 +3275,45 @@ export function StaffManagementView() {
   const filteredStaffProfiles = useMemo(() => {
     return staffProfiles.filter((staff) => {
       // Search filter - matches name, title, department, or specializations
-      const searchLower = searchQuery.toLowerCase();
-      const staffName = staff.customName || `${staff.user?.firstName || ''} ${staff.user?.lastName || ''}`;
-      const matchesSearch = searchQuery === "" || 
-        staffName.toLowerCase().includes(searchLower) ||
-        (staff.title?.toLowerCase().includes(searchLower) ?? false) ||
-        (staff.department?.toLowerCase().includes(searchLower) ?? false) ||
-        (staff.specializations?.some(s => s.toLowerCase().includes(searchLower)) ?? false);
+      const searchLower = searchQuery.toLowerCase().trim();
+      
+      // Skip filter if search is empty
+      if (searchLower === "") {
+        // Apply only other filters
+        const matchesDepartment = departmentFilter === "all" || 
+          (staff.department && staff.department === departmentFilter);
+        
+        const matchesLanding = showOnLandingFilter === "all" || 
+          (showOnLandingFilter === "yes" && staff.showOnLanding === true) ||
+          (showOnLandingFilter === "no" && !staff.showOnLanding);
+        
+        return matchesDepartment && matchesLanding;
+      }
+      
+      // Build searchable text from staff data
+      const staffName = (staff.customName || `${staff.user?.firstName || ''} ${staff.user?.lastName || ''}`).toLowerCase();
+      const title = (staff.title || '').toLowerCase();
+      const department = (staff.department || '').toLowerCase();
+      
+      // Check if specializations is an array and search through it
+      const specializationsArray = Array.isArray(staff.specializations) ? staff.specializations : [];
+      const specializationsMatch = specializationsArray.some(spec => 
+        typeof spec === 'string' && spec.toLowerCase().includes(searchLower)
+      );
+      
+      const matchesSearch = 
+        staffName.includes(searchLower) ||
+        title.includes(searchLower) ||
+        department.includes(searchLower) ||
+        specializationsMatch;
       
       // Department filter
-      const matchesDepartment = departmentFilter === "all" || staff.department === departmentFilter;
+      const matchesDepartment = departmentFilter === "all" || 
+        (staff.department && staff.department === departmentFilter);
       
       // Show on landing filter
       const matchesLanding = showOnLandingFilter === "all" || 
-        (showOnLandingFilter === "yes" && staff.showOnLanding) ||
+        (showOnLandingFilter === "yes" && staff.showOnLanding === true) ||
         (showOnLandingFilter === "no" && !staff.showOnLanding);
       
       return matchesSearch && matchesDepartment && matchesLanding;

@@ -5,35 +5,68 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Award, 
-  Star, 
   Trophy, 
   Target, 
   BookOpen,
   MessageSquare,
   Download,
   Heart,
-  TrendingUp,
-  Calendar,
-  Users
+  Users,
+  LucideIcon
 } from "lucide-react";
+import PollVoter from "./PollVoter";
 
 interface GamificationDashboardProps {
-  user: any;
+  user: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+  };
+}
+
+interface UserStats {
+  level: number;
+  xp: number;
+  xpToNext: number;
+  totalBadges: number;
+  totalComments: number;
+  totalDownloads: number;
+  blogLikes: number;
+  streak: number;
+  recentAchievements?: Array<{
+    title: string;
+    time: string;
+    xp: number;
+  }>;
+}
+
+interface BadgeItem {
+  name: string;
+  description: string;
+  earned: boolean;
+  icon?: LucideIcon;
+}
+
+interface LeaderboardMember {
+  name: string;
+  avatar: string;
+  level: number;
+  xp: number;
 }
 
 export default function GamificationDashboard({ user }: GamificationDashboardProps) {
-  // Fetch real gamification data
-  const { data: userStats, isLoading: statsLoading, error: statsError } = useQuery({
+  const { data: userStats, isLoading: statsLoading, error: statsError } = useQuery<UserStats>({
     queryKey: ['/api/gamification/user-stats', user._id],
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000
   });
 
-  const { data: leaderboard = [], isLoading: leaderboardLoading, error: leaderboardError } = useQuery({
+  const { data: leaderboard = [], isLoading: leaderboardLoading, error: leaderboardError } = useQuery<LeaderboardMember[]>({
     queryKey: ['/api/gamification/leaderboard'],
-    refetchInterval: 60000 // Refresh every minute
+    refetchInterval: 60000
   });
 
-  const { data: badges = [], isLoading: badgesLoading, error: badgesError } = useQuery({
+  const { data: badges = [], isLoading: badgesLoading, error: badgesError } = useQuery<BadgeItem[]>({
     queryKey: ['/api/gamification/badges', user._id],
     refetchInterval: 60000
   });
@@ -41,7 +74,6 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
   const isLoading = statsLoading || leaderboardLoading || badgesLoading;
   const hasError = statsError || leaderboardError || badgesError;
   
-  // Check for null data which indicates authentication failure (401)
   const isUnauthorized = !statsLoading && userStats === null;
 
   if (isUnauthorized) {
@@ -108,27 +140,29 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
     );
   }
 
-  // Map badges data to include icons
-  const badgesWithIcons = badges.map((badge: any) => {
-    const iconMapping = {
-      "First Comment": MessageSquare,
-      "Resource Explorer": BookOpen, 
-      "Active Participant": Users,
-      "Popular Contributor": Heart,
-      "Streak Master": Target,
-      "Scholar": Trophy,
-    };
-    return {
-      ...badge,
-      icon: iconMapping[badge.name as keyof typeof iconMapping] || Award
-    };
-  });
+  const iconMapping: Record<string, LucideIcon> = {
+    "First Comment": MessageSquare,
+    "Resource Explorer": BookOpen, 
+    "Active Participant": Users,
+    "Popular Contributor": Heart,
+    "Streak Master": Target,
+    "Scholar": Trophy,
+  };
+
+  const badgesWithIcons = badges.map((badge) => ({
+    ...badge,
+    icon: iconMapping[badge.name] || Award
+  }));
 
   const progressToNext = userStats.xpToNext > 0 ? ((1000 - userStats.xpToNext) / 1000) * 100 : 100;
 
+  const recentAchievements = userStats.recentAchievements || [
+    { title: "Welcome to Nsasa!", time: "Just now", xp: 10 },
+    { title: "Explore the platform", time: "Ongoing", xp: 50 },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Your Progress</h2>
         <p className="text-gray-600 dark:text-gray-400">
@@ -136,7 +170,6 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
         </p>
       </div>
 
-      {/* User Level & Progress */}
       <Card className="bg-gradient-to-br from-purple-500 to-blue-600 text-white" data-testid="card-user-progress">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
@@ -161,7 +194,6 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Stats */}
         <div className="space-y-4">
           <Card data-testid="card-quick-stats">
             <CardHeader>
@@ -201,7 +233,6 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
             </CardContent>
           </Card>
 
-          {/* Recent Achievements */}
           <Card data-testid="card-recent-achievements">
             <CardHeader>
               <CardTitle>Recent Achievements</CardTitle>
@@ -224,7 +255,6 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
           </Card>
         </div>
 
-        {/* Badges */}
         <Card data-testid="card-badges">
           <CardHeader>
             <CardTitle>Badges Collection</CardTitle>
@@ -232,7 +262,7 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              {badges.map((badge, index) => {
+              {badgesWithIcons.map((badge, index) => {
                 const Icon = badge.icon;
                 return (
                   <div
@@ -261,7 +291,6 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
           </CardContent>
         </Card>
 
-        {/* Leaderboard */}
         <Card data-testid="card-leaderboard">
           <CardHeader>
             <CardTitle>Department Leaderboard</CardTitle>
@@ -271,7 +300,7 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
             <div className="space-y-4">
               {leaderboard.map((member, index) => (
                 <div key={index} className={`flex items-center space-x-3 p-2 rounded-lg ${
-                  member.name.includes(user.firstName) ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200' : ''
+                  user.firstName && member.name.includes(user.firstName) ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200' : ''
                 }`}>
                   <div className="flex items-center space-x-2">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -305,6 +334,8 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
           </CardContent>
         </Card>
       </div>
+
+      <PollVoter showOnlyActive={true} />
     </div>
   );
 }
