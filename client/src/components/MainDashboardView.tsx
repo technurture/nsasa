@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, MapPin, Clock, Users } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Calendar, Eye, Heart, Star, Download, MapPin, Clock, Users, Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -836,12 +836,38 @@ export function BlogManagementView() {
   const [engagementModalType, setEngagementModalType] = useState<'likes' | 'views' | null>(null);
   const [engagementBlogId, setEngagementBlogId] = useState<string | null>(null);
   const [engagementBlogTitle, setEngagementBlogTitle] = useState<string>("");
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Fetch blogs query
   const { data: blogs = [], isLoading, refetch } = useQuery<BlogPost[]>({
     queryKey: ['/api/blogs'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
   });
+
+  // Filter blogs based on search query and filters
+  const filteredBlogs = useMemo(() => {
+    return blogs.filter((blog) => {
+      // Search filter - matches title or category
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchQuery === "" || 
+        blog.title.toLowerCase().includes(searchLower) ||
+        blog.category.toLowerCase().includes(searchLower);
+      
+      // Category filter
+      const matchesCategory = categoryFilter === "all" || blog.category === categoryFilter;
+      
+      // Status filter
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "published" && blog.published) ||
+        (statusFilter === "draft" && !blog.published);
+      
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [blogs, searchQuery, categoryFilter, statusFilter]);
 
   // Create blog mutation
   const createBlogMutation = useMutation({
@@ -931,6 +957,46 @@ export function BlogManagementView() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by title or category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-blogs"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-category">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="Psychology">Psychology</SelectItem>
+              <SelectItem value="Research">Research</SelectItem>
+              <SelectItem value="Academic">Academic</SelectItem>
+              <SelectItem value="Sociology">Sociology</SelectItem>
+              <SelectItem value="News">News</SelectItem>
+              <SelectItem value="Tutorial">Tutorial</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]" data-testid="select-filter-status">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -964,8 +1030,29 @@ export function BlogManagementView() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredBlogs.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2" data-testid="text-no-results">No matching blogs found</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Try adjusting your search or filter criteria.
+                </p>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCategoryFilter("all");
+                    setStatusFilter("all");
+                  }}
+                  data-testid="button-clear-filters"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            blogs.map((blog: BlogPost) => (
+            filteredBlogs.map((blog: BlogPost) => (
               <Card key={blog._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
@@ -1118,12 +1205,39 @@ export function EventManagementView() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [viewingRegistrations, setViewingRegistrations] = useState<Event | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
 
   // Fetch events query
   const { data: events = [], isLoading, refetch } = useQuery<Event[]>({
     queryKey: ['/api/events'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
   });
+
+  // Filter events based on search query and filters
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      // Search filter - matches title or location
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchQuery === "" || 
+        event.title.toLowerCase().includes(searchLower) ||
+        event.location.toLowerCase().includes(searchLower);
+      
+      // Type filter
+      const matchesType = typeFilter === "all" || event.type === typeFilter;
+      
+      // Date filter
+      const isUpcoming = new Date(event.date) >= new Date();
+      const matchesDate = dateFilter === "all" || 
+        (dateFilter === "upcoming" && isUpcoming) ||
+        (dateFilter === "past" && !isUpcoming);
+      
+      return matchesSearch && matchesType && matchesDate;
+    });
+  }, [events, searchQuery, typeFilter, dateFilter]);
 
   // Create event mutation
   const createEventMutation = useMutation({
@@ -1213,6 +1327,47 @@ export function EventManagementView() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by title or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-events"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-type">
+              <SelectValue placeholder="Event Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="workshop">Workshop</SelectItem>
+              <SelectItem value="seminar">Seminar</SelectItem>
+              <SelectItem value="conference">Conference</SelectItem>
+              <SelectItem value="lecture">Lecture</SelectItem>
+              <SelectItem value="webinar">Webinar</SelectItem>
+              <SelectItem value="social">Social</SelectItem>
+              <SelectItem value="career">Career</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-date">
+              <SelectValue placeholder="Date Range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="upcoming">Upcoming</SelectItem>
+              <SelectItem value="past">Past</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -1228,26 +1383,32 @@ export function EventManagementView() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {events.length === 0 ? (
+          {filteredEvents.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium mb-2">No events yet</h3>
+                <h3 className="text-lg font-medium mb-2">
+                  {events.length === 0 ? "No events yet" : "No events found"}
+                </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Create your first event to get started.
+                  {events.length === 0 
+                    ? "Create your first event to get started."
+                    : "Try adjusting your search or filter criteria."}
                 </p>
-                <Button 
-                  onClick={() => setIsCreateModalOpen(true)} 
-                  data-testid="button-create-first-event"
-                  className="px-6 py-2"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create First Event
-                </Button>
+                {events.length === 0 && (
+                  <Button 
+                    onClick={() => setIsCreateModalOpen(true)} 
+                    data-testid="button-create-first-event"
+                    className="px-6 py-2"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create First Event
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
-            events.map((event: Event) => (
+            filteredEvents.map((event: Event) => (
               <Card key={event._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
@@ -1781,12 +1942,58 @@ export function ResourceManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<LearningResource | null>(null);
   const [deletingResource, setDeletingResource] = useState<LearningResource | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
 
   // Fetch resources query
   const { data: resources = [], isLoading, refetch } = useQuery<LearningResource[]>({
     queryKey: ['/api/resources'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
   });
+
+  // Extract unique categories from resources for the filter dropdown
+  const uniqueCategories = useMemo(() => {
+    const categories = resources.map(r => r.category).filter(Boolean);
+    return Array.from(new Set(categories)).sort();
+  }, [resources]);
+
+  // Filter resources based on search query and filters
+  const filteredResources = useMemo(() => {
+    return resources.filter((resource) => {
+      // Search filter - matches title or category
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = searchQuery === "" || 
+        resource.title.toLowerCase().includes(searchLower) ||
+        resource.category.toLowerCase().includes(searchLower) ||
+        resource.description?.toLowerCase().includes(searchLower);
+      
+      // Category filter
+      const matchesCategory = categoryFilter === "all" || resource.category === categoryFilter;
+      
+      // Type filter
+      const matchesType = typeFilter === "all" || resource.type === typeFilter;
+      
+      // Difficulty filter
+      const matchesDifficulty = difficultyFilter === "all" || resource.difficulty === difficultyFilter;
+      
+      return matchesSearch && matchesCategory && matchesType && matchesDifficulty;
+    });
+  }, [resources, searchQuery, categoryFilter, typeFilter, difficultyFilter]);
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery !== "" || categoryFilter !== "all" || typeFilter !== "all" || difficultyFilter !== "all";
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setTypeFilter("all");
+    setDifficultyFilter("all");
+  };
 
   // Create resource mutation
   const createResourceMutation = useMutation({
@@ -1889,6 +2096,57 @@ export function ResourceManagementView() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by title, category, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-resources"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-resource-category">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {uniqueCategories.map((category) => (
+                <SelectItem key={category} value={category}>{category}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]" data-testid="select-filter-resource-type">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="pdf">PDF</SelectItem>
+              <SelectItem value="video">Video</SelectItem>
+              <SelectItem value="image">Image</SelectItem>
+              <SelectItem value="document">Document</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+            <SelectTrigger className="w-full sm:w-[150px]" data-testid="select-filter-resource-difficulty">
+              <SelectValue placeholder="All Levels" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="100l">100 Level</SelectItem>
+              <SelectItem value="200l">200 Level</SelectItem>
+              <SelectItem value="300l">300 Level</SelectItem>
+              <SelectItem value="400l">400 Level</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -1922,8 +2180,25 @@ export function ResourceManagementView() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredResources.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center" data-testid="no-resources-results">
+                <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No resources found</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No resources match your current filters. Try adjusting your search or filter criteria.
+                </p>
+                <Button 
+                  onClick={clearFilters} 
+                  variant="outline"
+                  data-testid="button-clear-resource-filters"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            resources.map((resource: LearningResource) => (
+            filteredResources.map((resource: LearningResource) => (
               <Card key={resource._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
@@ -2976,12 +3251,84 @@ export function StaffManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<(StaffProfile & { user?: User }) | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<StaffProfile | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [showOnLandingFilter, setShowOnLandingFilter] = useState<string>("all");
 
   // Fetch staff profiles query
   const { data: staffProfiles = [], isLoading, refetch } = useQuery<(StaffProfile & { user?: User })[]>({
     queryKey: ['/api/staff'],
     enabled: !!user && (user.role === 'admin' || user.role === 'super_admin')
   });
+
+  // Get unique departments for filter
+  const uniqueDepartments = useMemo(() => {
+    const departments = staffProfiles
+      .map(staff => staff.department)
+      .filter((dept): dept is string => !!dept);
+    return [...new Set(departments)].sort();
+  }, [staffProfiles]);
+
+  // Filter staff profiles based on search and filters
+  const filteredStaffProfiles = useMemo(() => {
+    return staffProfiles.filter((staff) => {
+      // Search filter - matches name, title, department, or specializations
+      const searchLower = searchQuery.toLowerCase().trim();
+      
+      // Skip filter if search is empty
+      if (searchLower === "") {
+        // Apply only other filters
+        const matchesDepartment = departmentFilter === "all" || 
+          (staff.department && staff.department === departmentFilter);
+        
+        const matchesLanding = showOnLandingFilter === "all" || 
+          (showOnLandingFilter === "yes" && staff.showOnLanding === true) ||
+          (showOnLandingFilter === "no" && !staff.showOnLanding);
+        
+        return matchesDepartment && matchesLanding;
+      }
+      
+      // Build searchable text from staff data
+      const staffName = (staff.customName || `${staff.user?.firstName || ''} ${staff.user?.lastName || ''}`).toLowerCase();
+      const title = (staff.title || '').toLowerCase();
+      const department = (staff.department || '').toLowerCase();
+      
+      // Check if specializations is an array and search through it
+      const specializationsArray = Array.isArray(staff.specializations) ? staff.specializations : [];
+      const specializationsMatch = specializationsArray.some(spec => 
+        typeof spec === 'string' && spec.toLowerCase().includes(searchLower)
+      );
+      
+      const matchesSearch = 
+        staffName.includes(searchLower) ||
+        title.includes(searchLower) ||
+        department.includes(searchLower) ||
+        specializationsMatch;
+      
+      // Department filter
+      const matchesDepartment = departmentFilter === "all" || 
+        (staff.department && staff.department === departmentFilter);
+      
+      // Show on landing filter
+      const matchesLanding = showOnLandingFilter === "all" || 
+        (showOnLandingFilter === "yes" && staff.showOnLanding === true) ||
+        (showOnLandingFilter === "no" && !staff.showOnLanding);
+      
+      return matchesSearch && matchesDepartment && matchesLanding;
+    });
+  }, [staffProfiles, searchQuery, departmentFilter, showOnLandingFilter]);
+
+  // Check if any filters are active
+  const hasActiveFilters = searchQuery !== "" || departmentFilter !== "all" || showOnLandingFilter !== "all";
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDepartmentFilter("all");
+    setShowOnLandingFilter("all");
+  };
 
   // Create staff mutation
   const createStaffMutation = useMutation({
@@ -3071,6 +3418,53 @@ export function StaffManagementView() {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search by name, title, department, or specialization..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-staff"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-filter-staff-department">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {uniqueDepartments.map((dept) => (
+                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={showOnLandingFilter} onValueChange={setShowOnLandingFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-staff-landing">
+              <SelectValue placeholder="Landing Page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Staff</SelectItem>
+              <SelectItem value="yes">On Landing Page</SelectItem>
+              <SelectItem value="no">Not on Landing</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+              className="w-full sm:w-auto"
+              data-testid="button-clear-staff-filters"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -3104,17 +3498,37 @@ export function StaffManagementView() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredStaffProfiles.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center" data-testid="no-staff-results">
+                <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No staff members found</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No staff members match your current filters. Try adjusting your search or filter criteria.
+                </p>
+                <Button 
+                  onClick={clearFilters} 
+                  variant="outline"
+                  data-testid="button-clear-staff-filters-empty"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            staffProfiles.map((staffProfile) => (
+            filteredStaffProfiles.map((staffProfile) => (
               <Card key={staffProfile._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                     <div className="flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-semibold line-clamp-2">
-                          {staffProfile.user?.firstName} {staffProfile.user?.lastName}
+                          {staffProfile.customName || `${staffProfile.user?.firstName || ''} ${staffProfile.user?.lastName || ''}`}
                         </h3>
                         <Badge variant="outline">{staffProfile.department}</Badge>
+                        {staffProfile.showOnLanding && (
+                          <Badge variant="secondary" className="text-xs">On Landing</Badge>
+                        )}
                       </div>
                       
                       <p className="text-gray-600 dark:text-gray-400 font-medium">{staffProfile.title}</p>

@@ -234,6 +234,9 @@ export const pollSchema = z.object({
   allowMultipleVotes: z.boolean().default(false),
   expiresAt: z.date().optional(),
   
+  // Target specific levels (e.g., ["100", "200", "300", "400"]) - empty array means all levels
+  targetLevels: z.array(z.string()).default([]),
+  
   status: z.enum(['active', 'closed']).default('active'),
   
   createdAt: z.date().default(() => new Date()),
@@ -264,7 +267,7 @@ export const insertStaffProfileSchema = staffProfileBaseSchema
     { message: "Either userId or customName must be provided" }
   );
 export const insertContactSubmissionSchema = contactSubmissionSchema.omit({ _id: true, createdAt: true });
-export const insertPollSchema = pollSchema.omit({ _id: true, createdAt: true, updatedAt: true, createdById: true });
+export const insertPollSchema = pollSchema.omit({ _id: true, createdAt: true, updatedAt: true, createdById: true, status: true });
 export const insertPollVoteSchema = pollVoteSchema.omit({ _id: true, createdAt: true });
 
 // Type exports

@@ -124,6 +124,7 @@ export interface IMongoStorage {
   votePoll(userId: string, pollId: string, optionId: string): Promise<void>;
   hasUserVoted(userId: string, pollId: string): Promise<boolean>;
   getUserVote(userId: string, pollId: string): Promise<PollVote | undefined>;
+  getPollVoters(pollId: string): Promise<any[]>;
 }
 
 export class MongoStorage implements IMongoStorage {
@@ -1879,6 +1880,45 @@ export class MongoStorage implements IMongoStorage {
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
     const vote = await votesCollection.findOne({ userId, pollId });
     return vote ? { ...vote, _id: vote._id.toString() } : undefined;
+  }
+
+  async getPollVoters(pollId: string): Promise<any[]> {
+    const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
+    const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
+    const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
+    
+    // Get the poll to have option text
+    const poll = await pollsCollection.findOne({ _id: new ObjectId(pollId) } as any);
+    if (!poll) {
+      throw new Error('Poll not found');
+    }
+    
+    // Get all votes for this poll
+    const votes = await votesCollection.find({ pollId }).toArray();
+    
+    // Get user details for each vote
+    const votersWithDetails = await Promise.all(
+      votes.map(async (vote) => {
+        const user = await usersCollection.findOne({ _id: new ObjectId(vote.userId) } as any);
+        const option = poll.options.find(opt => opt.id === vote.optionId);
+        
+        return {
+          optionId: vote.optionId,
+          optionText: option?.text || 'Unknown option',
+          votedAt: vote.createdAt,
+          user: user ? {
+            _id: user._id.toString(),
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email,
+            level: user.level || '',
+            matricNumber: user.matricNumber || ''
+          } : null
+        };
+      })
+    );
+    
+    return votersWithDetails.filter(v => v.user !== null);
   }
 
   private calculateUserBadges(blogCount: number, commentCount: number, eventCount: number): any[] {
