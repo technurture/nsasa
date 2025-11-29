@@ -139,14 +139,20 @@ function FeaturedStaffSection() {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <h3 className="font-bold text-2xl group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
                     {staffName}
                   </h3>
                   {staff.position && (
-                    <Badge className="text-sm font-semibold px-4 py-1" data-testid={`text-position-${staff._id}`}>
-                      {staff.position}
-                    </Badge>
+                    <div className="inline-block max-w-full">
+                      <Badge 
+                        variant="secondary" 
+                        className="text-sm font-semibold px-4 py-2 whitespace-normal text-center leading-tight" 
+                        data-testid={`text-position-${staff._id}`}
+                      >
+                        {staff.position}
+                      </Badge>
+                    </div>
                   )}
                   {staff.title && (
                     <p className="text-base text-muted-foreground line-clamp-2 mt-2">
@@ -702,20 +708,48 @@ function AuthRouter() {
   );
 }
 
-// Dashboard router for authenticated dashboard pages (Admin and Super Admin only)
+// Wrapper component for admin-only routes
+function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+      {children}
+    </ProtectedRoute>
+  );
+}
+
+// Dashboard router for authenticated dashboard pages (All authenticated users)
 function DashboardRouter() {
   return (
-    <ProtectedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/">
+    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'student']} redirectTo="/">
       <ModernDashboard>
         <Switch>
+          {/* Main dashboard - accessible to all authenticated users */}
           <Route path="/dashboard" component={MainDashboardView} />
-          <Route path="/dashboard/users" component={UserManagementView} />
-          <Route path="/dashboard/blogs" component={BlogManagementView} />
+          
+          {/* Admin-only routes */}
+          <Route path="/dashboard/users">
+            <AdminOnlyRoute><UserManagementView /></AdminOnlyRoute>
+          </Route>
+          <Route path="/dashboard/blogs">
+            <AdminOnlyRoute><BlogManagementView /></AdminOnlyRoute>
+          </Route>
+          <Route path="/dashboard/staff">
+            <AdminOnlyRoute><StaffManagementView /></AdminOnlyRoute>
+          </Route>
+          <Route path="/dashboard/analytics">
+            <AdminOnlyRoute><AnalyticsView /></AdminOnlyRoute>
+          </Route>
+          
+          {/* Shared routes - accessible to all authenticated users */}
           <Route path="/dashboard/events" component={EventManagementView} />
           <Route path="/dashboard/resources" component={ResourceManagementView} />
-          <Route path="/dashboard/staff" component={StaffManagementView} />
-          <Route path="/dashboard/analytics" component={AnalyticsView} />
           <Route path="/dashboard/settings" component={SettingsView} />
+          
+          {/* Student-specific routes */}
+          <Route path="/dashboard/gamification" component={StudentGamificationView} />
+          <Route path="/dashboard/my-posts" component={StudentGamificationView} />
+          
+          {/* Default fallback */}
           <Route component={MainDashboardView} />
         </Switch>
       </ModernDashboard>
