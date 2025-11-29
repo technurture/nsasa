@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +49,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Star, User as UserIcon, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Edit, Trash2, Star, User as UserIcon, Check, ChevronsUpDown, Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -105,6 +112,8 @@ export function StaffManagement() {
   const [editingStaff, setEditingStaff] = useState<StaffWithUser | null>(null);
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [positionFilter, setPositionFilter] = useState("all");
 
   // Fetch all staff
   const { data: staffList = [], isLoading: isLoadingStaff } = useQuery<StaffWithUser[]>({
@@ -116,6 +125,27 @@ export function StaffManagement() {
     queryKey: ['/api/auth/admin/users?status=approved'],
     enabled: user?.role === 'super_admin' || user?.role === 'admin',
   });
+
+  // Get unique positions from staff list for filter dropdown
+  const uniquePositions = useMemo(() => {
+    const positions = staffList
+      .map(staff => staff.position)
+      .filter((position): position is string => Boolean(position));
+    return [...new Set(positions)].sort();
+  }, [staffList]);
+
+  // Filter staff based on search term and position filter
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(staff => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        staff.name?.toLowerCase().includes(searchLower) ||
+        staff.customName?.toLowerCase().includes(searchLower) ||
+        staff.position?.toLowerCase().includes(searchLower);
+      const matchesPosition = positionFilter === "all" || staff.position === positionFilter;
+      return matchesSearch && matchesPosition;
+    });
+  }, [staffList, searchTerm, positionFilter]);
 
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
@@ -306,6 +336,44 @@ export function StaffManagement() {
         </Button>
       </div>
 
+      {/* Search and Filter Section */}
+      <div className="flex flex-col sm:flex-row gap-4" data-testid="container-search-filter">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or position..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+            data-testid="input-staff-search"
+          />
+        </div>
+        <Select value={positionFilter} onValueChange={setPositionFilter}>
+          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-position-filter">
+            <SelectValue placeholder="Filter by position" />
+          </SelectTrigger>
+          <SelectContent data-testid="select-position-content">
+            <SelectItem value="all" data-testid="option-position-all">All Positions</SelectItem>
+            {uniquePositions.map((position) => (
+              <SelectItem 
+                key={position} 
+                value={position}
+                data-testid={`option-position-${position.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                {position}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results count */}
+      {!isLoadingStaff && (
+        <p className="text-sm text-muted-foreground" data-testid="text-results-count">
+          Showing {filteredStaff.length} of {staffList.length} staff members
+        </p>
+      )}
+
       {isLoadingStaff ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
@@ -321,9 +389,9 @@ export function StaffManagement() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {staffList.map((staff) => (
-            <Card key={staff._id} className="overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="grid-staff-list">
+          {filteredStaff.map((staff) => (
+            <Card key={staff._id} className="overflow-hidden" data-testid={`card-staff-${staff._id}`}>
               <CardHeader className="text-center space-y-4 pb-4">
                 <div className="flex justify-center">
                   <Avatar className="h-20 w-20 border-4 border-background">
