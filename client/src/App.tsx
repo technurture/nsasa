@@ -739,10 +739,14 @@ function DashboardRouter() {
           <Route path="/dashboard/analytics">
             <AdminOnlyRoute><AnalyticsView /></AdminOnlyRoute>
           </Route>
+          <Route path="/dashboard/events">
+            <AdminOnlyRoute><EventManagementView /></AdminOnlyRoute>
+          </Route>
+          <Route path="/dashboard/resources">
+            <AdminOnlyRoute><ResourceManagementView /></AdminOnlyRoute>
+          </Route>
           
           {/* Shared routes - accessible to all authenticated users */}
-          <Route path="/dashboard/events" component={EventManagementView} />
-          <Route path="/dashboard/resources" component={ResourceManagementView} />
           <Route path="/dashboard/settings" component={SettingsView} />
           
           {/* Student-specific routes */}
