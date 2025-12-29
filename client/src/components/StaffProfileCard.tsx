@@ -75,13 +75,13 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
       <CardHeader className="text-center space-y-2 pt-4 pb-4">
         {/* Name and Title */}
         <div>
-          <h3 className="text-xl font-semibold group-hover:text-primary transition-colors" data-testid={`text-name-${staff.id}`}>
+          <h3 className="text-xl font-semibold group-hover:text-primary transition-colors break-words" data-testid={`text-name-${staff.id}`}>
             {staff.name}
           </h3>
-          <p className="text-muted-foreground font-medium" data-testid={`text-title-${staff.id}`}>
+          <p className="text-muted-foreground font-medium break-words" data-testid={`text-title-${staff.id}`}>
             {staff.title}
           </p>
-          <p className="text-sm text-muted-foreground">{staff.department}</p>
+          <p className="text-sm text-muted-foreground break-words">{staff.department}</p>
         </div>
       </CardHeader>
 

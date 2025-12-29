@@ -402,13 +402,13 @@ export function StaffManagement() {
                   </Avatar>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold" data-testid={`text-name-${staff._id}`}>
+                  <h3 className="text-lg font-semibold break-words" data-testid={`text-name-${staff._id}`}>
                     {staff.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground font-medium">{staff.title}</p>
-                  <p className="text-xs text-muted-foreground">{staff.department}</p>
+                  <p className="text-sm text-muted-foreground font-medium break-words">{staff.title}</p>
+                  <p className="text-xs text-muted-foreground break-words">{staff.department}</p>
                   {staff.phone && (
-                    <p className="text-xs text-muted-foreground mt-1">{staff.phone}</p>
+                    <p className="text-xs text-muted-foreground mt-1 break-words">{staff.phone}</p>
                   )}
                 </div>
                 {staff.showOnLanding && (
