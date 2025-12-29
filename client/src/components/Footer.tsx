@@ -190,7 +190,18 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-muted-foreground">
-            © 2024 Nsasa - Department of Sociology. All rights reserved.
+            © 2024 Nsasa - Department of Sociology. All rights reserved. {" "}
+            <span className="inline-flex items-center">
+              Powered by {" "}
+              <a 
+                href="https://www.technurture.org/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-1 text-primary hover:underline font-medium"
+              >
+                Technurture
+              </a>
+            </span>
           </div>
           
           <div className="flex gap-4 text-sm">

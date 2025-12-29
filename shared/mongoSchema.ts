@@ -17,6 +17,7 @@ export const userSchema = z.object({
   location: z.enum(['OnCampus', 'OffCampus']).optional(),
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
+  guardianPhoneNumber: z.string().optional(),
   level: z.string().optional(),
   occupation: z.string().optional(),
   

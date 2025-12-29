@@ -29,6 +29,7 @@ interface RegistrationData {
   location: string;
   address: string;
   phoneNumber: string;
+  guardianPhoneNumber: string;
   level: string;
   occupation?: string;
 }
@@ -45,6 +46,7 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
     location: "",
     address: "",
     phoneNumber: "",
+    guardianPhoneNumber: "",
     level: "",
     occupation: "",
   });
@@ -68,6 +70,7 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
     if (!formData.location) newErrors.location = "Location is required";
     if (!formData.address.trim()) newErrors.address = "Address is required";
     if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+    if (!formData.guardianPhoneNumber.trim()) newErrors.guardianPhoneNumber = "Guardian phone number is required";
     if (!formData.level) newErrors.level = "Level is required";
 
     // Email validation
@@ -130,7 +133,7 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
 
   // Calculate form completion percentage
   const completedFields = Object.values(formData).filter(value => value.trim() !== "").length;
-  const totalRequiredFields = 10; // Excluding optional occupation field
+  const totalRequiredFields = 11; // Updated to include guardian phone
   const completionPercentage = Math.round((completedFields / totalRequiredFields) * 100);
 
   return (
@@ -398,6 +401,23 @@ export default function RegistrationForm({ onSubmit, onCancel }: RegistrationFor
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     {errors.phoneNumber}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="guardianPhoneNumber">Guardian Phone Number *</Label>
+                <Input
+                  id="guardianPhoneNumber"
+                  value={formData.guardianPhoneNumber}
+                  onChange={(e) => handleInputChange("guardianPhoneNumber", e.target.value)}
+                  placeholder="Enter guardian's phone number"
+                  data-testid="input-guardian-phone"
+                />
+                {errors.guardianPhoneNumber && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.guardianPhoneNumber}
                   </p>
                 )}
               </div>

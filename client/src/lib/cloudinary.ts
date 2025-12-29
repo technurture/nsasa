@@ -47,7 +47,7 @@ export const uploadToCloudinary = async (
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
-  
+
   // Add optional parameters (only those allowed for unsigned uploads)
   if (options.folder) {
     formData.append('folder', options.folder);
@@ -58,7 +58,7 @@ export const uploadToCloudinary = async (
 
   try {
     console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
-    
+
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
       {
@@ -73,7 +73,7 @@ export const uploadToCloudinary = async (
         const errorData = await response.json();
         console.error('❌ Cloudinary API error:', errorData);
         errorMessage = errorData.error?.message || `Upload failed with status ${response.status}`;
-        
+
         if (response.status === 400) {
           if (errorData.error?.message?.includes('preset')) {
             errorMessage = 'Upload preset configuration error. Make sure the preset is set to "Unsigned" mode in Cloudinary settings.';
@@ -94,11 +94,11 @@ export const uploadToCloudinary = async (
     return result;
   } catch (error: any) {
     console.error('❌ Cloudinary upload error:', error);
-    
+
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
       throw new Error('Network error. Please check your internet connection and try again.');
     }
-    
+
     throw new Error(error.message || 'Failed to upload file to Cloudinary. Please try again.');
   }
 };
@@ -141,7 +141,7 @@ export const getOptimizedImageUrl = (
   }
 
   const params = new URLSearchParams();
-  
+
   if (transformations.width) params.append('w', transformations.width.toString());
   if (transformations.height) params.append('h', transformations.height.toString());
   if (transformations.crop) params.append('c', transformations.crop);
@@ -149,7 +149,7 @@ export const getOptimizedImageUrl = (
   if (transformations.format) params.append('f', transformations.format);
 
   const transformString = params.toString() ? `/${params.toString().replace(/&/g, ',')}` : '';
-  
+
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload${transformString}/${publicId}`;
 };
 
@@ -185,7 +185,7 @@ export const validateFile = (
   if (!allowedTypes.includes(file.type)) {
     const fileName = file.name.toLowerCase();
     const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-    
+
     if (!hasValidExtension) {
       return {
         isValid: false,
@@ -221,12 +221,36 @@ export const getDownloadUrl = (url: string, filename?: string): string => {
     // For public files, simply add fl_attachment flag to force download
     // The filename will be taken from the original file name in Cloudinary
     const downloadUrl = `${baseUrl}/upload/fl_attachment/${pathAfterUpload}`;
-    
+
     console.log('📥 Download URL generated:', downloadUrl);
     return downloadUrl;
   } catch (error) {
     console.error('Error generating download URL:', error);
     return url;
+  }
+};
+
+const requestSignedUrl = async (
+  publicId: string,
+  resourceType: string,
+  filename?: string
+): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/cloudinary/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publicId, resourceType, filename })
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data?.url || null;
+  } catch (error) {
+    console.error('Error requesting signed URL:', error);
+    return null;
   }
 };
 
@@ -242,11 +266,11 @@ const extractCloudinaryPublicId = (url: string): { publicId: string; resourceTyp
     if (urlParts.length !== 2) {
       throw new Error('Invalid Cloudinary URL');
     }
-    
+
     // Extract path after upload
     const pathAfterUpload = urlParts[1];
     const pathParts = pathAfterUpload.split('/');
-    
+
     // Find the version token (v followed by digits) or start of actual path
     // Everything after the version token is the public ID
     let versionIndex = -1;
@@ -256,19 +280,19 @@ const extractCloudinaryPublicId = (url: string): { publicId: string; resourceTyp
         break;
       }
     }
-    
+
     // If version found, public ID is everything after it
     // Otherwise, assume no transformations and whole path is public ID
     const publicIdParts = versionIndex >= 0 
       ? pathParts.slice(versionIndex + 1)
       : pathParts;
-    
+
     const publicId = publicIdParts.join('/');
-    
+
     // Determine resource type from URL
     const resourceType = url.includes('/image/') ? 'image' : 
                         url.includes('/video/') ? 'video' : 'raw';
-    
+
     return { publicId, resourceType };
   } catch (error) {
     console.error('Error extracting public ID:', error);
@@ -284,39 +308,51 @@ const extractCloudinaryPublicId = (url: string): { publicId: string; resourceTyp
 export const downloadFile = async (fileUrl: string, fileName: string): Promise<void> => {
   try {
     console.log(`📥 Downloading file: ${fileName}`);
-    
-    // For public files, add fl_attachment flag directly to URL
-    const downloadUrl = getDownloadUrl(fileUrl, fileName);
-    
+
+    let downloadUrl = getDownloadUrl(fileUrl, fileName);
+
+    // Prefer signed URLs to handle authenticated/private resources
+    if (fileUrl && fileUrl.includes('cloudinary.com')) {
+      try {
+        const { publicId, resourceType } = extractCloudinaryPublicId(fileUrl);
+        const signedUrl = await requestSignedUrl(publicId, resourceType, fileName);
+        if (signedUrl) {
+          downloadUrl = signedUrl;
+        }
+      } catch (error) {
+        console.warn('Falling back to direct download URL:', error);
+      }
+    }
+
     // Try to download using fetch and blob for better cross-origin handling
     try {
       const fileResponse = await fetch(downloadUrl);
       if (!fileResponse.ok) {
         throw new Error('Failed to fetch file');
       }
-      
+
       const blob = await fileResponse.blob();
       const blobUrl = URL.createObjectURL(blob);
-      
+
       // Create temporary link for download
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = fileName;
       link.style.display = 'none';
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup: Remove link immediately and revoke blob URL after a delay
       document.body.removeChild(link);
       setTimeout(() => {
         URL.revokeObjectURL(blobUrl);
       }, 1000);
-      
+
       console.log('✅ Download completed:', fileName);
     } catch (fetchError) {
       console.warn('Fetch download failed, using fallback method:', fetchError);
-      
+
       // Fallback: Use window.open for cross-origin files
       // This will open the file in a new tab if download fails
       window.open(downloadUrl, '_blank');
@@ -340,8 +376,14 @@ export const getPreviewUrl = async (url: string): Promise<string> => {
   }
 
   try {
-    // For public files, just return the original URL for preview
-    // No attachment flag means it will display in browser instead of downloading
+    // Prefer signed URLs to handle authenticated/private resources in previews
+    const { publicId, resourceType } = extractCloudinaryPublicId(url);
+    const signedUrl = await requestSignedUrl(publicId, resourceType);
+    if (signedUrl) {
+      return signedUrl;
+    }
+
+    // Fallback to direct URL for public files
     console.log('✅ Using direct URL for preview (public file)');
     return url;
   } catch (error) {
