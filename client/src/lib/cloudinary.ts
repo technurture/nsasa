@@ -311,41 +311,26 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
     // For public files, add fl_attachment flag directly to URL
     const downloadUrl = getDownloadUrl(fileUrl, fileName);
     
-    // Try to download using fetch and blob for better cross-origin handling
-    try {
-      const fileResponse = await fetch(downloadUrl);
-      if (!fileResponse.ok) {
-        // Handle Cloudinary specific errors
-        if (fileResponse.status === 401) {
-          throw new Error('Access denied: Cloudinary resource might be private or API key restricted.');
-        }
-        throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
-      }
-      
-      const blob = await fileResponse.blob();
-      triggerBlobDownload(blob, fileName);
-      console.log('✅ Download completed via Blob:', fileName);
-    } catch (fetchError: any) {
-      console.warn('Fetch download failed, using fallback method:', fetchError);
-      
-      // Fallback: Use direct link with download attribute
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = fileName;
-      link.target = '_self';
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => document.body.removeChild(link), 100);
-      
-      console.log('✅ Download initiated via fallback link:', fileName);
-    }
+    // Fallback: Use direct link with download attribute as the primary method
+    // Fetch/Blob often fails due to CORS or browser restrictions on direct downloads from Cloudinary
+    console.log('📥 Initiating download via direct link:', downloadUrl);
+    
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.target = '_blank'; // Open in new tab/window to trigger download without navigation
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+    }, 100);
+    
+    console.log('✅ Download initiated for:', fileName);
   } catch (error: any) {
     console.error('❌ Download error:', error);
-    // Provide a cleaner error message to the UI
-    if (error.message?.includes('401')) {
-      throw new Error('Access denied by Cloudinary. The file might be private or the API key is restricted.');
-    }
     throw error;
   }
 };
