@@ -231,6 +231,29 @@ export const getDownloadUrl = (url: string, filename?: string): string => {
 };
 
 /**
+ * Handle direct browser download for a blob
+ * @param blob - The blob to download
+ * @param fileName - The filename for the download
+ */
+const triggerBlobDownload = (blob: Blob, fileName: string) => {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = fileName;
+  link.target = '_self'; // Ensure it doesn't open a new page
+  link.style.display = 'none';
+  
+  document.body.appendChild(link);
+  link.click();
+  
+  // Cleanup
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  }, 100);
+};
+
+/**
  * Extract public ID from Cloudinary URL
  * Cloudinary URL structure: /{resource_type}/upload/{transformations}/{version}/{public_id}
  * @param url - Cloudinary URL
@@ -296,31 +319,22 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
       }
       
       const blob = await fileResponse.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      // Create temporary link for download
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      link.style.display = 'none';
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup: Remove link immediately and revoke blob URL after a delay
-      document.body.removeChild(link);
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-      }, 1000);
-      
-      console.log('✅ Download completed:', fileName);
+      triggerBlobDownload(blob, fileName);
+      console.log('✅ Download completed via Blob:', fileName);
     } catch (fetchError) {
       console.warn('Fetch download failed, using fallback method:', fetchError);
       
-      // Fallback: Use window.open for cross-origin files
-      // This will open the file in a new tab if download fails
-      window.open(downloadUrl, '_blank');
-      console.log('✅ Download initiated via window.open:', fileName);
+      // Fallback: Use direct link with download attribute
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = '_self';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => document.body.removeChild(link), 100);
+      
+      console.log('✅ Download initiated via fallback link:', fileName);
     }
   } catch (error) {
     console.error('❌ Download error:', error);
