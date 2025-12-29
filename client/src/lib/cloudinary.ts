@@ -208,119 +208,36 @@ export const getDownloadUrl = (url: string, filename?: string): string => {
     return url;
   }
 
-  try {
-    // Parse the URL to extract resource type and public ID
-    const urlParts = url.split('/upload/');
-    if (urlParts.length !== 2) {
-      return url;
-    }
-
-    const baseUrl = urlParts[0];
-    const pathAfterUpload = urlParts[1];
-
-    // For public files, simply add fl_attachment flag to force download
-    // The filename will be taken from the original file name in Cloudinary
-    const downloadUrl = `${baseUrl}/upload/fl_attachment/${pathAfterUpload}`;
-    
-    console.log('📥 Download URL generated:', downloadUrl);
-    return downloadUrl;
-  } catch (error) {
-    console.error('Error generating download URL:', error);
-    return url;
-  }
+  // NOTE: For 'raw' resources (PDFs, docs) on specific Cloudinary accounts,
+  // the 'fl_attachment' flag triggers 401 Unauthorized errors via unsigned requests.
+  // We return the direct URL to ensure the file remains accessible.
+  return url;
 };
 
 /**
- * Handle direct browser download for a blob
- * @param blob - The blob to download
- * @param fileName - The filename for the download
- */
-const triggerBlobDownload = (blob: Blob, fileName: string) => {
-  const blobUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = blobUrl;
-  link.download = fileName;
-  link.target = '_self'; // Ensure it doesn't open a new page
-  link.style.display = 'none';
-  
-  document.body.appendChild(link);
-  link.click();
-  
-  // Cleanup
-  setTimeout(() => {
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
-  }, 100);
-};
-
-/**
- * Extract public ID from Cloudinary URL
- * Cloudinary URL structure: /{resource_type}/upload/{transformations}/{version}/{public_id}
- * @param url - Cloudinary URL
- * @returns Public ID and resource type
- */
-const extractCloudinaryPublicId = (url: string): { publicId: string; resourceType: string } => {
-  try {
-    const urlParts = url.split('/upload/');
-    if (urlParts.length !== 2) {
-      throw new Error('Invalid Cloudinary URL');
-    }
-    
-    // Extract path after upload
-    const pathAfterUpload = urlParts[1];
-    const pathParts = pathAfterUpload.split('/');
-    
-    // Find the version token (v followed by digits) or start of actual path
-    // Everything after the version token is the public ID
-    let versionIndex = -1;
-    for (let i = 0; i < pathParts.length; i++) {
-      if (pathParts[i].match(/^v\d+$/)) {
-        versionIndex = i;
-        break;
-      }
-    }
-    
-    // If version found, public ID is everything after it
-    // Otherwise, assume no transformations and whole path is public ID
-    const publicIdParts = versionIndex >= 0 
-      ? pathParts.slice(versionIndex + 1)
-      : pathParts;
-    
-    const publicId = publicIdParts.join('/');
-    
-    // Determine resource type from URL
-    const resourceType = url.includes('/image/') ? 'image' : 
-                        url.includes('/video/') ? 'video' : 'raw';
-    
-    return { publicId, resourceType };
-  } catch (error) {
-    console.error('Error extracting public ID:', error);
-    throw error;
-  }
-};
-
-/**
- * Download a file from Cloudinary (for public files)
+ * Access a file from Cloudinary
  * @param fileUrl - Cloudinary file URL
- * @param fileName - Desired filename for download
+ * @param fileName - Desired filename for display
  */
 export const downloadFile = async (fileUrl: string, fileName: string): Promise<void> => {
   try {
-    console.log(`📥 Downloading file: ${fileName}`);
+    console.log(`📥 Accessing resource: ${fileName}`);
     
-    // For public files, add fl_attachment flag directly to URL
-    const downloadUrl = getDownloadUrl(fileUrl, fileName);
+    // The 401 Unauthorized error (dvgewacb7) is triggered by the 'fl_attachment' flag
+    // on raw files (PDFs) in your specific Cloudinary security configuration.
     
-    // Fallback: Use direct link with download attribute as the primary method
-    // Fetch/Blob often fails due to CORS or browser restrictions on direct downloads from Cloudinary
-    console.log('📥 Initiating download via direct link:', downloadUrl);
-    
+    // We'll use the direct, clean URL which avoids Cloudinary's attachment-forcing 
+    // security layer that is causing the 401 error.
+    const cleanUrl = fileUrl.replace(/\/upload\/[^\/]*fl_attachment[^\/]*\//, '/upload/');
+    console.log('🔗 Access URL:', cleanUrl);
+
+    // Opening in a new tab allows the browser to handle the PDF directly.
+    // Use an <a> tag with target="_blank" and rel="noreferrer" to avoid context-sharing issues
+    // that sometimes trigger 401s in some browser/environment combinations.
     const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fileName;
-    link.target = '_blank'; // Open in new tab/window to trigger download without navigation
+    link.href = cleanUrl;
+    link.target = '_blank';
     link.rel = 'noopener noreferrer';
-    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     
@@ -328,9 +245,9 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
       document.body.removeChild(link);
     }, 100);
     
-    console.log('✅ Download initiated for:', fileName);
+    console.log('✅ Resource access initiated');
   } catch (error: any) {
-    console.error('❌ Download error:', error);
+    console.error('❌ Error accessing resource:', error);
     throw error;
   }
 };
