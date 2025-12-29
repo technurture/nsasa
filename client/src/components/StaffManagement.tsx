@@ -392,7 +392,7 @@ export function StaffManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="grid-staff-list">
           {filteredStaff.map((staff) => (
             <Card key={staff._id} className="overflow-hidden" data-testid={`card-staff-${staff._id}`}>
-              <CardHeader className="text-center space-y-4 pb-4">
+              <CardHeader className="text-center space-y-4 pb-4 px-4 overflow-hidden">
                 <div className="flex justify-center">
                   <Avatar className="h-20 w-20 border-4 border-background">
                     <AvatarImage src={staff.avatar} alt={staff.name} />
@@ -401,14 +401,14 @@ export function StaffManagement() {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold break-words" data-testid={`text-name-${staff._id}`}>
+                <div className="w-full">
+                  <h3 className="text-lg font-semibold break-words line-clamp-2" data-testid={`text-name-${staff._id}`}>
                     {staff.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground font-medium break-words">{staff.title}</p>
-                  <p className="text-xs text-muted-foreground break-words">{staff.department}</p>
+                  <p className="text-sm text-muted-foreground font-medium break-words line-clamp-2">{staff.title}</p>
+                  <p className="text-xs text-muted-foreground break-words line-clamp-1">{staff.department}</p>
                   {staff.phone && (
-                    <p className="text-xs text-muted-foreground mt-1 break-words">{staff.phone}</p>
+                    <p className="text-xs text-muted-foreground mt-1 break-words line-clamp-1">{staff.phone}</p>
                   )}
                 </div>
                 {staff.showOnLanding && (
