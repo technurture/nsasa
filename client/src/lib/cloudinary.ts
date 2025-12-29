@@ -315,13 +315,17 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
     try {
       const fileResponse = await fetch(downloadUrl);
       if (!fileResponse.ok) {
-        throw new Error('Failed to fetch file');
+        // Handle Cloudinary specific errors
+        if (fileResponse.status === 401) {
+          throw new Error('Access denied: Cloudinary resource might be private or API key restricted.');
+        }
+        throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
       }
       
       const blob = await fileResponse.blob();
       triggerBlobDownload(blob, fileName);
       console.log('✅ Download completed via Blob:', fileName);
-    } catch (fetchError) {
+    } catch (fetchError: any) {
       console.warn('Fetch download failed, using fallback method:', fetchError);
       
       // Fallback: Use direct link with download attribute
@@ -336,8 +340,12 @@ export const downloadFile = async (fileUrl: string, fileName: string): Promise<v
       
       console.log('✅ Download initiated via fallback link:', fileName);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Download error:', error);
+    // Provide a cleaner error message to the UI
+    if (error.message?.includes('401')) {
+      throw new Error('Access denied by Cloudinary. The file might be private or the API key is restricted.');
+    }
     throw error;
   }
 };
