@@ -34,12 +34,12 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
       <div className="relative z-10 container mx-auto px-4 py-20 lg:py-32">
         <div className="max-w-4xl mx-auto text-center text-white">
           {/* Badge */}
-          <Badge variant="outline" className="mb-6 bg-white/10 text-white border-white/20 backdrop-blur-sm">
+          <Badge variant="outline" className="mb-6 bg-white/10 text-white border-white/20 backdrop-blur-sm whitespace-normal text-center">
             Department of Sociology Portal
           </Badge>
 
           {/* Heading */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight break-words overflow-wrap-anywhere">
             Welcome to{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-blue-100">
               Nsasa

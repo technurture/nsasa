@@ -61,11 +61,11 @@ export default function AboutSection({ onGetInvolved, onViewPrograms, onContactU
   return (
     <div className="space-y-16">
       {/* Hero Section */}
-      <div className="text-center space-y-6">
-        <Badge variant="outline" className="mb-4">
+      <div className="text-center space-y-6 px-4">
+        <Badge variant="outline" className="mb-4 whitespace-normal text-center">
           About Our Department
         </Badge>
-        <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+        <h1 className="text-4xl md:text-5xl font-bold leading-tight break-words overflow-wrap-anywhere">
           Shaping Tomorrow's
           <span className="text-primary block">Social Scientists</span>
         </h1>

@@ -243,7 +243,7 @@ function BlogFormModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">{blog ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl break-words">{blog ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -609,7 +609,7 @@ function EventFormModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">{event ? "Edit Event" : "Create New Event"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl break-words">{event ? "Edit Event" : "Create New Event"}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
