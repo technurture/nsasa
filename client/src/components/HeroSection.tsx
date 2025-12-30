@@ -39,7 +39,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
           </Badge>
 
           {/* Heading */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight break-words">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight break-words overflow-wrap-anywhere">
             Welcome to{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-blue-100">
               Nsasa

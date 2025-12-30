@@ -65,7 +65,7 @@ export default function AboutSection({ onGetInvolved, onViewPrograms, onContactU
         <Badge variant="outline" className="mb-4 whitespace-normal text-center">
           About Our Department
         </Badge>
-        <h1 className="text-4xl md:text-5xl font-bold leading-tight break-words">
+        <h1 className="text-4xl md:text-5xl font-bold leading-tight break-words overflow-wrap-anywhere">
           Shaping Tomorrow's
           <span className="text-primary block">Social Scientists</span>
         </h1>
