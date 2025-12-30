@@ -113,6 +113,7 @@ interface User {
   location: string;
   address: string;
   phoneNumber: string;
+  guardianPhoneNumber?: string;
   level: string;
   occupation?: string;
   role: 'student' | 'admin' | 'super_admin';
@@ -442,6 +443,15 @@ function UserDetailsDialog({
                   {user.phoneNumber}
                 </p>
               </div>
+              {user.guardianPhoneNumber && (
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Guardian Phone Number</p>
+                  <p className="font-medium flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    {user.guardianPhoneNumber}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -494,7 +504,7 @@ function UserDetailsDialog({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Location Type</p>
-                <p className="font-medium capitalize">{user.location.replace(/([A-Z])/g, ' $1').trim()}</p>
+                <p className="font-medium capitalize">{user.location ? user.location.replace(/([A-Z])/g, ' $1').trim() : 'Not Specified'}</p>
               </div>
               <div className="space-y-1 md:col-span-2">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
