@@ -8,12 +8,13 @@ import type { Event } from "@shared/mongoSchema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import PageHeader from "@/components/PageHeader";
 
 export default function EventsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-  
+
   const { data: events, isLoading, error } = useQuery<Event[]>({
     queryKey: ['/api/events'],
   });
@@ -72,70 +73,68 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <Calendar className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl font-bold" data-testid="heading-events">Events</h1>
-        </div>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Join us for workshops, seminars, and community gatherings
-        </p>
+    <div>
+      <PageHeader
+        title="Events"
+        description="Join us for workshops, seminars, and community gatherings"
+      />
+      <div className="container mx-auto px-4 py-8">
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : events && events.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {events.map((event) => {
+              // Transform event data to match EventCard props
+              const transformedEvent = {
+                id: event._id || '',
+                title: event.title,
+                description: event.description,
+                date: new Date(event.date).toISOString().split('T')[0],
+                time: event.time,
+                location: event.location,
+                type: event.type,
+                capacity: event.capacity,
+                registered: (event as any).registrationCount || 0,
+                price: event.price,
+                image: event.imageUrl,
+                organizer: (event as any).organizerName || event.organizerId,
+                tags: event.tags,
+              };
+
+              // Check if user is registered for this event
+              const isUserRegistered = userRegistrations?.some(
+                (reg) => reg.eventId === event._id
+              ) || false;
+
+              return (
+                <EventCard
+                  key={event._id}
+                  event={transformedEvent}
+                  isRegistered={isUserRegistered}
+                  onRegister={handleRegister}
+                  onReadMore={(id) => setLocation(`/events/${id}`)}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground" data-testid="text-no-events">
+              No events available at the moment. Check back soon!
+            </p>
+          </div>
+        )}
       </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="space-y-4">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          ))}
-        </div>
-      ) : events && events.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {events.map((event) => {
-            // Transform event data to match EventCard props
-            const transformedEvent = {
-              id: event._id || '',
-              title: event.title,
-              description: event.description,
-              date: new Date(event.date).toISOString().split('T')[0],
-              time: event.time,
-              location: event.location,
-              type: event.type,
-              capacity: event.capacity,
-              registered: (event as any).registrationCount || 0,
-              price: event.price,
-              image: event.imageUrl,
-              organizer: (event as any).organizerName || event.organizerId,
-              tags: event.tags,
-            };
-
-            // Check if user is registered for this event
-            const isUserRegistered = userRegistrations?.some(
-              (reg) => reg.eventId === event._id
-            ) || false;
-
-            return (
-              <EventCard 
-                key={event._id} 
-                event={transformedEvent}
-                isRegistered={isUserRegistered}
-                onRegister={handleRegister}
-                onReadMore={(id) => setLocation(`/events/${id}`)}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground" data-testid="text-no-events">
-            No events available at the moment. Check back soon!
-          </p>
-        </div>
-      )}
     </div>
+
   );
 }
