@@ -33,11 +33,11 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -61,8 +61,8 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
       {/* Event Image */}
       {event.image && (
         <div className="aspect-video w-full overflow-hidden">
-          <img 
-            src={event.image} 
+          <img
+            src={event.image}
             alt={event.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />
@@ -103,17 +103,17 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span data-testid={`text-date-${event.id}`}>{formatDate(event.date)}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span data-testid={`text-time-${event.id}`}>{event.time}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span data-testid={`text-location-${event.id}`}>{event.location}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span data-testid={`text-capacity-${event.id}`}>
@@ -134,7 +134,7 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1">
-          {event.tags.slice(0, 3).map((tag, index) => (
+          {(event.tags || []).slice(0, 3).map((tag, index) => (
             <Badge key={index} variant="outline" className="text-xs">
               #{tag}
             </Badge>
@@ -151,7 +151,7 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-1">
           {!isRegistered && !isFull && (
-            <Button 
+            <Button
               onClick={handleRegister}
               className="flex-1"
               data-testid={`button-register-${event.id}`}
@@ -159,10 +159,10 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
               Register
             </Button>
           )}
-          
+
           {isRegistered && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               disabled
               data-testid={`button-registered-${event.id}`}
@@ -170,10 +170,10 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
               ✓ Registered
             </Button>
           )}
-          
+
           {isFull && !isRegistered && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               disabled
               data-testid={`button-full-${event.id}`}
@@ -182,7 +182,7 @@ export default function EventCard({ event, isRegistered = false, onRegister, onR
             </Button>
           )}
 
-          <Button 
+          <Button
             size="sm"
             onClick={() => onReadMore?.(event.id)}
             data-testid={`button-read-more-${event.id}`}

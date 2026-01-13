@@ -2,12 +2,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Download, 
-  Eye, 
-  FileText, 
-  Video, 
-  Image as ImageIcon, 
+import {
+  Download,
+  Eye,
+  FileText,
+  Video,
+  Image as ImageIcon,
   BookOpen,
   Calendar,
   User,
@@ -44,13 +44,13 @@ interface LearningResourceCardProps {
   onReadMore?: (id: string) => void;
 }
 
-export default function LearningResourceCard({ 
-  resource, 
-  onDownload, 
-  onPreview, 
-  onRate, 
+export default function LearningResourceCard({
+  resource,
+  onDownload,
+  onPreview,
+  onRate,
   onFavorite,
-  onReadMore 
+  onReadMore
 }: LearningResourceCardProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -128,7 +128,7 @@ export default function LearningResourceCard({
   const handleRating = async (e: React.MouseEvent, rating: number) => {
     e.stopPropagation();
     setUserRating(rating);
-    
+
     try {
       const response = await fetch(`/api/resources/${resource.id}/rate`, {
         method: 'POST',
@@ -157,10 +157,10 @@ export default function LearningResourceCard({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -173,8 +173,8 @@ export default function LearningResourceCard({
       {/* Thumbnail/Preview */}
       {resource.thumbnail && (
         <div className="aspect-video w-full overflow-hidden bg-muted">
-          <img 
-            src={resource.thumbnail} 
+          <img
+            src={resource.thumbnail}
             alt={resource.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />
@@ -207,14 +207,14 @@ export default function LearningResourceCard({
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1">
-          {resource.tags.slice(0, 3).map((tag, index) => (
+          {(resource.tags || []).slice(0, 3).map((tag, index) => (
             <Badge key={index} variant="outline" className="text-xs">
               #{tag}
             </Badge>
           ))}
-          {resource.tags.length > 3 && (
+          {(resource.tags || []).length > 3 && (
             <Badge variant="outline" className="text-xs">
-              +{resource.tags.length - 3} more
+              +{(resource.tags || []).length - 3} more
             </Badge>
           )}
         </div>
@@ -240,7 +240,7 @@ export default function LearningResourceCard({
                 <span data-testid={`text-downloads-${resource.id}`}>{resource.downloads}</span>
               </div>
             </div>
-            
+
             {/* Rating */}
             <div className="flex items-center gap-1">
               <Star className="h-3 w-3 text-yellow-500 fill-current" />
@@ -259,12 +259,11 @@ export default function LearningResourceCard({
               className="p-0 border-0 bg-transparent hover:scale-110 transition-transform"
               data-testid={`star-${star}-${resource.id}`}
             >
-              <Star 
-                className={`h-4 w-4 ${
-                  star <= userRating 
-                    ? 'text-yellow-500 fill-current' 
+              <Star
+                className={`h-4 w-4 ${star <= userRating
+                    ? 'text-yellow-500 fill-current'
                     : 'text-gray-300 hover:text-yellow-400'
-                }`} 
+                  }`}
               />
             </button>
           ))}
@@ -286,7 +285,7 @@ export default function LearningResourceCard({
         {/* Action Buttons */}
         <div className="space-y-2">
           <div className="flex gap-2">
-            <Button 
+            <Button
               onClick={handleDownload}
               disabled={isDownloading}
               className="flex-1"
@@ -296,8 +295,8 @@ export default function LearningResourceCard({
               {isDownloading ? 'Downloading...' : 'Download'}
             </Button>
 
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               onClick={handleFavorite}
               className={isFavorited ? 'text-red-500' : ''}
@@ -308,8 +307,8 @@ export default function LearningResourceCard({
           </div>
 
           {resource.previewAvailable && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handlePreview}
               className="w-full"
               data-testid={`button-preview-${resource.id}`}
@@ -319,8 +318,8 @@ export default function LearningResourceCard({
             </Button>
           )}
 
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={handleReadMore}
             className="w-full"
             data-testid={`button-readmore-${resource.id}`}
