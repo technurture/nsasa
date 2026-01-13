@@ -94,16 +94,16 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
         )}
 
         {/* Specializations - Limited to 2 */}
-        {staff.specializations.length > 0 && (
+        {(staff.specializations || []).length > 0 && (
           <div className="flex flex-wrap gap-1 justify-center">
-            {staff.specializations.slice(0, 2).map((spec, index) => (
+            {(staff.specializations || []).slice(0, 2).map((spec, index) => (
               <Badge key={index} variant="secondary" className="text-xs">
                 {spec}
               </Badge>
             ))}
-            {staff.specializations.length > 2 && (
+            {(staff.specializations || []).length > 2 && (
               <Badge variant="outline" className="text-xs">
-                +{staff.specializations.length - 2}
+                +{(staff.specializations || []).length - 2}
               </Badge>
             )}
           </div>

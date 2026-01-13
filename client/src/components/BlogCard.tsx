@@ -120,22 +120,22 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
   const displayImage = blog.imageUrl || (blog.imageUrls && blog.imageUrls.length > 0 ? blog.imageUrls[0] : undefined);
   const placeholderImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(blog.title)}&size=800&background=random&bold=true&format=svg`;
-  
+
   return (
     <Card className="group overflow-hidden hover-elevate transition-all duration-200">
       {/* Blog Image */}
       <div className="aspect-video w-full overflow-hidden bg-muted">
-        <img 
-          src={displayImage || placeholderImage} 
+        <img
+          src={displayImage || placeholderImage}
           alt={blog.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
         />
@@ -176,7 +176,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1">
-          {blog.tags.slice(0, 3).map((tag, index) => (
+          {(blog.tags || []).slice(0, 3).map((tag, index) => (
             <Badge key={index} variant="outline" className="text-xs">
               #{tag}
             </Badge>
@@ -206,9 +206,9 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
         {/* Engagement Actions */}
         <div className="flex items-center gap-1">
           <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className={`gap-1 ${isLiked ? 'text-red-500' : ''}`}
               onClick={handleLike}
               disabled={likeMutation.isPending || unlikeMutation.isPending}
@@ -240,9 +240,9 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
               <span className="text-sm">{blog.views}</span>
             </div>
           ) : (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="gap-1"
               onClick={(e) => {
                 e.stopPropagation();
@@ -255,9 +255,9 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
             </Button>
           )}
 
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="gap-1"
             onClick={() => onComment?.(blog.id)}
             data-testid={`button-comment-${blog.id}`}
@@ -266,8 +266,8 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
             <span>{blog.comments}</span>
           </Button>
 
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => onShare?.(blog.id)}
             data-testid={`button-share-${blog.id}`}
@@ -278,8 +278,8 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             className={isBookmarked ? 'text-primary' : ''}
             onClick={handleBookmark}
@@ -289,7 +289,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
           </Button>
 
           {onReadMore && (
-            <Button 
+            <Button
               size="sm"
               onClick={() => onReadMore(blog.id)}
               data-testid={`button-read-more-${blog.id}`}
@@ -299,7 +299,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
           )}
         </div>
       </CardFooter>
-      
+
       {!disableEngagementDialogs && (
         <>
           <BlogEngagementDialog
@@ -308,7 +308,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
             blogId={blog.id}
             type="likes"
           />
-          
+
           <BlogEngagementDialog
             open={showViewsDialog}
             onOpenChange={setShowViewsDialog}
