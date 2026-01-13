@@ -31,7 +31,7 @@ export interface IMongoStorage {
   registerUser(userData: RegisterUser): Promise<User>;
   loginUser(email: string, password: string): Promise<{ user: User; token: string }>;
   authenticateToken(token: string): Promise<User | null>;
-  
+
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -40,7 +40,7 @@ export interface IMongoStorage {
   updateUserApprovalStatus(id: string, status: string): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
   completeUserProfile(id: string, profileData: Partial<User>): Promise<User>;
-  
+
   // Blog operations
   createBlogPost(authorId: string, post: InsertBlogPost): Promise<BlogPost>;
   getBlogPosts(limit?: number, offset?: number): Promise<BlogPost[]>;
@@ -49,12 +49,12 @@ export interface IMongoStorage {
   deleteBlogPost(id: string): Promise<void>;
   getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]>;
   incrementBlogViews(id: string, userId?: string): Promise<void>;
-  
+
   // Comment operations
   createBlogComment(authorId: string, blogPostId: string, comment: InsertComment): Promise<Comment>;
   getBlogComments(blogPostId: string): Promise<Comment[]>;
   deleteComment(id: string): Promise<void>;
-  
+
   // Event operations
   createEvent(organizerId: string, event: InsertEvent): Promise<Event>;
   getEvents(limit?: number, offset?: number): Promise<Event[]>;
@@ -64,7 +64,7 @@ export interface IMongoStorage {
   registerForEvent(userId: string, eventId: string): Promise<EventRegistration>;
   getEventRegistrations(eventId: string): Promise<EventRegistration[]>;
   getUserEventRegistrations(userId: string): Promise<EventRegistration[]>;
-  
+
   // Learning resource operations
   createLearningResource(uploadedById: string, resource: InsertLearningResource & { fileUrl: string; fileName: string; fileSize: string }): Promise<LearningResource>;
   getLearningResources(limit?: number, offset?: number): Promise<LearningResource[]>;
@@ -73,7 +73,7 @@ export interface IMongoStorage {
   deleteLearningResource(id: string): Promise<void>;
   recordResourceDownload(userId: string, resourceId: string): Promise<void>;
   rateResource(userId: string, resourceId: string, rating: number): Promise<void>;
-  
+
   // Staff operations
   createStaffProfile(userId: string | undefined, profile: InsertStaffProfile): Promise<StaffProfile>;
   getStaffProfiles(): Promise<StaffProfile[]>;
@@ -83,26 +83,26 @@ export interface IMongoStorage {
   updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile>;
   updateStaffProfileById(id: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile>;
   deleteStaffProfile(id: string): Promise<void>;
-  
+
   // Contact operations
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
   getContactSubmissions(status?: string): Promise<ContactSubmission[]>;
   updateContactSubmissionStatus(id: string, status: string): Promise<ContactSubmission>;
-  
+
   // Newsletter operations
   subscribeNewsletter(email: string): Promise<void>;
   unsubscribeNewsletter(email: string): Promise<void>;
-  
+
   // Analytics operations
   getAnalyticsOverview(): Promise<any>;
   getRecentActivity(): Promise<any[]>;
   getTopBlogs(): Promise<any[]>;
-  
+
   // Gamification operations
   getUserGamificationStats(userId: string): Promise<any>;
   getLeaderboard(): Promise<any[]>;
   getUserBadges(userId: string): Promise<any[]>;
-  
+
   // Like operations
   likeBlogPost(userId: string, blogPostId: string): Promise<void>;
   unlikeBlogPost(userId: string, blogPostId: string): Promise<void>;
@@ -114,7 +114,7 @@ export interface IMongoStorage {
   unlikeComment(userId: string, commentId: string): Promise<void>;
   getCommentLikesCount(commentId: string): Promise<number>;
   isCommentLikedByUser(userId: string, commentId: string): Promise<boolean>;
-  
+
   // Poll operations
   createPoll(createdById: string, poll: InsertPoll): Promise<Poll>;
   getPolls(status?: 'active' | 'closed'): Promise<Poll[]>;
@@ -129,16 +129,16 @@ export interface IMongoStorage {
 
 export class MongoStorage implements IMongoStorage {
   private jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
-  
+
   // Auth operations
   async registerUser(userData: RegisterUser): Promise<User> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     // Validate matric number contains 'soc'
     if (userData.matricNumber && !userData.matricNumber.toLowerCase().includes('soc')) {
       throw new Error('Matric number must contain "soc"');
     }
-    
+
     // Check if email or matric number already exists
     const existingUser = await usersCollection.findOne({
       $or: [
@@ -146,14 +146,14 @@ export class MongoStorage implements IMongoStorage {
         ...(userData.matricNumber ? [{ matricNumber: userData.matricNumber }] : [])
       ]
     });
-    
+
     if (existingUser) {
       throw new Error('User with this email or matric number already exists');
     }
-    
+
     // Hash password
     const passwordHash = await bcrypt.hash(userData.password, 12);
-    
+
     // Create user document
     const userDoc: Omit<User, '_id'> = {
       ...userData,
@@ -162,47 +162,47 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await usersCollection.insertOne(userDoc as any);
     const newUser = await usersCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newUser) {
       throw new Error('Failed to create user');
     }
-    
+
     return { ...newUser, _id: newUser._id.toString() };
   }
-  
+
   async loginUser(email: string, password: string): Promise<{ user: User; token: string }> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const user = await usersCollection.findOne({ email });
     if (!user) {
       throw new Error('Invalid email or password');
     }
-    
+
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       throw new Error('Invalid email or password');
     }
-    
+
     if (user.approvalStatus !== 'approved') {
       throw new Error('Account is pending approval');
     }
-    
+
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id.toString(), email: user.email, role: user.role },
       this.jwtSecret,
       { expiresIn: '7d' }
     );
-    
+
     return {
       user: { ...user, _id: user._id.toString() },
       token
     };
   }
-  
+
   async authenticateToken(token: string): Promise<User | null> {
     try {
       const decoded = jwt.verify(token, this.jwtSecret) as any;
@@ -212,109 +212,109 @@ export class MongoStorage implements IMongoStorage {
       return null;
     }
   }
-  
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const user = await usersCollection.findOne({ _id: new ObjectId(id) } as any);
     return user ? { ...user, _id: user._id.toString() } : undefined;
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const user = await usersCollection.findOne({ email });
     return user ? { ...user, _id: user._id.toString() } : undefined;
   }
-  
+
   async getUserByMatricNumber(matricNumber: string): Promise<User | undefined> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const user = await usersCollection.findOne({ matricNumber });
     return user ? { ...user, _id: user._id.toString() } : undefined;
   }
-  
+
   async getUsersByApprovalStatus(status: string): Promise<User[]> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const users = await usersCollection.find({ approvalStatus: status as any }).toArray();
     return users.map(user => ({ ...user, _id: user._id.toString() }));
   }
-  
+
   async updateUserApprovalStatus(id: string, status: string): Promise<User> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { approvalStatus: status as any, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('User not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async updateUserRole(id: string, role: string): Promise<User> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { role: role as any, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('User not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async completeUserProfile(id: string, profileData: Partial<User>): Promise<User> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const updateData = {
       ...profileData,
       profileCompletion: this.calculateProfileCompletion(profileData),
       updatedAt: new Date()
     };
-    
+
     const result = await usersCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: updateData },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('User not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async updateUserPassword(id: string, hashedPassword: string): Promise<void> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const result = await usersCollection.updateOne(
       { _id: new ObjectId(id) } as any,
       { $set: { passwordHash: hashedPassword, updatedAt: new Date() } }
     );
-    
+
     if (result.matchedCount === 0) {
       throw new Error('User not found');
     }
   }
-  
+
   private calculateProfileCompletion(user: Partial<User>): number {
     const fields = ['email', 'firstName', 'lastName', 'matricNumber', 'gender', 'location', 'address', 'phoneNumber', 'level'];
     const completedFields = fields.filter(field => user[field as keyof User]);
     return Math.round((completedFields.length / fields.length) * 100);
   }
-  
+
   // Blog operations
   async createBlogPost(authorId: string, post: InsertBlogPost): Promise<BlogPost> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    
+
     const blogPostDoc: Omit<BlogPost, '_id'> = {
       ...post,
       authorId,
@@ -324,20 +324,20 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await blogPostsCollection.insertOne(blogPostDoc as any);
     const newPost = await blogPostsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newPost) {
       throw new Error('Failed to create blog post');
     }
-    
+
     return { ...newPost, _id: newPost._id.toString() };
   }
-  
+
   async getBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    
+
     const posts = await blogPostsCollection.aggregate([
       { $match: { published: true } },
       { $sort: { createdAt: -1 } },
@@ -364,12 +364,12 @@ export class MongoStorage implements IMongoStorage {
           from: COLLECTIONS.USERS,
           let: { authorId: "$authorId" },
           pipeline: [
-            { 
-              $match: { 
-                $expr: { 
-                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
-                } 
-              } 
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, "$$authorId"]
+                }
+              }
             }
           ],
           as: "authorData"
@@ -411,22 +411,22 @@ export class MongoStorage implements IMongoStorage {
         }
       }
     ]).toArray();
-    
+
     return posts as BlogPost[];
   }
-  
+
   async getBlogPost(id: string): Promise<BlogPost | undefined> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     const post = await blogPostsCollection.findOne({ _id: new ObjectId(id) } as any);
-    
+
     if (!post) return undefined;
-    
+
     const author = await usersCollection.findOne({ _id: new ObjectId(post.authorId) } as any);
     const commentCount = await commentsCollection.countDocuments({ blogPostId: id });
-    
+
     return {
       ...post,
       _id: post._id.toString(),
@@ -435,39 +435,39 @@ export class MongoStorage implements IMongoStorage {
       commentCount
     } as any;
   }
-  
+
   async updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    
+
     const result = await blogPostsCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { ...post, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Blog post not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async deleteBlogPost(id: string): Promise<void> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     await blogPostsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
-  
+
   async getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const posts = await blogPostsCollection
       .find({ authorId })
       .sort({ createdAt: -1 })
       .toArray();
-    
+
     const author = await usersCollection.findOne({ _id: new ObjectId(authorId) } as any);
-    
+
     return posts.map(post => ({
       ...post,
       _id: post._id.toString(),
@@ -475,15 +475,15 @@ export class MongoStorage implements IMongoStorage {
       authorAvatar: author?.profileImageUrl
     })) as BlogPost[];
   }
-  
+
   async incrementBlogViews(id: string, userId?: string): Promise<void> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     const viewsCollection = await getCollection(COLLECTIONS.BLOG_VIEWS);
-    
+
     // If userId is provided, track the view for authenticated users
     if (userId) {
       const existingView = await viewsCollection.findOne({ userId, blogPostId: id });
-      
+
       if (!existingView) {
         // Track this user viewed the blog
         await viewsCollection.insertOne({
@@ -491,7 +491,7 @@ export class MongoStorage implements IMongoStorage {
           blogPostId: id,
           createdAt: new Date(),
         });
-        
+
         // Increment view counter only if user hasn't viewed before
         await blogPostsCollection.updateOne(
           { _id: new ObjectId(id) } as any,
@@ -509,16 +509,16 @@ export class MongoStorage implements IMongoStorage {
       );
     }
   }
-  
+
   // Comment operations
   async createBlogComment(authorId: string, blogPostId: string, comment: InsertComment): Promise<Comment> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     // Normalize parentCommentId - convert empty string to undefined
-    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim() 
-      ? comment.parentCommentId 
+    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim()
+      ? comment.parentCommentId
       : undefined;
-    
+
     const commentDoc: Omit<Comment, '_id'> = {
       ...comment,
       authorId,
@@ -527,20 +527,20 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await commentsCollection.insertOne(commentDoc as any);
     const newComment = await commentsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newComment) {
       throw new Error('Failed to create comment');
     }
-    
+
     return { ...newComment, _id: newComment._id.toString() };
   }
-  
+
   async getBlogComments(blogPostId: string): Promise<Comment[]> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     const comments = await commentsCollection.aggregate([
       { $match: { blogPostId } },
       { $sort: { createdAt: -1 } },
@@ -549,12 +549,12 @@ export class MongoStorage implements IMongoStorage {
           from: COLLECTIONS.USERS,
           let: { authorId: "$authorId" },
           pipeline: [
-            { 
-              $match: { 
-                $expr: { 
-                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
-                } 
-              } 
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, "$$authorId"]
+                }
+              }
             }
           ],
           as: "authorData"
@@ -621,14 +621,14 @@ export class MongoStorage implements IMongoStorage {
         }
       }
     ]).toArray();
-    
+
     // Organize comments into nested structure
     const allComments = comments as any[];
-    
+
     // Separate top-level comments (no parentCommentId) from replies
     const topLevelComments = allComments.filter(c => !c.parentCommentId);
     const repliesMap = new Map<string, any[]>();
-    
+
     // Group replies by parent comment ID
     allComments.filter(c => c.parentCommentId).forEach(reply => {
       if (!repliesMap.has(reply.parentCommentId)) {
@@ -636,7 +636,7 @@ export class MongoStorage implements IMongoStorage {
       }
       repliesMap.get(reply.parentCommentId)!.push(reply);
     });
-    
+
     // Recursively attach replies to their parents
     const attachReplies = (comment: any): any => {
       const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
@@ -645,27 +645,27 @@ export class MongoStorage implements IMongoStorage {
         replies: replies.map(attachReplies)
       };
     };
-    
+
     // Attach replies to top-level comments
     const commentsWithReplies = topLevelComments.map(attachReplies);
-    
+
     return commentsWithReplies as Comment[];
   }
-  
+
   async deleteComment(id: string): Promise<void> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
     await commentsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
-  
+
   // Event comment operations
   async createEventComment(authorId: string, eventId: string, comment: InsertComment): Promise<Comment> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     // Normalize parentCommentId - convert empty string to undefined
-    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim() 
-      ? comment.parentCommentId 
+    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim()
+      ? comment.parentCommentId
       : undefined;
-    
+
     const commentDoc: Omit<Comment, '_id'> = {
       ...comment,
       authorId,
@@ -674,20 +674,20 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await commentsCollection.insertOne(commentDoc as any);
     const newComment = await commentsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newComment) {
       throw new Error('Failed to create comment');
     }
-    
+
     return { ...newComment, _id: newComment._id.toString() };
   }
-  
+
   async getEventComments(eventId: string): Promise<Comment[]> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     const comments = await commentsCollection.aggregate([
       { $match: { eventId } },
       { $sort: { createdAt: -1 } },
@@ -696,12 +696,12 @@ export class MongoStorage implements IMongoStorage {
           from: COLLECTIONS.USERS,
           let: { authorId: "$authorId" },
           pipeline: [
-            { 
-              $match: { 
-                $expr: { 
-                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
-                } 
-              } 
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, "$$authorId"]
+                }
+              }
             }
           ],
           as: "authorData"
@@ -768,18 +768,18 @@ export class MongoStorage implements IMongoStorage {
         }
       }
     ]).toArray();
-    
+
     const allComments = comments as any[];
     const topLevelComments = allComments.filter(c => !c.parentCommentId);
     const repliesMap = new Map<string, any[]>();
-    
+
     allComments.filter(c => c.parentCommentId).forEach(reply => {
       if (!repliesMap.has(reply.parentCommentId)) {
         repliesMap.set(reply.parentCommentId, []);
       }
       repliesMap.get(reply.parentCommentId)!.push(reply);
     });
-    
+
     const attachReplies = (comment: any): any => {
       const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
       return {
@@ -787,20 +787,20 @@ export class MongoStorage implements IMongoStorage {
         replies: replies.map(attachReplies)
       };
     };
-    
+
     const commentsWithReplies = topLevelComments.map(attachReplies);
     return commentsWithReplies as Comment[];
   }
-  
+
   // Learning resource comment operations
   async createResourceComment(authorId: string, resourceId: string, comment: InsertComment): Promise<Comment> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     // Normalize parentCommentId - convert empty string to undefined
-    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim() 
-      ? comment.parentCommentId 
+    const parentCommentId = comment.parentCommentId && comment.parentCommentId.trim()
+      ? comment.parentCommentId
       : undefined;
-    
+
     const commentDoc: Omit<Comment, '_id'> = {
       ...comment,
       authorId,
@@ -809,20 +809,20 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await commentsCollection.insertOne(commentDoc as any);
     const newComment = await commentsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newComment) {
       throw new Error('Failed to create comment');
     }
-    
+
     return { ...newComment, _id: newComment._id.toString() };
   }
-  
+
   async getResourceComments(resourceId: string): Promise<Comment[]> {
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     const comments = await commentsCollection.aggregate([
       { $match: { resourceId } },
       { $sort: { createdAt: -1 } },
@@ -831,12 +831,12 @@ export class MongoStorage implements IMongoStorage {
           from: COLLECTIONS.USERS,
           let: { authorId: "$authorId" },
           pipeline: [
-            { 
-              $match: { 
-                $expr: { 
-                  $eq: [{ $toString: "$_id" }, "$$authorId"] 
-                } 
-              } 
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, "$$authorId"]
+                }
+              }
             }
           ],
           as: "authorData"
@@ -903,18 +903,18 @@ export class MongoStorage implements IMongoStorage {
         }
       }
     ]).toArray();
-    
+
     const allComments = comments as any[];
     const topLevelComments = allComments.filter(c => !c.parentCommentId);
     const repliesMap = new Map<string, any[]>();
-    
+
     allComments.filter(c => c.parentCommentId).forEach(reply => {
       if (!repliesMap.has(reply.parentCommentId)) {
         repliesMap.set(reply.parentCommentId, []);
       }
       repliesMap.get(reply.parentCommentId)!.push(reply);
     });
-    
+
     const attachReplies = (comment: any): any => {
       const replies = repliesMap.get(comment.id) || repliesMap.get(comment._id) || [];
       return {
@@ -922,44 +922,44 @@ export class MongoStorage implements IMongoStorage {
         replies: replies.map(attachReplies)
       };
     };
-    
+
     const commentsWithReplies = topLevelComments.map(attachReplies);
     return commentsWithReplies as Comment[];
   }
-  
+
   // Event operations
   async createEvent(organizerId: string, event: InsertEvent): Promise<Event> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
-    
+
     const eventDoc: Omit<Event, '_id'> = {
       ...event,
       organizerId,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await eventsCollection.insertOne(eventDoc as any);
     const newEvent = await eventsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newEvent) {
       throw new Error('Failed to create event');
     }
-    
+
     return { ...newEvent, _id: newEvent._id.toString() };
   }
-  
+
   async getEvents(limit = 20, offset = 0): Promise<Event[]> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
-    
+
     const events = await eventsCollection
       .find({})
       .sort({ date: -1 })
       .skip(offset)
       .limit(limit)
       .toArray();
-    
+
     const eventsWithOrganizerInfo = await Promise.all(
       events.map(async (event) => {
         const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) } as any);
@@ -973,24 +973,24 @@ export class MongoStorage implements IMongoStorage {
         } as any;
       })
     );
-    
+
     return eventsWithOrganizerInfo as Event[];
   }
-  
+
   async getEvent(id: string): Promise<Event | undefined> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
-    
+
     const event = await eventsCollection.findOne({ _id: new ObjectId(id) } as any);
-    
+
     if (!event) {
       return undefined;
     }
-    
+
     const organizer = await usersCollection.findOne({ _id: new ObjectId(event.organizerId) } as any);
     const registrationCount = await registrationsCollection.countDocuments({ eventId: event._id.toString() });
-    
+
     return {
       ...event,
       _id: event._id.toString(),
@@ -999,92 +999,92 @@ export class MongoStorage implements IMongoStorage {
       registrationCount
     } as any;
   }
-  
+
   async updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
-    
+
     const result = await eventsCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { ...event, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Event not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async deleteEvent(id: string): Promise<void> {
     const eventsCollection = await getCollection<Event>(COLLECTIONS.EVENTS);
     await eventsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
-  
+
   async registerForEvent(userId: string, eventId: string): Promise<EventRegistration> {
     const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
-    
+
     // Check if user is already registered for this event
-    const existingRegistration = await registrationsCollection.findOne({ 
-      userId, 
-      eventId 
+    const existingRegistration = await registrationsCollection.findOne({
+      userId,
+      eventId
     } as any);
-    
+
     if (existingRegistration) {
       // Return the existing registration instead of creating a duplicate
       return { ...existingRegistration, _id: existingRegistration._id.toString() };
     }
-    
+
     const registrationDoc: Omit<EventRegistration, '_id'> = {
       userId,
       eventId,
       status: 'registered',
       createdAt: new Date(),
     };
-    
+
     const result = await registrationsCollection.insertOne(registrationDoc as any);
     const newRegistration = await registrationsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newRegistration) {
       throw new Error('Failed to register for event');
     }
-    
+
     return { ...newRegistration, _id: newRegistration._id.toString() };
   }
-  
+
   async getEventRegistrations(eventId: string): Promise<EventRegistration[]> {
     const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
     const registrations = await registrationsCollection.find({ eventId }).toArray();
     return registrations.map(reg => ({ ...reg, _id: reg._id.toString() }));
   }
-  
+
   async getUserEventRegistrations(userId: string): Promise<EventRegistration[]> {
     const registrationsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
     const registrations = await registrationsCollection.find({ userId }).toArray();
     return registrations.map(reg => ({ ...reg, _id: reg._id.toString() }));
   }
-  
+
   // Helper function to determine if a file is previewable
   private isFilePreviewable(fileType: string, fileName: string, fileUrl?: string): boolean {
     // Prioritize actual file URL/fileName to get the true file extension
     const urlToCheck = fileUrl || fileName;
-    
+
     // Check actual file extension (this is the most reliable indicator)
     // PDFs
     if (/\.pdf$/i.test(urlToCheck)) {
       return true;
     }
-    
+
     // Images
     if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(urlToCheck)) {
       return true;
     }
-    
+
     // Videos
     if (/\.(mp4|webm|ogg|mov)$/i.test(urlToCheck)) {
       return true;
     }
-    
+
     // If no previewable extension found, file cannot be previewed in browser
     return false;
   }
@@ -1092,10 +1092,10 @@ export class MongoStorage implements IMongoStorage {
   // Learning resource operations
   async createLearningResource(uploadedById: string, resource: InsertLearningResource & { fileUrl: string; fileName: string; fileSize: string }): Promise<LearningResource> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
-    
+
     // Automatically determine if the file is previewable
     const previewAvailable = this.isFilePreviewable(resource.type, resource.fileName, resource.fileUrl);
-    
+
     const resourceDoc: Omit<LearningResource, '_id'> = {
       ...resource,
       previewAvailable,
@@ -1103,35 +1103,35 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await resourcesCollection.insertOne(resourceDoc as any);
     const newResource = await resourcesCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newResource) {
       throw new Error('Failed to create learning resource');
     }
-    
+
     return { ...newResource, _id: newResource._id.toString() };
   }
-  
+
   async getLearningResources(limit = 20, offset = 0): Promise<LearningResource[]> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const resources = await resourcesCollection
       .find({})
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit)
       .toArray();
-    
+
     const resourcesWithUploaderInfo = await Promise.all(
       resources.map(async (resource) => {
         const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) } as any);
-        
+
         // Always recalculate previewAvailable based on actual file type to ensure accuracy
         const previewAvailable = this.isFilePreviewable(resource.type, resource.fileName, resource.fileUrl);
-        
+
         return {
           ...resource,
           _id: resource._id.toString(),
@@ -1141,25 +1141,25 @@ export class MongoStorage implements IMongoStorage {
         } as any;
       })
     );
-    
+
     return resourcesWithUploaderInfo as LearningResource[];
   }
-  
+
   async getLearningResource(id: string): Promise<LearningResource | undefined> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     const resource = await resourcesCollection.findOne({ _id: new ObjectId(id) } as any);
-    
+
     if (!resource) {
       return undefined;
     }
-    
+
     const uploader = await usersCollection.findOne({ _id: new ObjectId(resource.uploadedById) } as any);
-    
+
     // Always recalculate previewAvailable based on actual file type to ensure accuracy
     const previewAvailable = this.isFilePreviewable(resource.type, resource.fileName, resource.fileUrl);
-    
+
     return {
       ...resource,
       _id: resource._id.toString(),
@@ -1168,91 +1168,103 @@ export class MongoStorage implements IMongoStorage {
       uploaderAvatar: uploader?.profileImageUrl
     } as any;
   }
-  
+
   async updateLearningResource(id: string, resource: Partial<LearningResource>): Promise<LearningResource> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
-    
+
     const result = await resourcesCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { ...resource, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Learning resource not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async deleteLearningResource(id: string): Promise<void> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
     await resourcesCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
-  
+
   async recordResourceDownload(userId: string, resourceId: string): Promise<void> {
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
+    const downloadsCollection = await getCollection(COLLECTIONS.RESOURCE_DOWNLOADS);
+
+    // Update resource download count
     await resourcesCollection.updateOne(
       { _id: new ObjectId(resourceId) } as any,
       { $inc: { downloads: 1 } }
     );
+
+    // Record user download action (if not already recorded to prevent spam point farming, or allow multiple?
+    // Let's assume points are awarded per unique resource download, or maybe per download event. 
+    // Usually points for unique downloads is safer.
+    await downloadsCollection.insertOne({
+      userId,
+      resourceId,
+      downloadedAt: new Date()
+    });
   }
 
   async rateResource(userId: string, resourceId: string, rating: number): Promise<void> {
     const resourceRatingsCollection = await getCollection(COLLECTIONS.RESOURCE_RATINGS);
     const resourcesCollection = await getCollection<LearningResource>(COLLECTIONS.LEARNING_RESOURCES);
-    
+
     // Upsert the rating
     await resourceRatingsCollection.updateOne(
       { userId, resourceId },
       { $set: { userId, resourceId, rating, updatedAt: new Date() } },
       { upsert: true }
     );
-    
+
     // Recalculate average rating
     const ratings = await resourceRatingsCollection.find({ resourceId }).toArray();
     const avgRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length;
     const ratingCount = ratings.length;
-    
+
     // Update resource with new average rating
     await resourcesCollection.updateOne(
       { _id: new ObjectId(resourceId) } as any,
-      { 
-        $set: { 
+      {
+        $set: {
           rating: Math.round(avgRating * 10), // Store as integer * 10 for precision
-          ratingCount 
-        } 
+          ratingCount
+        }
       }
     );
   }
-  
+
   // Staff operations
   async createStaffProfile(userId: string | undefined, profile: InsertStaffProfile): Promise<StaffProfile> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
-    
+
     const profileDoc: Omit<StaffProfile, '_id'> = {
       ...profile,
       ...(userId ? { userId } : {}), // Only include userId if provided
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await staffCollection.insertOne(profileDoc as any);
     const newProfile = await staffCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newProfile) {
       throw new Error('Failed to create staff profile');
     }
-    
+
     return { ...newProfile, _id: newProfile._id.toString() };
   }
-  
+
   async getStaffProfiles(): Promise<StaffProfile[]> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     const profiles = await staffCollection.find({}).sort({ title: 1 }).toArray();
     return profiles.map(profile => ({ ...profile, _id: profile._id.toString() }));
   }
-  
+
   async getLandingPageStaff(): Promise<StaffProfile[]> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     const profiles = await staffCollection
@@ -1261,117 +1273,117 @@ export class MongoStorage implements IMongoStorage {
       .toArray();
     return profiles.map(profile => ({ ...profile, _id: profile._id.toString() }));
   }
-  
+
   async getStaffProfile(userId: string): Promise<StaffProfile | undefined> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     const profile = await staffCollection.findOne({ userId });
     return profile ? { ...profile, _id: profile._id.toString() } : undefined;
   }
-  
+
   async getStaffProfileById(id: string): Promise<StaffProfile | undefined> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     const profile = await staffCollection.findOne({ _id: new ObjectId(id) } as any);
     return profile ? { ...profile, _id: profile._id.toString() } : undefined;
   }
-  
+
   async updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
-    
+
     const result = await staffCollection.findOneAndUpdate(
       { userId },
       { $set: { ...profile, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Staff profile not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async updateStaffProfileById(id: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
-    
+
     const result = await staffCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { ...profile, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Staff profile not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async deleteStaffProfile(id: string): Promise<void> {
     const staffCollection = await getCollection<StaffProfile>(COLLECTIONS.STAFF_PROFILES);
     await staffCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
-  
+
   // Contact operations
   async createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission> {
     const contactCollection = await getCollection<ContactSubmission>(COLLECTIONS.CONTACT_SUBMISSIONS);
-    
+
     const submissionDoc: Omit<ContactSubmission, '_id'> = {
       ...submission,
       createdAt: new Date(),
     };
-    
+
     const result = await contactCollection.insertOne(submissionDoc as any);
     const newSubmission = await contactCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newSubmission) {
       throw new Error('Failed to create contact submission');
     }
-    
+
     return { ...newSubmission, _id: newSubmission._id.toString() };
   }
-  
+
   async getContactSubmissions(status?: string): Promise<ContactSubmission[]> {
     const contactCollection = await getCollection<ContactSubmission>(COLLECTIONS.CONTACT_SUBMISSIONS);
     const query = status ? { status: status as any } : {};
-    
+
     const submissions = await contactCollection
       .find(query)
       .sort({ createdAt: -1 })
       .toArray();
-    
+
     return submissions.map(submission => ({ ...submission, _id: submission._id.toString() }));
   }
-  
+
   async updateContactSubmissionStatus(id: string, status: string): Promise<ContactSubmission> {
     const contactCollection = await getCollection<ContactSubmission>(COLLECTIONS.CONTACT_SUBMISSIONS);
-    
+
     const result = await contactCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { status: status as any } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Contact submission not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   // Newsletter operations
   async subscribeNewsletter(email: string): Promise<void> {
     const newsletterCollection = await getCollection(COLLECTIONS.NEWSLETTER_SUBSCRIPTIONS);
-    
+
     await newsletterCollection.updateOne(
       { email },
       { $set: { email, status: 'active', createdAt: new Date() } },
       { upsert: true }
     );
   }
-  
+
   async unsubscribeNewsletter(email: string): Promise<void> {
     const newsletterCollection = await getCollection(COLLECTIONS.NEWSLETTER_SUBSCRIPTIONS);
-    
+
     await newsletterCollection.updateOne(
       { email },
       { $set: { status: 'unsubscribed' } }
@@ -1387,7 +1399,7 @@ export class MongoStorage implements IMongoStorage {
 
     const [
       totalUsers,
-      approvedUsers, 
+      approvedUsers,
       pendingUsers,
       totalBlogs,
       totalEvents,
@@ -1479,7 +1491,7 @@ export class MongoStorage implements IMongoStorage {
 
   async getTopBlogs(): Promise<any[]> {
     const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    
+
     const topBlogs = await blogsCollection
       .find({})
       .sort({ views: -1 })
@@ -1507,10 +1519,10 @@ export class MongoStorage implements IMongoStorage {
 
     // Calculate user stats
     const [userBlogs, userComments, userDownloads] = await Promise.all([
-      blogsCollection.countDocuments({ authorId: userId }),
+      blogsCollection.countDocuments({ authorId: userId, approvalStatus: 'approved' }),
       commentsCollection.countDocuments({ authorId: userId }),
-      // Placeholder for downloads - would need download tracking
-      Promise.resolve(Math.floor(Math.random() * 50) + 10)
+      // Real download count
+      (await getCollection(COLLECTIONS.RESOURCE_DOWNLOADS)).countDocuments({ userId })
     ]);
 
     const totalActions = userBlogs * 50 + userComments * 15 + userDownloads * 5;
@@ -1543,7 +1555,7 @@ export class MongoStorage implements IMongoStorage {
     const leaderboard = await Promise.all(
       users.map(async (user) => {
         const [userBlogs, userComments] = await Promise.all([
-          blogsCollection.countDocuments({ authorId: user._id.toString() }),
+          blogsCollection.countDocuments({ authorId: user._id.toString(), approvalStatus: 'approved' }),
           commentsCollection.countDocuments({ authorId: user._id.toString() })
         ]);
 
@@ -1571,7 +1583,7 @@ export class MongoStorage implements IMongoStorage {
     const eventsCollection = await getCollection<EventRegistration>(COLLECTIONS.EVENT_REGISTRATIONS);
 
     const [userBlogs, userComments, userEvents] = await Promise.all([
-      blogsCollection.countDocuments({ authorId: userId }),
+      blogsCollection.countDocuments({ authorId: userId, approvalStatus: 'approved' }),
       commentsCollection.countDocuments({ authorId: userId }),
       eventsCollection.countDocuments({ userId: userId })
     ]);
@@ -1583,29 +1595,29 @@ export class MongoStorage implements IMongoStorage {
   async likeBlogPost(userId: string, blogPostId: string): Promise<void> {
     const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
     const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    
+
     const existingLike = await likesCollection.findOne({ userId, blogPostId });
-    
+
     if (!existingLike) {
       await likesCollection.insertOne({
         userId,
         blogPostId,
         createdAt: new Date(),
       });
-      
+
       await blogsCollection.updateOne(
         { _id: new ObjectId(blogPostId) } as any,
         { $inc: { likes: 1 } }
       );
     }
   }
-  
+
   async unlikeBlogPost(userId: string, blogPostId: string): Promise<void> {
     const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
     const blogsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
-    
+
     const result = await likesCollection.deleteOne({ userId, blogPostId });
-    
+
     if (result.deletedCount > 0) {
       await blogsCollection.updateOne(
         { _id: new ObjectId(blogPostId) } as any,
@@ -1613,82 +1625,82 @@ export class MongoStorage implements IMongoStorage {
       );
     }
   }
-  
+
   async getBlogLikesCount(blogPostId: string): Promise<number> {
     const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
     return await likesCollection.countDocuments({ blogPostId });
   }
-  
+
   async isPostLikedByUser(userId: string, blogPostId: string): Promise<boolean> {
     const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
     const like = await likesCollection.findOne({ userId, blogPostId });
     return !!like;
   }
-  
+
   async getBlogLikedByUsers(blogPostId: string): Promise<User[]> {
     const likesCollection = await getCollection(COLLECTIONS.BLOG_LIKES);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     // Get all likes for this blog post
     const likes = await likesCollection.find({ blogPostId }).toArray();
     const userIds = likes.map(like => like.userId);
-    
+
     // Get user details
     const users = await usersCollection.find({
       _id: { $in: userIds.map(id => new ObjectId(id) as any) }
     }).toArray();
-    
+
     return users.map(user => ({
       ...user,
       _id: user._id.toString(),
     })) as User[];
   }
-  
+
   async getBlogViewedByUsers(blogPostId: string): Promise<User[]> {
     const viewsCollection = await getCollection(COLLECTIONS.BLOG_VIEWS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
-    
+
     // Get all views for this blog post
     const views = await viewsCollection.find({ blogPostId }).toArray();
     const userIds = views.map(view => view.userId);
-    
+
     // Get user details
     const users = await usersCollection.find({
       _id: { $in: userIds.map(id => new ObjectId(id) as any) }
     }).toArray();
-    
+
     return users.map(user => ({
       ...user,
       _id: user._id.toString(),
     })) as User[];
   }
-  
+
   async likeComment(userId: string, commentId: string): Promise<void> {
     const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     const existingLike = await likesCollection.findOne({ userId, commentId });
-    
+
     if (!existingLike) {
       await likesCollection.insertOne({
         userId,
         commentId,
         createdAt: new Date(),
       });
-      
+
       await commentsCollection.updateOne(
         { _id: new ObjectId(commentId) } as any,
         { $inc: { likes: 1 } }
       );
     }
   }
-  
+
   async unlikeComment(userId: string, commentId: string): Promise<void> {
     const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);
-    
+
     const result = await likesCollection.deleteOne({ userId, commentId });
-    
+
     if (result.deletedCount > 0) {
       await commentsCollection.updateOne(
         { _id: new ObjectId(commentId) } as any,
@@ -1696,12 +1708,12 @@ export class MongoStorage implements IMongoStorage {
       );
     }
   }
-  
+
   async getCommentLikesCount(commentId: string): Promise<number> {
     const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
     return await likesCollection.countDocuments({ commentId });
   }
-  
+
   async isCommentLikedByUser(userId: string, commentId: string): Promise<boolean> {
     const likesCollection = await getCollection(COLLECTIONS.COMMENT_LIKES);
     const like = await likesCollection.findOne({ userId, commentId });
@@ -1711,7 +1723,7 @@ export class MongoStorage implements IMongoStorage {
   // Poll operations
   async createPoll(createdById: string, poll: InsertPoll): Promise<Poll> {
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
-    
+
     const pollDoc: Omit<Poll, '_id'> = {
       ...poll,
       createdById,
@@ -1719,33 +1731,33 @@ export class MongoStorage implements IMongoStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     const result = await pollsCollection.insertOne(pollDoc as any);
     const newPoll = await pollsCollection.findOne({ _id: result.insertedId });
-    
+
     if (!newPoll) {
       throw new Error('Failed to create poll');
     }
-    
+
     return { ...newPoll, _id: newPoll._id.toString() };
   }
-  
+
   async getPolls(status?: 'active' | 'closed'): Promise<Poll[]> {
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
-    
+
     const query = status ? { status } : {};
     const polls = await pollsCollection
       .find(query)
       .sort({ createdAt: -1 })
       .toArray();
-    
+
     // For each poll, get vote counts for each option
     const pollsWithVotes = await Promise.all(
       polls.map(async (poll) => {
         const pollId = poll._id.toString();
         const votes = await votesCollection.find({ pollId }).toArray();
-        
+
         // Count votes for each option
         const optionsWithVotes = poll.options.map(option => {
           const voteCount = votes.filter(v => v.optionId === option.id).length;
@@ -1754,7 +1766,7 @@ export class MongoStorage implements IMongoStorage {
             votes: voteCount
           };
         });
-        
+
         return {
           ...poll,
           _id: pollId,
@@ -1763,23 +1775,23 @@ export class MongoStorage implements IMongoStorage {
         };
       })
     );
-    
+
     return pollsWithVotes as Poll[];
   }
-  
+
   async getPoll(id: string): Promise<Poll | undefined> {
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
-    
+
     const poll = await pollsCollection.findOne({ _id: new ObjectId(id) } as any);
-    
+
     if (!poll) {
       return undefined;
     }
-    
+
     const pollId = poll._id.toString();
     const votes = await votesCollection.find({ pollId }).toArray();
-    
+
     // Count votes for each option
     const optionsWithVotes = poll.options.map(option => {
       const voteCount = votes.filter(v => v.optionId === option.id).length;
@@ -1788,7 +1800,7 @@ export class MongoStorage implements IMongoStorage {
         votes: voteCount
       };
     });
-    
+
     return {
       ...poll,
       _id: pollId,
@@ -1796,61 +1808,61 @@ export class MongoStorage implements IMongoStorage {
       totalVotes: votes.length
     } as any;
   }
-  
+
   async closePoll(id: string): Promise<Poll> {
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
-    
+
     const result = await pollsCollection.findOneAndUpdate(
       { _id: new ObjectId(id) } as any,
       { $set: { status: 'closed', updatedAt: new Date() } },
       { returnDocument: 'after' }
     );
-    
+
     if (!result) {
       throw new Error('Poll not found');
     }
-    
+
     return { ...result, _id: result._id.toString() };
   }
-  
+
   async deletePoll(id: string): Promise<void> {
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
-    
+
     // Delete all votes for this poll
     await votesCollection.deleteMany({ pollId: id });
-    
+
     // Delete the poll
     await pollsCollection.deleteOne({ _id: new ObjectId(id) } as any);
   }
-  
+
   async votePoll(userId: string, pollId: string, optionId: string): Promise<void> {
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
-    
+
     // Check if poll exists and is active
     const poll = await pollsCollection.findOne({ _id: new ObjectId(pollId) } as any);
-    
+
     if (!poll) {
       throw new Error('Poll not found');
     }
-    
+
     if (poll.status === 'closed') {
       throw new Error('Poll is closed');
     }
-    
+
     // Verify option exists in poll
     const optionExists = poll.options.some(opt => opt.id === optionId);
     if (!optionExists) {
       throw new Error('Invalid option - option does not belong to this poll');
     }
-    
+
     // Check if user has already voted on this specific option (always prevent duplicates)
     const existingVoteOnOption = await votesCollection.findOne({ userId, pollId, optionId });
     if (existingVoteOnOption) {
       throw new Error('You have already voted on this option');
     }
-    
+
     // If allowMultipleVotes is false, check if user has voted on ANY option in the poll
     if (!poll.allowMultipleVotes) {
       const existingVote = await votesCollection.findOne({ userId, pollId });
@@ -1858,7 +1870,7 @@ export class MongoStorage implements IMongoStorage {
         throw new Error('You have already voted on this poll. Multiple votes are not allowed.');
       }
     }
-    
+
     // Create vote
     const voteDoc: Omit<PollVote, '_id'> = {
       userId,
@@ -1866,16 +1878,16 @@ export class MongoStorage implements IMongoStorage {
       optionId,
       createdAt: new Date(),
     };
-    
+
     await votesCollection.insertOne(voteDoc as any);
   }
-  
+
   async hasUserVoted(userId: string, pollId: string): Promise<boolean> {
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
     const vote = await votesCollection.findOne({ userId, pollId });
     return !!vote;
   }
-  
+
   async getUserVote(userId: string, pollId: string): Promise<PollVote | undefined> {
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
     const vote = await votesCollection.findOne({ userId, pollId });
@@ -1886,22 +1898,22 @@ export class MongoStorage implements IMongoStorage {
     const votesCollection = await getCollection<PollVote>(COLLECTIONS.POLL_VOTES);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const pollsCollection = await getCollection<Poll>(COLLECTIONS.POLLS);
-    
+
     // Get the poll to have option text
     const poll = await pollsCollection.findOne({ _id: new ObjectId(pollId) } as any);
     if (!poll) {
       throw new Error('Poll not found');
     }
-    
+
     // Get all votes for this poll
     const votes = await votesCollection.find({ pollId }).toArray();
-    
+
     // Get user details for each vote
     const votersWithDetails = await Promise.all(
       votes.map(async (vote) => {
         const user = await usersCollection.findOne({ _id: new ObjectId(vote.userId) } as any);
         const option = poll.options.find(opt => opt.id === vote.optionId);
-        
+
         return {
           optionId: vote.optionId,
           optionText: option?.text || 'Unknown option',
@@ -1917,7 +1929,7 @@ export class MongoStorage implements IMongoStorage {
         };
       })
     );
-    
+
     return votersWithDetails.filter(v => v.user !== null);
   }
 

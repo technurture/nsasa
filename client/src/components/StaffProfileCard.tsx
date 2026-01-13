@@ -26,7 +26,7 @@ interface StaffProfileCardProps {
 }
 
 export default function StaffProfileCard({ staff, onContact, onViewProfile }: StaffProfileCardProps) {
-  
+
   const handleEmailContact = (e: React.MouseEvent) => {
     e.stopPropagation();
     onContact?.(staff.id, 'email');
@@ -50,16 +50,16 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
   };
 
   return (
-    <Card 
-      className="group overflow-hidden hover-elevate transition-all duration-200 cursor-pointer" 
+    <Card
+      className="group overflow-hidden hover-elevate transition-all duration-200 cursor-pointer"
       onClick={handleViewProfile}
       data-testid={`card-staff-${staff.id}`}
     >
       {/* Profile Image Header */}
       <div className="relative w-full h-56 overflow-hidden bg-muted">
         {staff.avatar ? (
-          <img 
-            src={staff.avatar} 
+          <img
+            src={staff.avatar}
             alt={staff.name}
             className="w-full h-full object-cover"
           />
@@ -81,14 +81,14 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
           <p className="text-muted-foreground font-medium break-words overflow-wrap-anywhere" data-testid={`text-title-${staff.id}`}>
             {staff.title}
           </p>
-          <p className="text-sm text-muted-foreground break-words line-clamp-1">{staff.department}</p>
+          <p className="text-sm text-muted-foreground break-words">{staff.department}</p>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4 pt-0">
         {/* Bio - Shortened */}
         {staff.bio && (
-          <p className="text-sm text-muted-foreground line-clamp-2 text-center" data-testid={`text-bio-${staff.id}`}>
+          <p className="text-sm text-muted-foreground text-center" data-testid={`text-bio-${staff.id}`}>
             {staff.bio}
           </p>
         )}
@@ -111,9 +111,9 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-1 gap-1"
             onClick={handleEmailContact}
             data-testid={`button-email-${staff.id}`}
@@ -121,11 +121,11 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
             <Mail className="h-3 w-3" />
             Email
           </Button>
-          
+
           {staff.phone && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="flex-1 gap-1"
               onClick={handlePhoneContact}
               data-testid={`button-phone-${staff.id}`}
@@ -136,9 +136,9 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
           )}
         </div>
 
-        <Button 
-          variant="default" 
-          size="sm" 
+        <Button
+          variant="default"
+          size="sm"
           className="w-full gap-1"
           onClick={handleViewFullProfile}
           data-testid={`button-profile-${staff.id}`}

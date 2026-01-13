@@ -28,7 +28,7 @@ export default function ContactForm({ onSubmit }: ContactFormProps) {
     category: "",
     message: "",
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -76,19 +76,19 @@ export default function ContactForm({ onSubmit }: ContactFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       onSubmit?.(formData);
       setIsSubmitted(true);
       console.log("Contact form submitted:", formData);
-      
+
       // Reset form after successful submission
       setFormData({
         name: "",
@@ -153,7 +153,7 @@ export default function ContactForm({ onSubmit }: ContactFormProps) {
             <div>
               <h3 className="font-semibold">Email</h3>
               <p className="text-sm text-muted-foreground" data-testid="text-email">
-                info@nsasa.edu
+                admin@nsasauniabuja.com
               </p>
             </div>
           </CardContent>
@@ -296,7 +296,7 @@ export default function ContactForm({ onSubmit }: ContactFormProps) {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                We typically respond to inquiries within 24-48 hours during business days. 
+                We typically respond to inquiries within 24-48 hours during business days.
                 For urgent matters, please call our office directly.
               </AlertDescription>
             </Alert>

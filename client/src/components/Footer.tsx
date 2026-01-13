@@ -2,13 +2,13 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Facebook, 
-  Twitter, 
-  Instagram, 
-  Linkedin, 
-  Mail, 
-  Phone, 
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Mail,
+  Phone,
   MapPin,
   ExternalLink
 } from "lucide-react";
@@ -25,7 +25,7 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    
+
     onNewsletterSignup?.(email);
     setEmail("");
     console.log("Newsletter signup:", email);
@@ -66,12 +66,12 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
               <img src={logoUrl} alt="Nsasa Logo" className="h-8 w-8" />
               <span className="text-xl font-bold text-primary">Nsasa</span>
             </div>
-            
+
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The premier student-focused blog and media-sharing platform for the Department of Sociology. 
+              The premier student-focused blog and media-sharing platform for the Department of Sociology.
               Connecting students, fostering learning, and building communities.
             </p>
-            
+
             {/* Social Links */}
             <div className="flex gap-2">
               {socialLinks.map((social, index) => {
@@ -100,8 +100,8 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
             <nav className="space-y-2">
               {navigationLinks.map((link, index) => (
                 <Link key={index} href={link.href}>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start p-0 h-auto font-normal text-muted-foreground hover:text-foreground"
                     data-testid={`footer-nav-${link.label.toLowerCase()}`}
                   >
@@ -118,8 +118,8 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
             <nav className="space-y-2">
               {quickLinks.map((link, index) => (
                 <Link key={index} href={link.href}>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start p-0 h-auto font-normal text-muted-foreground hover:text-foreground"
                     data-testid={`footer-quick-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
                   >
@@ -139,7 +139,7 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
               <p className="text-sm text-muted-foreground">
                 Get the latest news and updates from the department.
               </p>
-              
+
               <form onSubmit={handleNewsletterSubmit} className="space-y-2">
                 <Input
                   type="email"
@@ -149,9 +149,9 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
                   className="h-9"
                   data-testid="input-newsletter-email"
                 />
-                <Button 
-                  type="submit" 
-                  size="sm" 
+                <Button
+                  type="submit"
+                  size="sm"
                   className="w-full"
                   disabled={!email.trim()}
                   data-testid="button-newsletter-signup"
@@ -164,21 +164,21 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
             {/* Contact Info */}
             <div className="space-y-3">
               <h3 className="font-semibold">Contact Info</h3>
-              
+
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   <span>Sociology Building, University Campus</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <span>+1 (555) 123-4567</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  <span>info@nsasa.edu</span>
+                  <span>admin@nsasauniabuja.com</span>
                 </div>
               </div>
             </div>
@@ -193,9 +193,9 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
             © 2024 Nsasa - Department of Sociology. All rights reserved. {" "}
             <span className="inline-flex items-center">
               Powered by {" "}
-              <a 
-                href="https://www.technurture.org/" 
-                target="_blank" 
+              <a
+                href="https://www.technurture.org/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="ml-1 text-primary hover:underline font-medium"
               >
@@ -203,7 +203,7 @@ export default function Footer({ onNewsletterSignup }: FooterProps) {
               </a>
             </span>
           </div>
-          
+
           <div className="flex gap-4 text-sm">
             <Link href="/privacy">
               <Button variant="ghost" className="p-0 h-auto text-xs underline" data-testid="link-privacy">

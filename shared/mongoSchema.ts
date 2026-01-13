@@ -7,10 +7,10 @@ export const userSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   profileImageUrl: z.string().optional(),
-  
+
   // Authentication fields
   passwordHash: z.string(),
-  
+
   // Nsasa-specific fields
   matricNumber: z.string().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
@@ -20,12 +20,12 @@ export const userSchema = z.object({
   guardianPhoneNumber: z.string().optional(),
   level: z.string().optional(),
   occupation: z.string().optional(),
-  
+
   // User status and role
   role: z.enum(['student', 'admin', 'super_admin']).default('student'),
   approvalStatus: z.enum(['pending', 'approved', 'rejected']).default('pending'),
   profileCompletion: z.number().default(0),
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -38,19 +38,22 @@ export const blogPostSchema = z.object({
   content: z.string(),
   category: z.string(),
   tags: z.array(z.string()).default([]),
-  
+
   authorId: z.string(),
-  
+
+  approvalStatus: z.enum(['pending', 'approved', 'rejected']).default('pending'),
+  rejectionReason: z.string().optional(),
+
   published: z.boolean().default(false),
   featured: z.boolean().default(false),
-  
+
   likes: z.number().default(0),
   views: z.number().default(0),
   readTime: z.number().default(5),
-  
+
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional().default([]),
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -59,18 +62,18 @@ export const blogPostSchema = z.object({
 const baseCommentSchema = z.object({
   _id: z.string().optional(),
   content: z.string(),
-  
+
   authorId: z.string(),
-  
+
   // Resource identifiers - at least one must be provided
   blogPostId: z.string().optional(),  // For blog post comments
   eventId: z.string().optional(),     // For event comments
   resourceId: z.string().optional(),  // For learning resource comments
-  
+
   parentCommentId: z.string().optional(),
-  
+
   likes: z.number().default(0),
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -93,22 +96,22 @@ export const eventSchema = z.object({
   _id: z.string().optional(),
   title: z.string(),
   description: z.string(),
-  
+
   date: z.date(),
   time: z.string(),
   location: z.string(),
-  
+
   type: z.enum(['workshop', 'seminar', 'conference', 'social', 'academic']),
   capacity: z.number(),
   price: z.number().default(0), // Price in cents, 0 for free
-  
+
   organizerId: z.string(),
-  
+
   tags: z.array(z.string()).default([]),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional().default([]),
   videoUrl: z.string().optional(), // Video URL for event recordings
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -116,12 +119,12 @@ export const eventSchema = z.object({
 // Event registration schema
 export const eventRegistrationSchema = z.object({
   _id: z.string().optional(),
-  
+
   userId: z.string(),
   eventId: z.string(),
-  
+
   status: z.enum(['registered', 'attended', 'cancelled']).default('registered'),
-  
+
   createdAt: z.date().default(() => new Date()),
 });
 
@@ -130,27 +133,27 @@ export const learningResourceSchema = z.object({
   _id: z.string().optional(),
   title: z.string(),
   description: z.string(),
-  
+
   type: z.enum(['pdf', 'video', 'image', 'document']),
   category: z.string(),
-  
+
   fileUrl: z.string(),
   fileName: z.string(),
   fileSize: z.string(),
-  
+
   uploadedById: z.string(),
-  
+
   downloads: z.number().default(0),
   rating: z.number().default(0), // Average rating * 10 (for precision)
   ratingCount: z.number().default(0),
-  
+
   difficulty: z.enum(['100l', '200l', '300l', '400l']),
   tags: z.array(z.string()).default([]),
-  
+
   previewAvailable: z.boolean().default(false),
   thumbnailUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional().default([]),
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -158,32 +161,32 @@ export const learningResourceSchema = z.object({
 // Staff profile schema (base without refinement for omit)
 export const staffProfileBaseSchema = z.object({
   _id: z.string().optional(),
-  
+
   // Either userId (existing user) OR customName (custom profile) must be provided
   userId: z.string().optional(),
   customName: z.string().optional(), // For staff members not in the user system
-  
+
   title: z.string(),
   department: z.string(),
   specializations: z.array(z.string()).default([]),
-  
+
   office: z.string().optional(),
   bio: z.string().optional(),
-  
+
   courses: z.array(z.string()).default([]),
   publications: z.number().default(0),
   experience: z.string().optional(),
   education: z.array(z.string()).default([]),
-  
+
   // Additional fields for custom profiles
   phone: z.string().optional(),
   avatar: z.string().optional(),
-  
+
   // Landing page display
   showOnLanding: z.boolean().default(false),
   position: z.string().optional(), // e.g., "President", "V.President", "Financial Secretary"
   displayOrder: z.number().default(999), // Lower numbers appear first
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -197,15 +200,15 @@ export const staffProfileSchema = staffProfileBaseSchema.refine(
 // Contact submission schema
 export const contactSubmissionSchema = z.object({
   _id: z.string().optional(),
-  
+
   name: z.string(),
   email: z.string().email(),
   subject: z.string(),
   category: z.string(),
   message: z.string(),
-  
+
   status: z.enum(['new', 'read', 'responded', 'closed']).default('new'),
-  
+
   createdAt: z.date().default(() => new Date()),
 });
 
@@ -229,17 +232,17 @@ export const pollSchema = z.object({
   _id: z.string().optional(),
   question: z.string().min(1, "Poll question is required"),
   options: z.array(pollOptionSchema).min(2, "At least 2 options are required"),
-  
+
   createdById: z.string(),
-  
+
   allowMultipleVotes: z.boolean().default(false),
   expiresAt: z.date().optional(),
-  
+
   // Target specific levels (e.g., ["100", "200", "300", "400"]) - empty array means all levels
   targetLevels: z.array(z.string()).default([]),
-  
+
   status: z.enum(['active', 'closed']).default('active'),
-  
+
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
 });
@@ -250,7 +253,7 @@ export const pollVoteSchema = z.object({
   pollId: z.string(),
   userId: z.string(),
   optionId: z.string(),
-  
+
   createdAt: z.date().default(() => new Date()),
 });
 

@@ -13,6 +13,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import type { BlogPost, Event } from "@shared/mongoSchema";
 
 // Components
+import PageHeader from "@/components/PageHeader";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import HeroSection from "@/components/HeroSection";
@@ -108,10 +109,10 @@ function FeaturedStaffSection() {
         {featuredStaff.map((staff) => {
           const staffName = staff.customName || staff.name || 'Unknown';
           const initials = staffName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
-          
+
           return (
-            <Card 
-              key={staff._id} 
+            <Card
+              key={staff._id}
               className="group overflow-hidden hover-elevate transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-xl"
               data-testid={`staff-card-${staff._id}`}
               onClick={() => setLocation(`/staff/${staff._id}`)}
@@ -121,8 +122,8 @@ function FeaturedStaffSection() {
                   <div className="relative">
                     <Avatar className="h-48 w-48 border-4 border-primary/20 shadow-2xl group-hover:border-primary/50 transition-all duration-300 ring-8 ring-primary/5">
                       {staff.avatar ? (
-                        <AvatarImage 
-                          src={staff.avatar} 
+                        <AvatarImage
+                          src={staff.avatar}
                           alt={staffName}
                           className="object-cover"
                         />
@@ -138,16 +139,16 @@ function FeaturedStaffSection() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <h3 className="font-bold text-2xl group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
                     {staffName}
                   </h3>
                   {staff.position && (
                     <div className="inline-block max-w-full">
-                      <Badge 
-                        variant="secondary" 
-                        className="text-sm font-semibold px-4 py-2 whitespace-normal text-center leading-tight" 
+                      <Badge
+                        variant="secondary"
+                        className="text-sm font-semibold px-4 py-2 whitespace-normal text-center leading-tight"
                         data-testid={`text-position-${staff._id}`}
                       >
                         {staff.position}
@@ -160,13 +161,13 @@ function FeaturedStaffSection() {
                     </p>
                   )}
                 </div>
-                
+
                 {staff.bio && (
                   <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed">
                     {staff.bio}
                   </p>
                 )}
-                
+
                 <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <p className="text-xs text-primary font-semibold">Click to view full profile →</p>
                 </div>
@@ -176,7 +177,7 @@ function FeaturedStaffSection() {
         })}
       </div>
       <div className="text-center mt-10">
-        <Button 
+        <Button
           variant="outline"
           onClick={() => setLocation('/staff')}
           data-testid="link-view-all-staff"
@@ -196,7 +197,7 @@ function FeaturedStaffSection() {
 function LandingPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
-  
+
   const { data: blogs, isLoading: blogsLoading } = useQuery<BlogPost[]>({
     queryKey: ['/api/blogs', { limit: 3 }],
     queryFn: async () => {
@@ -279,8 +280,8 @@ function LandingPage() {
                     tags: blog.tags,
                   };
                   return (
-                    <BlogCard 
-                      key={blog._id} 
+                    <BlogCard
+                      key={blog._id}
                       blog={transformedBlog}
                       isLikedByUser={blog.isLikedByUser || false}
                       onReadMore={(id) => setLocation(`/blogs/${id}`)}
@@ -291,8 +292,8 @@ function LandingPage() {
                 })}
               </div>
               <div className="text-center mt-8">
-                <a 
-                  href="/blogs" 
+                <a
+                  href="/blogs"
                   className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
                   data-testid="link-view-all-blogs"
                 >
@@ -342,15 +343,15 @@ function LandingPage() {
                     organizer: event.organizerName || 'Unknown Organizer',
                     tags: event.tags,
                   };
-                  
+
                   // Check if user is registered for this event
                   const isUserRegistered = userRegistrations?.some(
                     (reg) => reg.eventId === event._id
                   ) || false;
-                  
+
                   return (
-                    <EventCard 
-                      key={event._id} 
+                    <EventCard
+                      key={event._id}
                       event={transformedEvent}
                       isRegistered={isUserRegistered}
                       onReadMore={(id) => setLocation(`/events/${id}`)}
@@ -359,8 +360,8 @@ function LandingPage() {
                 })}
               </div>
               <div className="text-center mt-8">
-                <a 
-                  href="/events" 
+                <a
+                  href="/events"
                   className="inline-flex items-center px-6 py-3 text-primary hover:text-primary/80 transition-colors"
                   data-testid="link-view-all-events"
                 >
@@ -383,7 +384,7 @@ function LandingPage() {
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
               Register today and become part of a vibrant academic community dedicated to social science excellence.
             </p>
-            <button 
+            <button
               onClick={handleGetStarted}
               className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               data-testid="button-get-started"
@@ -443,124 +444,124 @@ function ResourcesPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Learning Resources</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Access our comprehensive collection of educational materials
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title="Learning Resources"
+        description="Access our comprehensive collection of educational materials"
+      />
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-4">
-              <div className="h-48 bg-muted animate-pulse rounded-lg" />
-              <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
-              <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
-            </div>
-          ))}
-        </div>
-      ) : error ? (
-        <div className="text-center py-12">
-          <p className="text-destructive">Failed to load resources. Please try again later.</p>
-        </div>
-      ) : resources && resources.length > 0 ? (
-        <>
+      <div className="container mx-auto px-4 py-8">
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {resources.map((resource: any) => {
-              const transformedResource = {
-                id: resource._id,
-                title: resource.title,
-                description: resource.description,
-                type: resource.type,
-                category: resource.category,
-                size: resource.fileSize || 'Unknown',
-                downloads: resource.downloads || 0,
-                rating: resource.rating || 0,
-                uploadedBy: resource.uploaderName || 'Unknown',
-                uploadDate: new Date(resource.uploadedAt || resource.createdAt).toISOString().split('T')[0],
-                tags: resource.tags || [],
-                difficulty: resource.difficulty,
-                thumbnail: resource.thumbnailUrl,
-                previewAvailable: !!resource.previewUrl,
-                fileUrl: resource.fileUrl,
-                fileName: resource.fileName
-              };
-              
-              return (
-                <div 
-                  key={resource._id} 
-                  onClick={() => handleCardClick(resource._id)}
-                  className="cursor-pointer"
-                  data-testid={`card-resource-${resource._id}`}
-                >
-                  <LearningResourceCard 
-                    resource={transformedResource}
-                    onReadMore={handleReadMore}
-                  />
-                </div>
-              );
-            })}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-4">
+                <div className="h-48 bg-muted animate-pulse rounded-lg" />
+                <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+              </div>
+            ))}
           </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-destructive">Failed to load resources. Please try again later.</p>
+          </div>
+        ) : resources && resources.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {resources.map((resource: any) => {
+                const transformedResource = {
+                  id: resource._id,
+                  title: resource.title,
+                  description: resource.description,
+                  type: resource.type,
+                  category: resource.category,
+                  size: resource.fileSize || 'Unknown',
+                  downloads: resource.downloads || 0,
+                  rating: resource.rating || 0,
+                  uploadedBy: resource.uploaderName || 'Unknown',
+                  uploadDate: new Date(resource.uploadedAt || resource.createdAt).toISOString().split('T')[0],
+                  tags: resource.tags || [],
+                  difficulty: resource.difficulty,
+                  thumbnail: resource.thumbnailUrl,
+                  previewAvailable: !!resource.previewUrl,
+                  fileUrl: resource.fileUrl,
+                  fileName: resource.fileName
+                };
 
-          <ResourceDetailModal
-            open={isModalOpen && !!selectedResource}
-            onOpenChange={setIsModalOpen}
-            resource={selectedResource || {
-              id: '',
-              title: '',
-              description: '',
-              type: 'document' as const,
-              category: '',
-              size: '',
-              downloads: 0,
-              rating: 0,
-              uploadedBy: '',
-              uploadDate: '',
-              tags: [],
-              difficulty: '100l' as const,
-              previewAvailable: false,
-              fileUrl: '',
-              fileName: ''
-            }}
-            onDownload={async (id) => {
-              try {
-                await fetch(`/api/resources/${id}/download`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  credentials: 'include',
-                });
-              } catch (error) {
-                console.error('Error recording download:', error);
-              }
-            }}
-            onPreview={(id) => {
-              const resourceToPreview = resources.find((r: any) => r._id === id);
-              if (resourceToPreview) {
-                setPreviewResource(resourceToPreview);
-              }
-            }}
-          />
+                return (
+                  <div
+                    key={resource._id}
+                    onClick={() => handleCardClick(resource._id)}
+                    className="cursor-pointer"
+                    data-testid={`card-resource-${resource._id}`}
+                  >
+                    <LearningResourceCard
+                      resource={transformedResource}
+                      onReadMore={handleReadMore}
+                    />
+                  </div>
+                );
+              })}
+            </div>
 
-          {previewResource && (
-            <FilePreviewModal
-              open={!!previewResource}
-              onOpenChange={(open) => !open && setPreviewResource(null)}
-              fileUrl={previewResource.fileUrl}
-              fileName={previewResource.fileName || previewResource.title}
-              fileType={previewResource.type}
-              title={previewResource.title}
+            <ResourceDetailModal
+              open={isModalOpen && !!selectedResource}
+              onOpenChange={setIsModalOpen}
+              resource={selectedResource || {
+                id: '',
+                title: '',
+                description: '',
+                type: 'document' as const,
+                category: '',
+                size: '',
+                downloads: 0,
+                rating: 0,
+                uploadedBy: '',
+                uploadDate: '',
+                tags: [],
+                difficulty: '100l' as const,
+                previewAvailable: false,
+                fileUrl: '',
+                fileName: ''
+              }}
+              onDownload={async (id) => {
+                try {
+                  await fetch(`/api/resources/${id}/download`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                  });
+                } catch (error) {
+                  console.error('Error recording download:', error);
+                }
+              }}
+              onPreview={(id) => {
+                const resourceToPreview = resources.find((r: any) => r._id === id);
+                if (resourceToPreview) {
+                  setPreviewResource(resourceToPreview);
+                }
+              }}
             />
-          )}
-        </>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No learning resources available yet.</p>
-        </div>
-      )}
+
+            {previewResource && (
+              <FilePreviewModal
+                open={!!previewResource}
+                onOpenChange={(open) => !open && setPreviewResource(null)}
+                fileUrl={previewResource.fileUrl}
+                fileName={previewResource.fileName || previewResource.title}
+                fileType={previewResource.type}
+                title={previewResource.title}
+              />
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No learning resources available yet.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -622,7 +623,7 @@ function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <StudentDashboard 
+      <StudentDashboard
         student={mockStudent}
         stats={mockStats}
         recentActivity={mockRecentActivity}
@@ -644,7 +645,7 @@ function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 flex items-center">
+    <div className="py-12 flex justify-center items-center bg-background">
       <RegistrationForm onSubmit={handleSubmit} onCancel={handleCancel} />
     </div>
   );
@@ -660,7 +661,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 flex items-center">
+    <div className="py-12 flex justify-center items-center bg-background">
       <LoginForm onLogin={handleLogin} onSignUpRedirect={handleSignUpRedirect} />
     </div>
   );
@@ -672,8 +673,14 @@ function AdminPage() {
 
 function AboutPage() {
   return (
-    <div className="container mx-auto px-4 py-12">
-      <AboutSection />
+    <div>
+      <PageHeader
+        title="About Us"
+        description="Learn more about the Department of Sociology"
+      />
+      <div className="container mx-auto px-4 py-8">
+        <AboutSection />
+      </div>
     </div>
   );
 }
@@ -684,14 +691,14 @@ function ContactPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">Contact Us</h1>
-        <p className="text-muted-foreground">
-          Get in touch with the Department of Sociology
-        </p>
+    <div>
+      <PageHeader
+        title="Contact Us"
+        description="Get in touch with the Department of Sociology"
+      />
+      <div className="container mx-auto px-4 py-8">
+        <ContactForm onSubmit={handleSubmit} />
       </div>
-      <ContactForm onSubmit={handleSubmit} />
     </div>
   );
 }
@@ -725,7 +732,7 @@ function DashboardRouter() {
         <Switch>
           {/* Main dashboard - accessible to all authenticated users */}
           <Route path="/dashboard" component={MainDashboardView} />
-          
+
           {/* Admin-only routes */}
           <Route path="/dashboard/users">
             <AdminOnlyRoute><UserManagementView /></AdminOnlyRoute>
@@ -745,14 +752,14 @@ function DashboardRouter() {
           <Route path="/dashboard/resources">
             <AdminOnlyRoute><ResourceManagementView /></AdminOnlyRoute>
           </Route>
-          
+
           {/* Shared routes - accessible to all authenticated users */}
           <Route path="/dashboard/settings" component={SettingsView} />
-          
+
           {/* Student-specific routes */}
           <Route path="/dashboard/gamification" component={StudentGamificationView} />
           <Route path="/dashboard/my-posts" component={StudentGamificationView} />
-          
+
           {/* Default fallback */}
           <Route component={MainDashboardView} />
         </Switch>
@@ -800,10 +807,10 @@ function MainRouter() {
           <Route path="/dashboard/:rest*">
             {(params) => <DashboardRouter />}
           </Route>
-          
+
           {/* Landing page accessible to authenticated users */}
           <Route path="/" component={LandingPage} />
-          
+
           {/* Public pages with regular layout for authenticated users */}
           <Route path="/blogs/:id" component={BlogDetailPage} />
           <Route path="/blogs" component={BlogsPage} />
@@ -824,22 +831,22 @@ function MainRouter() {
 // Separate component for dashboard redirect
 function DashboardRedirect() {
   const [, setLocation] = useLocation();
-  
+
   useEffect(() => {
     setLocation('/dashboard');
   }, [setLocation]);
-  
+
   return null;
 }
 
 // Redirect to login component
 function RedirectToLogin() {
   const [, setLocation] = useLocation();
-  
+
   useEffect(() => {
     setLocation('/login');
   }, [setLocation]);
-  
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
@@ -851,14 +858,14 @@ function RedirectToLogin() {
 
 function Router() {
   const [location] = useLocation();
-  
+
   // Check if current path is an auth page
-  const isAuthPage = location === '/login' || location === '/register';
-  
+  const isAuthPage = location === '/login' || location === '/register' || location === '/forgot-password' || location === '/reset-password';
+
   if (isAuthPage) {
     return <AuthRouter />;
   }
-  
+
   return <MainRouter />;
 }
 
@@ -891,34 +898,30 @@ function AppContent() {
     alert(`Thank you for subscribing with email: ${email}`);
   };
 
-  // Check if current path is an auth page
-  const isAuthPage = location === '/login' || location === '/register' || location === '/forgot-password' || location === '/reset-password';
-  
   // Check if current path is a dashboard page (should not have header/footer)
-  // Don't show header/footer while loading auth or when on dashboard
   const isDashboardPage = (isLoading && location.startsWith('/dashboard')) || (isAuthenticated && location.startsWith('/dashboard'));
 
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background flex flex-col">
-        {/* Only render Header for non-auth and non-dashboard pages */}
-        {!isAuthPage && !isDashboardPage && (
+        {/* Only render Header for non-dashboard pages */}
+        {!isDashboardPage && (
           <Header user={isAuthenticated && user ? {
             name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || 'User',
             avatar: user.profileImageUrl || undefined,
             role: (user.role as 'student' | 'admin' | 'guest') || 'student'
           } : undefined} onAuthAction={handleAuthAction} />
         )}
-        
+
         <main className={isDashboardPage ? "flex-1" : "flex-1"}>
           <Router />
         </main>
-        
-        {/* Only render Footer for non-auth and non-dashboard pages */}
-        {!isAuthPage && !isDashboardPage && (
+
+        {/* Only render Footer for non-dashboard pages */}
+        {!isDashboardPage && (
           <Footer onNewsletterSignup={handleNewsletterSignup} />
         )}
-        
+
         {/* Theme Toggle - Fixed Position (only for non-dashboard pages) */}
         {!isDashboardPage && (
           <div className="fixed bottom-4 right-4 z-50">

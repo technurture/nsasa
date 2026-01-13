@@ -20,11 +20,11 @@ const getMongoUrl = (): string => {
   ];
 
   const mongoUrl = possibleUrls.find(url => url);
-  
+
   if (!mongoUrl) {
     throw new Error('MongoDB connection URL not found. Please add DATABASE_URL or one of these environment variables: MONGODB_URL, MONGO_URL, MONGODB_URI, MONGO_URI, MONGODB_CONNECTION_STRING, or MONGO_DATABASE_URL');
   }
-  
+
   return mongoUrl;
 };
 
@@ -33,10 +33,10 @@ export async function connectToMongoDB(): Promise<Db> {
     try {
       const mongoUrl = getMongoUrl();
       console.log('Attempting to connect to MongoDB...');
-      
+
       client = new MongoClient(mongoUrl);
       await client.connect();
-      
+
       // Get database name from URL or use default
       let dbName;
       try {
@@ -46,19 +46,19 @@ export async function connectToMongoDB(): Promise<Db> {
         console.warn('Could not parse database name from URL, using default');
         dbName = 'nsasa_platform';
       }
-      
+
       db = client.db(dbName);
-      
+
       // Test the connection
       await db.admin().ping();
-      
+
       console.log(`Successfully connected to MongoDB database: ${dbName}`);
     } catch (error) {
       console.error('MongoDB connection error:', error);
       throw error;
     }
   }
-  
+
   return db;
 }
 
@@ -76,11 +76,12 @@ export const COLLECTIONS = {
   BLOG_LIKES: 'blogLikes',
   BLOG_VIEWS: 'blogViews',
   COMMENT_LIKES: 'commentLikes',
-  COMMENTS: 'comments', 
+  COMMENTS: 'comments',
   EVENTS: 'events',
   EVENT_REGISTRATIONS: 'eventRegistrations',
   LEARNING_RESOURCES: 'learningResources',
   RESOURCE_RATINGS: 'resourceRatings',
+  RESOURCE_DOWNLOADS: 'resourceDownloads',
   STAFF_PROFILES: 'staffProfiles',
   CONTACT_SUBMISSIONS: 'contactSubmissions',
   NEWSLETTER_SUBSCRIPTIONS: 'newsletterSubscriptions',
@@ -100,13 +101,13 @@ export async function initializeMongoDB(): Promise<void> {
   try {
     console.log('Initializing MongoDB...');
     const database = await connectToMongoDB();
-    
+
     if (!database) {
       throw new Error('Failed to get database connection');
     }
-    
+
     console.log('Creating MongoDB indexes...');
-    
+
     // Create indexes for better performance
     try {
       await database.collection(COLLECTIONS.USERS).createIndex({ email: 1 }, { unique: true });
@@ -128,7 +129,7 @@ export async function initializeMongoDB(): Promise<void> {
       await database.collection(COLLECTIONS.POLLS).createIndex({ status: 1, createdAt: -1 });
       await database.collection(COLLECTIONS.POLL_VOTES).createIndex({ pollId: 1, userId: 1, optionId: 1 });
       await database.collection(COLLECTIONS.POLL_VOTES).createIndex({ userId: 1 });
-      
+
       console.log('MongoDB indexes created successfully');
     } catch (indexError: any) {
       // Index creation failures should not stop the app from starting

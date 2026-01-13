@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Users } from "lucide-react";
 import { z } from "zod";
 import { staffProfileSchema, userSchema } from "@shared/mongoSchema";
+import PageHeader from "@/components/PageHeader";
 
 type StaffProfile = z.infer<typeof staffProfileSchema>;
 type User = z.infer<typeof userSchema>;
@@ -24,7 +25,7 @@ export default function StaffPage() {
             <Skeleton className="h-10 w-64 mx-auto mb-4" />
             <Skeleton className="h-6 w-96 mx-auto" />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
               <Card key={i}>
@@ -69,16 +70,11 @@ export default function StaffPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHeader
+        title="Our Faculty & Staff"
+        description="Meet our dedicated team of educators and researchers committed to advancing the field of sociology"
+      />
       <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4" data-testid="heading-staff-page">
-            Our Faculty & Staff
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-staff-description">
-            Meet our dedicated team of educators and researchers committed to advancing the field of sociology
-          </p>
-        </div>
 
         {/* Staff Grid */}
         {transformedStaff.length === 0 ? (
@@ -97,7 +93,7 @@ export default function StaffPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="grid-staff">
             {transformedStaff.map((staff) => (
               <div key={staff.id} data-testid={`staff-card-${staff.id}`}>
-                <StaffProfileCard 
+                <StaffProfileCard
                   staff={staff}
                   onContact={(id, method) => {
                     if (method === 'email') {
