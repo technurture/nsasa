@@ -27,6 +27,9 @@ import {
 
 // Interface for MongoDB storage operations
 export interface IMongoStorage {
+  // Gamification operations
+  getGamificationLeaderboard(limit?: number): Promise<User[]>;
+
   // Auth operations
   registerUser(userData: RegisterUser): Promise<User>;
   loginUser(email: string, password: string): Promise<{ user: User; token: string }>;
@@ -131,6 +134,16 @@ export class MongoStorage implements IMongoStorage {
   private jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
 
   // Auth operations
+  async getGamificationLeaderboard(limit = 100): Promise<User[]> {
+    const db = await getCollection(COLLECTIONS.USERS);
+    // Sort by level (desc) then calculates points (if we had them stored directly, or just level for now)
+    // Assuming level is the main metric for now as explicitly stored
+    return db.find({ role: 'student', approvalStatus: 'approved' })
+      .sort({ level: -1, profileCompletion: -1 }) // Secondary sort by profile completion as proxy for activity
+      .limit(limit)
+      .toArray() as unknown as User[];
+  }
+
   async registerUser(userData: RegisterUser): Promise<User> {
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
 

@@ -231,6 +231,30 @@ router.get('/admin/users', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/admin/gamification/leaderboard', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'super_admin')) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const leaderboard = await mongoStorage.getGamificationLeaderboard();
+
+    // Remove sensitive data
+    const safeLeaderboard = leaderboard.map(user => {
+      const { passwordHash, ...safeUser } = user;
+      return safeUser;
+    });
+
+    res.json(safeLeaderboard);
+  } catch (error: any) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({
+      message: 'Failed to fetch leaderboard',
+      error: error.message
+    });
+  }
+});
+
 router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'super_admin') {
@@ -289,8 +313,8 @@ router.put('/admin/users/:id/role', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!['student', 'admin', 'super_admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role. Must be student, admin, or super_admin' });
+    if (!['student', 'admin', 'super_admin', 'alumnus'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Must be student, admin, super_admin, or alumnus' });
     }
 
     const updatedUser = await mongoStorage.updateUserRole(id, role);

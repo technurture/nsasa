@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from "@shared/schema";
+import type { User } from "@shared/mongoSchema";
 
 export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User>({
@@ -9,7 +9,8 @@ export function useAuth() {
     retry: false,
     staleTime: 0, // Always check for fresh data on navigation
     refetchOnMount: true,
-    refetchInterval: 10000, // Poll every 10 seconds to detect role changes "instantly"
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchInterval: 4000, // Poll every 4 seconds for "instant" role updates
   });
 
   // Only consider user authenticated if we have user data

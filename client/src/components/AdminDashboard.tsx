@@ -22,13 +22,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Mail,
+  Phone,
+  MapPin,
   GraduationCap,
   Clock,
   CheckCircle,
@@ -41,8 +41,18 @@ import {
   BarChart3,
   Search,
   Filter,
-  X
+  X,
+  Trophy,
+  Medal
 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import PollManagement from './PollManagement';
@@ -68,6 +78,7 @@ const ROLE_OPTIONS = [
   { value: 'all', label: 'All Roles' },
   { value: 'student', label: 'Student' },
   { value: 'admin', label: 'Admin' },
+  { value: 'alumnus', label: 'Pass Out Student' },
 ];
 
 const DATE_OPTIONS = [
@@ -79,10 +90,10 @@ const DATE_OPTIONS = [
 
 function isWithinDateRange(dateString: string, filter: string): boolean {
   if (filter === 'all') return true;
-  
+
   const date = new Date(dateString);
   const now = new Date();
-  
+
   switch (filter) {
     case 'today': {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -126,21 +137,21 @@ interface User {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('pending');
   const { toast } = useToast();
-  
+
   const [pendingFilters, setPendingFilters] = useState<FilterState>({
     searchTerm: '',
     levelFilter: 'all',
     roleFilter: 'all',
     dateFilter: 'all',
   });
-  
+
   const [approvedFilters, setApprovedFilters] = useState<FilterState>({
     searchTerm: '',
     levelFilter: 'all',
     roleFilter: 'all',
     dateFilter: 'all',
   });
-  
+
   const [rejectedFilters, setRejectedFilters] = useState<FilterState>({
     searchTerm: '',
     levelFilter: 'all',
@@ -243,9 +254,8 @@ export default function AdminDashboard() {
     updateApprovalMutation.mutate({ userId, status });
   };
 
-  const handleRoleToggle = (userId: string, currentRole: string) => {
-    const newRole = currentRole === 'admin' ? 'student' : 'admin';
-    updateRoleMutation.mutate({ userId, role: newRole });
+  const handleRoleChange = (userId: string, newRole: string) => {
+    updateRoleMutation.mutate({ userId, role: newRole as 'student' | 'admin' });
   };
 
   const getStatusBadge = (status: string) => {
@@ -321,12 +331,16 @@ export default function AdminDashboard() {
               <BarChart3 className="h-4 w-4" />
               Polls
             </TabsTrigger>
+            <TabsTrigger value="gamification" className="flex items-center gap-2" data-testid="tab-gamification">
+              <Trophy className="h-4 w-4" />
+              Leaderboard
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-6">
-            <PendingUsersContent 
-              users={users} 
-              isLoading={isLoading} 
+            <PendingUsersContent
+              users={users}
+              isLoading={isLoading}
               onApproval={handleApproval}
               isUpdating={updateApprovalMutation.isPending}
               isSuperAdmin={isSuperAdmin}
@@ -336,12 +350,12 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="approved" className="space-y-6">
-            <UsersListContent 
-              users={users} 
-              isLoading={isLoading} 
+            <UsersListContent
+              users={users}
+              isLoading={isLoading}
               status="approved"
               isSuperAdmin={isSuperAdmin}
-              onRoleToggle={handleRoleToggle}
+              onRoleChange={handleRoleChange}
               isUpdatingRole={updateRoleMutation.isPending}
               filters={approvedFilters}
               onFiltersChange={setApprovedFilters}
@@ -350,9 +364,9 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="rejected" className="space-y-6">
-            <UsersListContent 
-              users={users} 
-              isLoading={isLoading} 
+            <UsersListContent
+              users={users}
+              isLoading={isLoading}
               status="rejected"
               filters={rejectedFilters}
               onFiltersChange={setRejectedFilters}
@@ -362,6 +376,10 @@ export default function AdminDashboard() {
           <TabsContent value="polls" className="space-y-6">
             <PollManagement />
           </TabsContent>
+
+          <TabsContent value="gamification" className="space-y-6">
+            <LeaderboardContent />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -369,14 +387,14 @@ export default function AdminDashboard() {
 }
 
 // User Details Dialog Component
-function UserDetailsDialog({ 
-  user, 
-  open, 
+function UserDetailsDialog({
+  user,
+  open,
   onOpenChange,
   onApproval,
   isUpdating,
   showActions = false
-}: { 
+}: {
   user: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -405,20 +423,22 @@ function UserDetailsDialog({
                 {user.email}
               </DialogDescription>
             </div>
-            <Badge variant="outline" 
-              className={
-                user.approvalStatus === 'pending' 
-                  ? "text-yellow-600 border-yellow-600" 
-                  : user.approvalStatus === 'approved'
-                  ? "text-green-600 border-green-600"
-                  : "text-red-600 border-red-600"
-              }
-            >
-              {user.approvalStatus === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-              {user.approvalStatus === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
-              {user.approvalStatus === 'rejected' && <XCircle className="h-3 w-3 mr-1" />}
-              {user.approvalStatus.charAt(0).toUpperCase() + user.approvalStatus.slice(1)}
-            </Badge>
+            {user.approvalStatus && (
+              <Badge variant="outline"
+                className={
+                  user.approvalStatus === 'pending'
+                    ? "text-yellow-600 border-yellow-600"
+                    : user.approvalStatus === 'approved'
+                      ? "text-green-600 border-green-600"
+                      : "text-red-600 border-red-600"
+                }
+              >
+                {user.approvalStatus === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                {user.approvalStatus === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
+                {user.approvalStatus === 'rejected' && <XCircle className="h-3 w-3 mr-1" />}
+                {user.approvalStatus.charAt(0).toUpperCase() + user.approvalStatus.slice(1)}
+              </Badge>
+            )}
           </div>
         </DialogHeader>
 
@@ -529,8 +549,8 @@ function UserDetailsDialog({
                 <p className="text-sm text-muted-foreground">Profile Completion</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all" 
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
                       style={{ width: `${user.profileCompletion}%` }}
                     />
                   </div>
@@ -539,18 +559,18 @@ function UserDetailsDialog({
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Registered On</p>
-                <p className="font-medium">{new Date(user.createdAt).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                <p className="font-medium">{new Date(user.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
                 })}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Last Updated</p>
-                <p className="font-medium">{new Date(user.updatedAt).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                <p className="font-medium">{new Date(user.updatedAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
                 })}</p>
               </div>
             </div>
@@ -595,14 +615,14 @@ function UserDetailsDialog({
   );
 }
 
-function UserFilterBar({ 
-  filters, 
-  onFiltersChange, 
+function UserFilterBar({
+  filters,
+  onFiltersChange,
   showRoleFilter = false,
   totalCount,
   filteredCount,
   isLoading
-}: { 
+}: {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   showRoleFilter?: boolean;
@@ -610,9 +630,9 @@ function UserFilterBar({
   filteredCount: number;
   isLoading: boolean;
 }) {
-  const hasActiveFilters = filters.searchTerm || 
-    filters.levelFilter !== 'all' || 
-    filters.roleFilter !== 'all' || 
+  const hasActiveFilters = filters.searchTerm ||
+    filters.levelFilter !== 'all' ||
+    filters.roleFilter !== 'all' ||
     filters.dateFilter !== 'all';
 
   const clearFilters = () => {
@@ -637,10 +657,10 @@ function UserFilterBar({
             data-testid="input-user-search"
           />
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
-          <Select 
-            value={filters.levelFilter} 
+          <Select
+            value={filters.levelFilter}
             onValueChange={(value) => onFiltersChange({ ...filters, levelFilter: value })}
           >
             <SelectTrigger className="w-[140px]" data-testid="select-level-filter">
@@ -648,8 +668,8 @@ function UserFilterBar({
             </SelectTrigger>
             <SelectContent data-testid="select-level-content">
               {LEVEL_OPTIONS.map((option) => (
-                <SelectItem 
-                  key={option.value} 
+                <SelectItem
+                  key={option.value}
                   value={option.value}
                   data-testid={`option-level-${option.value}`}
                 >
@@ -660,8 +680,8 @@ function UserFilterBar({
           </Select>
 
           {showRoleFilter && (
-            <Select 
-              value={filters.roleFilter} 
+            <Select
+              value={filters.roleFilter}
               onValueChange={(value) => onFiltersChange({ ...filters, roleFilter: value })}
             >
               <SelectTrigger className="w-[120px]" data-testid="select-role-filter">
@@ -669,8 +689,8 @@ function UserFilterBar({
               </SelectTrigger>
               <SelectContent data-testid="select-role-content">
                 {ROLE_OPTIONS.map((option) => (
-                  <SelectItem 
-                    key={option.value} 
+                  <SelectItem
+                    key={option.value}
                     value={option.value}
                     data-testid={`option-role-${option.value}`}
                   >
@@ -681,8 +701,8 @@ function UserFilterBar({
             </Select>
           )}
 
-          <Select 
-            value={filters.dateFilter} 
+          <Select
+            value={filters.dateFilter}
             onValueChange={(value) => onFiltersChange({ ...filters, dateFilter: value })}
           >
             <SelectTrigger className="w-[130px]" data-testid="select-date-filter">
@@ -690,8 +710,8 @@ function UserFilterBar({
             </SelectTrigger>
             <SelectContent data-testid="select-date-content">
               {DATE_OPTIONS.map((option) => (
-                <SelectItem 
-                  key={option.value} 
+                <SelectItem
+                  key={option.value}
                   value={option.value}
                   data-testid={`option-date-${option.value}`}
                 >
@@ -702,9 +722,9 @@ function UserFilterBar({
           </Select>
 
           {hasActiveFilters && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={clearFilters}
               data-testid="button-clear-filters"
             >
@@ -725,17 +745,17 @@ function UserFilterBar({
 }
 
 // Component for pending users that need approval
-function PendingUsersContent({ 
-  users, 
-  isLoading, 
-  onApproval, 
+function PendingUsersContent({
+  users,
+  isLoading,
+  onApproval,
   isUpdating,
   isSuperAdmin,
   filters,
   onFiltersChange
-}: { 
-  users: User[]; 
-  isLoading: boolean; 
+}: {
+  users: User[];
+  isLoading: boolean;
   onApproval: (userId: string, status: 'approved' | 'rejected') => void;
   isUpdating: boolean;
   isSuperAdmin: boolean;
@@ -748,17 +768,17 @@ function PendingUsersContent({
     return users.filter((user) => {
       const searchLower = filters.searchTerm.toLowerCase();
       const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-      
+
       const matchesSearch = !filters.searchTerm ||
         fullName.includes(searchLower) ||
         user.email.toLowerCase().includes(searchLower) ||
         (user.matricNumber?.toLowerCase().includes(searchLower) ?? false);
-      
-      const matchesLevel = filters.levelFilter === 'all' || 
+
+      const matchesLevel = filters.levelFilter === 'all' ||
         user.level === filters.levelFilter;
-      
+
       const matchesDate = isWithinDateRange(user.createdAt, filters.dateFilter);
-      
+
       return matchesSearch && matchesLevel && matchesDate;
     });
   }, [users, filters]);
@@ -806,8 +826,8 @@ function PendingUsersContent({
     );
   }
 
-  const hasActiveFilters = filters.searchTerm || 
-    filters.levelFilter !== 'all' || 
+  const hasActiveFilters = filters.searchTerm ||
+    filters.levelFilter !== 'all' ||
     filters.dateFilter !== 'all';
 
   return (
@@ -828,8 +848,8 @@ function PendingUsersContent({
             No users match your current search and filter criteria.
           </p>
           {hasActiveFilters && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onFiltersChange({
                 searchTerm: '',
                 levelFilter: 'all',
@@ -846,8 +866,8 @@ function PendingUsersContent({
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredUsers.map((user) => (
-            <Card 
-              key={user._id} 
+            <Card
+              key={user._id}
               className="hover-elevate cursor-pointer transition-all"
               onClick={() => setSelectedUser(user)}
               data-testid={`card-user-${user._id}`}
@@ -886,13 +906,13 @@ function PendingUsersContent({
                       <span className="font-medium truncate">{user.matricNumber}</span>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span className="text-muted-foreground">Phone:</span>
                     <span className="font-medium">{user.phoneNumber}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span className="text-muted-foreground">Level:</span>
@@ -954,22 +974,22 @@ function PendingUsersContent({
 }
 
 // Component for approved/rejected users list
-function UsersListContent({ 
-  users, 
-  isLoading, 
+function UsersListContent({
+  users,
+  isLoading,
   status,
   isSuperAdmin,
-  onRoleToggle,
+  onRoleChange,
   isUpdatingRole,
   filters,
   onFiltersChange,
   showRoleFilter = false
-}: { 
-  users: User[]; 
-  isLoading: boolean; 
+}: {
+  users: User[];
+  isLoading: boolean;
   status: 'approved' | 'rejected';
   isSuperAdmin?: boolean;
-  onRoleToggle?: (userId: string, currentRole: string) => void;
+  onRoleChange?: (userId: string, newRole: string) => void;
   isUpdatingRole?: boolean;
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
@@ -981,20 +1001,20 @@ function UsersListContent({
     return users.filter((user) => {
       const searchLower = filters.searchTerm.toLowerCase();
       const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-      
+
       const matchesSearch = !filters.searchTerm ||
         fullName.includes(searchLower) ||
         user.email.toLowerCase().includes(searchLower) ||
         (user.matricNumber?.toLowerCase().includes(searchLower) ?? false);
-      
-      const matchesLevel = filters.levelFilter === 'all' || 
+
+      const matchesLevel = filters.levelFilter === 'all' ||
         user.level === filters.levelFilter;
-      
-      const matchesRole = filters.roleFilter === 'all' || 
+
+      const matchesRole = filters.roleFilter === 'all' ||
         user.role === filters.roleFilter;
-      
+
       const matchesDate = isWithinDateRange(user.createdAt, filters.dateFilter);
-      
+
       return matchesSearch && matchesLevel && matchesRole && matchesDate;
     });
   }, [users, filters]);
@@ -1033,12 +1053,12 @@ function UsersListContent({
   if (users.length === 0) {
     const icon = status === 'approved' ? UserCheck : UserX;
     const IconComponent = icon;
-    
+
     return (
       <Card className="text-center p-12" data-testid="empty-state-no-users">
         <IconComponent className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">
-          No {status.charAt(0).toUpperCase() + status.slice(1)} Users
+          No {status ? status.charAt(0).toUpperCase() + status.slice(1) : ''} Users
         </h3>
         <p className="text-muted-foreground">
           No users with {status} status found.
@@ -1047,8 +1067,8 @@ function UsersListContent({
     );
   }
 
-  const hasActiveFilters = filters.searchTerm || 
-    filters.levelFilter !== 'all' || 
+  const hasActiveFilters = filters.searchTerm ||
+    filters.levelFilter !== 'all' ||
     filters.roleFilter !== 'all' ||
     filters.dateFilter !== 'all';
 
@@ -1071,8 +1091,8 @@ function UsersListContent({
             No users match your current search and filter criteria.
           </p>
           {hasActiveFilters && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onFiltersChange({
                 searchTerm: '',
                 levelFilter: 'all',
@@ -1089,7 +1109,7 @@ function UsersListContent({
       ) : (
         <div className="space-y-4">
           {filteredUsers.map((user) => (
-            <Card 
+            <Card
               key={user._id}
               className="hover-elevate cursor-pointer transition-all"
               onClick={() => setSelectedUser(user)}
@@ -1102,7 +1122,7 @@ function UsersListContent({
                       {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1 space-y-1 min-w-0">
                     <div className="font-semibold">
                       {user.firstName} {user.lastName}
@@ -1120,11 +1140,11 @@ function UsersListContent({
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="text-right space-y-2 flex-shrink-0">
-                    <Badge variant="outline" 
-                      className={status === 'approved' 
-                        ? "text-green-600 border-green-600" 
+                    <Badge variant="outline"
+                      className={status === 'approved'
+                        ? "text-green-600 border-green-600"
                         : "text-red-600 border-red-600"
                       }
                     >
@@ -1133,36 +1153,41 @@ function UsersListContent({
                       ) : (
                         <XCircle className="h-3 w-3 mr-1" />
                       )}
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                      {status ? status.charAt(0).toUpperCase() + status.slice(1) : ''}
                     </Badge>
-                    
+
                     {/* Role Badge */}
                     <div className="flex justify-end">
-                      <Badge 
+                      <Badge
                         variant={user.role === 'admin' ? 'default' : 'secondary'}
                         className="text-xs"
                       >
-                        {user.role === 'super_admin' ? 'Super Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        {user.role === 'super_admin' ? 'Super Admin' : (user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : '')}
                       </Badge>
                     </div>
-                    
-                    {/* Role Toggle Button - Only for approved users and super_admins */}
-                    {status === 'approved' && isSuperAdmin && onRoleToggle && user.role !== 'super_admin' && (
-                      <Button
-                        size="sm"
-                        variant={user.role === 'admin' ? 'destructive' : 'default'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRoleToggle(user._id, user.role);
-                        }}
-                        disabled={isUpdatingRole}
-                        data-testid={`button-toggle-role-${user._id}`}
-                        className="w-full text-xs"
-                      >
-                        {user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
-                      </Button>
+
+                    {/* Role Selection - Only for approved users and super_admins */}
+                    {status === 'approved' && isSuperAdmin && onRoleChange && user.role !== 'super_admin' && (
+                      <div className="w-full">
+                        <Select
+                          defaultValue={user.role}
+                          onValueChange={(value) => {
+                            onRoleChange(user._id, value);
+                          }}
+                          disabled={isUpdatingRole}
+                        >
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="alumnus">Pass Out Student</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
-                    
+
                     <div className="text-xs text-muted-foreground">
                       {new Date(user.updatedAt).toLocaleDateString()}
                     </div>
@@ -1181,5 +1206,106 @@ function UsersListContent({
         showActions={false}
       />
     </>
+  );
+}
+
+function LeaderboardContent() {
+  const { data: leaderboard = [], isLoading } = useQuery({
+    queryKey: ['/api/admin/gamification/leaderboard'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/gamification/leaderboard', {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch leaderboard');
+      return response.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Gamification Leaderboard</CardTitle>
+          <CardDescription>Loading leaderboard data...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-10 bg-muted rounded w-full animate-pulse" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-yellow-500" />
+          Student Leaderboard
+        </CardTitle>
+        <CardDescription>
+          Performance ranking based on level and profile completeness (Points System)
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px]">Rank</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Level</TableHead>
+              <TableHead className="text-right">Points</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leaderboard.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No active students to display.
+                </TableCell>
+              </TableRow>
+            ) : (
+              leaderboard.map((student: any, index: number) => (
+                <TableRow key={student._id}>
+                  <TableCell className="font-medium">
+                    {index < 3 ? (
+                      <div className="flex items-center gap-1">
+                        {index === 0 && <Trophy className="h-4 w-4 text-yellow-500" />}
+                        {index === 1 && <Medal className="h-4 w-4 text-gray-400" />}
+                        {index === 2 && <Medal className="h-4 w-4 text-amber-600" />}
+                        <span className="ml-1">#{index + 1}</span>
+                      </div>
+                    ) : (
+                      <span className="ml-5">#{index + 1}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {student.firstName?.[0]}{student.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{student.firstName} {student.lastName}</span>
+                        <span className="text-xs text-muted-foreground">{student.matricNumber || 'No Matric'}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{student.level || 'N/A'}</TableCell>
+                  <TableCell className="text-right font-bold">
+                    {/* Placeholder for points logic - using completion as proxy for now */}
+                    {Math.floor((student.profileCompletion || 0) * 10) + (parseInt(student.level || '0') * 5)} pts
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

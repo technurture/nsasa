@@ -22,7 +22,7 @@ export const userSchema = z.object({
   occupation: z.string().optional(),
 
   // User status and role
-  role: z.enum(['student', 'admin', 'super_admin']).default('student'),
+  role: z.enum(['student', 'admin', 'super_admin', 'alumnus']).default('student'),
   approvalStatus: z.enum(['pending', 'approved', 'rejected']).default('pending'),
   profileCompletion: z.number().default(0),
 

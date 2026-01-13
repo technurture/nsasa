@@ -37,14 +37,14 @@ type StaffProfile = z.infer<typeof staffProfileSchema>;
 type User = z.infer<typeof userSchema>;
 
 // Form validation schema based on shared schema
-const blogFormSchema = blogPostSchema.omit({ 
-  _id: true, 
-  authorId: true, 
-  createdAt: true, 
-  updatedAt: true, 
-  likes: true, 
-  views: true, 
-  readTime: true 
+const blogFormSchema = blogPostSchema.omit({
+  _id: true,
+  authorId: true,
+  createdAt: true,
+  updatedAt: true,
+  likes: true,
+  views: true,
+  readTime: true
 }).extend({
   tags: z.string().optional(),
   imageUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
@@ -54,11 +54,11 @@ const blogFormSchema = blogPostSchema.omit({
 type BlogFormData = z.infer<typeof blogFormSchema>;
 
 // Event form validation schema
-const eventFormSchema = eventSchema.omit({ 
-  _id: true, 
-  organizerId: true, 
-  createdAt: true, 
-  updatedAt: true 
+const eventFormSchema = eventSchema.omit({
+  _id: true,
+  organizerId: true,
+  createdAt: true,
+  updatedAt: true
 }).extend({
   date: z.string().min(1, "Date is required"), // Transform Date to string for form input
   tags: z.string().optional(), // Transform array to comma-separated string for form input
@@ -69,10 +69,10 @@ const eventFormSchema = eventSchema.omit({
 type EventFormData = z.infer<typeof eventFormSchema>;
 
 // Learning Resource form validation schema
-const resourceFormSchema = learningResourceSchema.omit({ 
-  _id: true, 
-  uploadedById: true, 
-  createdAt: true, 
+const resourceFormSchema = learningResourceSchema.omit({
+  _id: true,
+  uploadedById: true,
+  createdAt: true,
   updatedAt: true,
   downloads: true,
   rating: true,
@@ -86,9 +86,9 @@ const resourceFormSchema = learningResourceSchema.omit({
 type ResourceFormData = z.infer<typeof resourceFormSchema>;
 
 // Staff Profile form validation schema
-const staffFormSchema = staffProfileBaseSchema.omit({ 
+const staffFormSchema = staffProfileBaseSchema.omit({
   _id: true,
-  createdAt: true, 
+  createdAt: true,
   updatedAt: true,
   userId: true
 }).extend({
@@ -126,14 +126,62 @@ export default function MainDashboardView() {
       return <AnalyticsDashboard userRole="admin" />;
     case 'student':
       return <GamificationDashboard user={user} />;
+    case 'alumnus':
+      return <AlumniDashboard user={user} />;
     default:
       return <GamificationDashboard user={user} />;
   }
 }
 
+// Simple Alumni Dashboard
+function AlumniDashboard({ user }: { user: User }) {
+  return (
+    <div className="container mx-auto p-4 sm:p-6 space-y-8">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user.firstName}!</h1>
+        <p className="text-muted-foreground">
+          You can browse resources and posts, and engage with the community through comments and likes.
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="hover-elevate cursor-pointer h-full" onClick={() => window.location.href = '/blogs'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Latest News
+            </CardTitle>
+            <CardDescription>Catch up on department news and articles</CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card className="hover-elevate cursor-pointer h-full" onClick={() => window.location.href = '/events'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Upcoming Events
+            </CardTitle>
+            <CardDescription>See what's happening in the department</CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card className="hover-elevate cursor-pointer h-full" onClick={() => window.location.href = '/resources'}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary" />
+              Resources
+            </CardTitle>
+            <CardDescription>Access learning materials and documents</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export function UserManagementView() {
   const { user } = useAuth();
-  
+
   // Only allow admin and super_admin access
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (
@@ -151,7 +199,7 @@ export function UserManagementView() {
 
 export function StudentGamificationView() {
   const { user } = useAuth();
-  
+
   // Only allow students access to gamification
   if (!user || user.role !== 'student') {
     return (
@@ -169,7 +217,7 @@ export function StudentGamificationView() {
 
 export function AnalyticsView() {
   const { user } = useAuth();
-  
+
   // Only allow admin and super_admin access
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (
@@ -186,18 +234,18 @@ export function AnalyticsView() {
 }
 
 // Blog Form Modal Component
-function BlogFormModal({ 
-  isOpen, 
-  onClose, 
-  blog, 
-  onSubmit, 
-  isLoading 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  blog: BlogPost | null; 
-  onSubmit: (data: any) => void; 
-  isLoading: boolean; 
+function BlogFormModal({
+  isOpen,
+  onClose,
+  blog,
+  onSubmit,
+  isLoading
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  blog: BlogPost | null;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
 }) {
   const form = useForm<BlogFormData>({
     resolver: zodResolver(blogFormSchema),
@@ -245,7 +293,7 @@ function BlogFormModal({
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl break-words">{blog ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -262,7 +310,7 @@ function BlogFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="category"
@@ -288,7 +336,7 @@ function BlogFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="tags"
@@ -303,7 +351,7 @@ function BlogFormModal({
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="imageUrl"
@@ -324,7 +372,7 @@ function BlogFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="imageUrls"
@@ -345,7 +393,7 @@ function BlogFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="excerpt"
@@ -359,7 +407,7 @@ function BlogFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="content"
@@ -367,10 +415,10 @@ function BlogFormModal({
                 <FormItem>
                   <FormLabel>Content *</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Write your blog content here..." 
-                      rows={10} 
-                      {...field} 
+                    <Textarea
+                      placeholder="Write your blog content here..."
+                      rows={10}
+                      {...field}
                       data-testid="textarea-blog-content"
                     />
                   </FormControl>
@@ -378,7 +426,7 @@ function BlogFormModal({
                 </FormItem>
               )}
             />
-            
+
             <div className="flex flex-col sm:flex-row gap-4">
               <FormField
                 control={form.control}
@@ -386,9 +434,9 @@ function BlogFormModal({
                 render={({ field }) => (
                   <FormItem className="flex items-center space-x-2">
                     <FormControl>
-                      <Switch 
-                        checked={field.value} 
-                        onCheckedChange={field.onChange} 
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
                         data-testid="switch-blog-published"
                       />
                     </FormControl>
@@ -396,17 +444,17 @@ function BlogFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="featured"
                 render={({ field }) => (
                   <FormItem className="flex items-center space-x-2">
                     <FormControl>
-                      <Switch 
-                        checked={field.value} 
+                      <Switch
+                        checked={field.value}
                         onCheckedChange={field.onChange}
-                        data-testid="switch-blog-featured" 
+                        data-testid="switch-blog-featured"
                       />
                     </FormControl>
                     <FormLabel>Featured</FormLabel>
@@ -414,20 +462,20 @@ function BlogFormModal({
                 )}
               />
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
                 className="flex-1 sm:flex-none"
                 data-testid="button-cancel-blog-form"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading} 
+              <Button
+                type="submit"
+                disabled={isLoading}
                 className="flex-1 sm:flex-none"
                 data-testid="button-submit-blog"
               >
@@ -470,8 +518,8 @@ function UserEngagementModal({
   });
 
   const title = type === 'likes' ? 'Users who liked this blog' : 'Users who viewed this blog';
-  const emptyMessage = type === 'likes' 
-    ? 'No likes yet. Be the first to like this blog!' 
+  const emptyMessage = type === 'likes'
+    ? 'No likes yet. Be the first to like this blog!'
     : 'No views yet.';
 
   return (
@@ -483,7 +531,7 @@ function UserEngagementModal({
             {blogTitle}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="max-h-[400px] overflow-y-auto">
           {isLoading ? (
             <div className="space-y-3" data-testid={`loading-blog-${type}`}>
@@ -516,8 +564,8 @@ function UserEngagementModal({
                 >
                   <Avatar className="h-10 w-10">
                     {user.profileImageUrl ? (
-                      <AvatarImage 
-                        src={user.profileImageUrl} 
+                      <AvatarImage
+                        src={user.profileImageUrl}
                         alt={`${user.firstName} ${user.lastName}`}
                         data-testid={`avatar-img-${type}-${index}`}
                       />
@@ -547,18 +595,18 @@ function UserEngagementModal({
 }
 
 // Event Form Modal Component
-function EventFormModal({ 
-  isOpen, 
-  onClose, 
-  event, 
-  onSubmit, 
-  isLoading 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  event: Event | null; 
-  onSubmit: (data: any) => void; 
-  isLoading: boolean; 
+function EventFormModal({
+  isOpen,
+  onClose,
+  event,
+  onSubmit,
+  isLoading
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  event: Event | null;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
 }) {
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventFormSchema),
@@ -611,7 +659,7 @@ function EventFormModal({
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl break-words">{event ? "Edit Event" : "Create New Event"}</DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -628,7 +676,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="type"
@@ -653,7 +701,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="date"
@@ -667,7 +715,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="time"
@@ -681,7 +729,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="location"
@@ -695,7 +743,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="capacity"
@@ -709,7 +757,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="price"
@@ -723,7 +771,7 @@ function EventFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="tags"
@@ -738,7 +786,7 @@ function EventFormModal({
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="imageUrl"
@@ -759,7 +807,7 @@ function EventFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="videoUrl"
@@ -780,7 +828,7 @@ function EventFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -788,10 +836,10 @@ function EventFormModal({
                 <FormItem>
                   <FormLabel>Description *</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Event description..." 
-                      rows={6} 
-                      {...field} 
+                    <Textarea
+                      placeholder="Event description..."
+                      rows={6}
+                      {...field}
                       data-testid="textarea-event-description"
                     />
                   </FormControl>
@@ -799,20 +847,20 @@ function EventFormModal({
                 </FormItem>
               )}
             />
-            
+
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
                 className="flex-1 sm:flex-none"
                 data-testid="button-cancel-event-form"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading} 
+              <Button
+                type="submit"
+                disabled={isLoading}
                 className="flex-1 sm:flex-none"
                 data-testid="button-submit-event"
               >
@@ -836,7 +884,7 @@ export function BlogManagementView() {
   const [engagementModalType, setEngagementModalType] = useState<'likes' | 'views' | null>(null);
   const [engagementBlogId, setEngagementBlogId] = useState<string | null>(null);
   const [engagementBlogTitle, setEngagementBlogTitle] = useState<string>("");
-  
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -853,18 +901,18 @@ export function BlogManagementView() {
     return blogs.filter((blog) => {
       // Search filter - matches title or category
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         blog.title.toLowerCase().includes(searchLower) ||
         blog.category.toLowerCase().includes(searchLower);
-      
+
       // Category filter
       const matchesCategory = categoryFilter === "all" || blog.category === categoryFilter;
-      
+
       // Status filter
-      const matchesStatus = statusFilter === "all" || 
+      const matchesStatus = statusFilter === "all" ||
         (statusFilter === "published" && blog.published) ||
         (statusFilter === "draft" && !blog.published);
-      
+
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [blogs, searchQuery, categoryFilter, statusFilter]);
@@ -947,7 +995,7 @@ export function BlogManagementView() {
           <h2 className="text-2xl font-bold">Blog Management</h2>
           <p className="text-gray-600 dark:text-gray-400">Create, edit, and manage blog posts</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateModalOpen(true)}
           className="w-full sm:w-auto"
           data-testid="button-create-blog"
@@ -1020,8 +1068,8 @@ export function BlogManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Create your first blog post to get started.
                 </p>
-                <Button 
-                  onClick={() => setIsCreateModalOpen(true)} 
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
                   data-testid="button-create-first-blog"
                   className="px-6 py-2"
                 >
@@ -1038,7 +1086,7 @@ export function BlogManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Try adjusting your search or filter criteria.
                 </p>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => {
                     setSearchQuery("");
@@ -1069,11 +1117,11 @@ export function BlogManagementView() {
                           {blog.published ? "Published" : "Draft"}
                         </Badge>
                       </div>
-                      
+
                       {blog.excerpt && (
                         <p className="text-gray-600 dark:text-gray-400 line-clamp-2">{blog.excerpt}</p>
                       )}
-                      
+
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
@@ -1106,7 +1154,7 @@ export function BlogManagementView() {
                         <Badge variant="outline">{blog.category}</Badge>
                       </div>
                     </div>
-                    
+
                     <div className="flex lg:flex-col gap-2">
                       <Button
                         variant="outline"
@@ -1205,7 +1253,7 @@ export function EventManagementView() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [viewingRegistrations, setViewingRegistrations] = useState<Event | null>(null);
-  
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -1222,19 +1270,19 @@ export function EventManagementView() {
     return events.filter((event) => {
       // Search filter - matches title or location
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         event.title.toLowerCase().includes(searchLower) ||
         event.location.toLowerCase().includes(searchLower);
-      
+
       // Type filter
       const matchesType = typeFilter === "all" || event.type === typeFilter;
-      
+
       // Date filter
       const isUpcoming = new Date(event.date) >= new Date();
-      const matchesDate = dateFilter === "all" || 
+      const matchesDate = dateFilter === "all" ||
         (dateFilter === "upcoming" && isUpcoming) ||
         (dateFilter === "past" && !isUpcoming);
-      
+
       return matchesSearch && matchesType && matchesDate;
     });
   }, [events, searchQuery, typeFilter, dateFilter]);
@@ -1317,7 +1365,7 @@ export function EventManagementView() {
           <h2 className="text-2xl font-bold">Event Management</h2>
           <p className="text-gray-600 dark:text-gray-400">Create, edit, and manage department events</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateModalOpen(true)}
           className="w-full sm:w-auto"
           data-testid="button-create-event"
@@ -1391,13 +1439,13 @@ export function EventManagementView() {
                   {events.length === 0 ? "No events yet" : "No events found"}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  {events.length === 0 
+                  {events.length === 0
                     ? "Create your first event to get started."
                     : "Try adjusting your search or filter criteria."}
                 </p>
                 {events.length === 0 && (
-                  <Button 
-                    onClick={() => setIsCreateModalOpen(true)} 
+                  <Button
+                    onClick={() => setIsCreateModalOpen(true)}
                     data-testid="button-create-first-event"
                     className="px-6 py-2"
                   >
@@ -1417,11 +1465,11 @@ export function EventManagementView() {
                         <h3 className="text-lg font-semibold line-clamp-2">{event.title}</h3>
                         <Badge variant="outline">{event.type}</Badge>
                       </div>
-                      
+
                       {event.description && (
                         <p className="text-gray-600 dark:text-gray-400 line-clamp-2">{event.description}</p>
                       )}
-                      
+
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
@@ -1435,7 +1483,7 @@ export function EventManagementView() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex lg:flex-col gap-2">
                       <Button
                         variant="outline"
@@ -1533,14 +1581,14 @@ export function EventManagementView() {
 }
 
 // Event Registrations Modal Component
-function EventRegistrationsModal({ 
-  event, 
-  isOpen, 
-  onClose 
-}: { 
-  event: Event; 
-  isOpen: boolean; 
-  onClose: () => void; 
+function EventRegistrationsModal({
+  event,
+  isOpen,
+  onClose
+}: {
+  event: Event;
+  isOpen: boolean;
+  onClose: () => void;
 }) {
   const { data: registrations = [], isLoading } = useQuery<any[]>({
     queryKey: [`/api/events/${event._id}/registrations`],
@@ -1576,11 +1624,11 @@ function EventRegistrationsModal({
                   Total registrations: <span className="font-semibold">{registrations.length}</span>
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 {registrations.map((registration: any, index: number) => (
-                  <Card 
-                    key={registration._id || index} 
+                  <Card
+                    key={registration._id || index}
                     className="p-4"
                     data-testid={`card-registration-${registration._id || index}`}
                   >
@@ -1603,8 +1651,8 @@ function EventRegistrationsModal({
                         <p className="text-sm text-muted-foreground mt-2" data-testid={`text-registration-date-${registration._id || index}`}>
                           Registered: {new Date(registration.createdAt).toLocaleDateString()} at {new Date(registration.createdAt).toLocaleTimeString()}
                         </p>
-                        <Badge 
-                          variant={registration.status === 'registered' ? 'default' : 'secondary'} 
+                        <Badge
+                          variant={registration.status === 'registered' ? 'default' : 'secondary'}
                           className="mt-2"
                           data-testid={`badge-status-${registration._id || index}`}
                         >
@@ -1630,18 +1678,18 @@ function EventRegistrationsModal({
 }
 
 // Resource Form Modal Component
-function ResourceFormModal({ 
-  isOpen, 
-  onClose, 
-  resource, 
-  onSubmit, 
-  isLoading 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  resource: LearningResource | null; 
-  onSubmit: (data: any) => void; 
-  isLoading: boolean; 
+function ResourceFormModal({
+  isOpen,
+  onClose,
+  resource,
+  onSubmit,
+  isLoading
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  resource: LearningResource | null;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
 }) {
   const form = useForm<ResourceFormData>({
     resolver: zodResolver(resourceFormSchema),
@@ -1708,7 +1756,7 @@ function ResourceFormModal({
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl">{resource ? "Edit Learning Resource" : "Upload New Learning Resource"}</DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1725,7 +1773,7 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="type"
@@ -1749,7 +1797,7 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="category"
@@ -1763,7 +1811,7 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="difficulty"
@@ -1787,7 +1835,7 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="fileName"
@@ -1801,7 +1849,7 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="fileSize"
@@ -1815,7 +1863,7 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="tags"
@@ -1829,15 +1877,15 @@ function ResourceFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="previewAvailable"
                 render={({ field }) => (
                   <FormItem className="flex items-center space-x-2">
                     <FormControl>
-                      <Switch 
-                        checked={field.value} 
+                      <Switch
+                        checked={field.value}
                         onCheckedChange={field.onChange}
                         data-testid="switch-resource-preview"
                       />
@@ -1847,7 +1895,7 @@ function ResourceFormModal({
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="fileUrl"
@@ -1869,7 +1917,7 @@ function ResourceFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="thumbnailUrl"
@@ -1890,7 +1938,7 @@ function ResourceFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -1898,10 +1946,10 @@ function ResourceFormModal({
                 <FormItem>
                   <FormLabel>Description *</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Describe the learning resource..." 
-                      rows={6} 
-                      {...field} 
+                    <Textarea
+                      placeholder="Describe the learning resource..."
+                      rows={6}
+                      {...field}
                       data-testid="textarea-resource-description"
                     />
                   </FormControl>
@@ -1909,20 +1957,20 @@ function ResourceFormModal({
                 </FormItem>
               )}
             />
-            
+
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
                 className="flex-1 sm:flex-none"
                 data-testid="button-cancel-resource-form"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading} 
+              <Button
+                type="submit"
+                disabled={isLoading}
                 className="flex-1 sm:flex-none"
                 data-testid="button-submit-resource"
               >
@@ -1942,7 +1990,7 @@ export function ResourceManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<LearningResource | null>(null);
   const [deletingResource, setDeletingResource] = useState<LearningResource | null>(null);
-  
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -1966,20 +2014,20 @@ export function ResourceManagementView() {
     return resources.filter((resource) => {
       // Search filter - matches title or category
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         resource.title.toLowerCase().includes(searchLower) ||
         resource.category.toLowerCase().includes(searchLower) ||
         resource.description?.toLowerCase().includes(searchLower);
-      
+
       // Category filter
       const matchesCategory = categoryFilter === "all" || resource.category === categoryFilter;
-      
+
       // Type filter
       const matchesType = typeFilter === "all" || resource.type === typeFilter;
-      
+
       // Difficulty filter
       const matchesDifficulty = difficultyFilter === "all" || resource.difficulty === difficultyFilter;
-      
+
       return matchesSearch && matchesCategory && matchesType && matchesDifficulty;
     });
   }, [resources, searchQuery, categoryFilter, typeFilter, difficultyFilter]);
@@ -2086,7 +2134,7 @@ export function ResourceManagementView() {
           <h2 className="text-2xl font-bold">Learning Resources</h2>
           <p className="text-gray-600 dark:text-gray-400">Upload and manage educational materials</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateModalOpen(true)}
           className="w-full sm:w-auto"
           data-testid="button-create-resource"
@@ -2170,8 +2218,8 @@ export function ResourceManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Upload your first learning resource to get started.
                 </p>
-                <Button 
-                  onClick={() => setIsCreateModalOpen(true)} 
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
                   data-testid="button-create-first-resource"
                   className="px-6 py-2"
                 >
@@ -2188,8 +2236,8 @@ export function ResourceManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No resources match your current filters. Try adjusting your search or filter criteria.
                 </p>
-                <Button 
-                  onClick={clearFilters} 
+                <Button
+                  onClick={clearFilters}
                   variant="outline"
                   data-testid="button-clear-resource-filters"
                 >
@@ -2212,11 +2260,11 @@ export function ResourceManagementView() {
                             {resource.difficulty.toUpperCase()}
                           </Badge>
                         </div>
-                        
+
                         {resource.description && (
                           <p className="text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{resource.description}</p>
                         )}
-                        
+
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <Download className="w-4 h-4" />
@@ -2231,7 +2279,7 @@ export function ResourceManagementView() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex lg:flex-col gap-2">
                       <Button
                         variant="outline"
@@ -2517,7 +2565,7 @@ export function SettingsView() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={profileForm.control}
@@ -2532,7 +2580,7 @@ export function SettingsView() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={profileForm.control}
                       name="lastName"
@@ -2547,7 +2595,7 @@ export function SettingsView() {
                       )}
                     />
                   </div>
-                  
+
                   <FormField
                     control={profileForm.control}
                     name="email"
@@ -2561,14 +2609,14 @@ export function SettingsView() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="flex items-center justify-between pt-4">
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       <p><strong>Role:</strong> {user.role}</p>
                       <p><strong>Status:</strong> {user.approvalStatus}</p>
                     </div>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={updateProfileMutation.isPending}
                       data-testid="button-update-profile"
                     >
@@ -2610,7 +2658,7 @@ export function SettingsView() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={notificationForm.control}
                       name="blogNotifications"
@@ -2630,7 +2678,7 @@ export function SettingsView() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={notificationForm.control}
                       name="eventNotifications"
@@ -2650,7 +2698,7 @@ export function SettingsView() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={notificationForm.control}
                       name="resourceNotifications"
@@ -2671,9 +2719,9 @@ export function SettingsView() {
                       )}
                     />
                   </div>
-                  
-                  <Button 
-                    type="submit" 
+
+                  <Button
+                    type="submit"
                     disabled={updateNotificationsMutation.isPending}
                     data-testid="button-update-notifications"
                   >
@@ -2789,7 +2837,7 @@ export function SettingsView() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={passwordForm.control}
                 name="newPassword"
@@ -2803,7 +2851,7 @@ export function SettingsView() {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={passwordForm.control}
                 name="confirmPassword"
@@ -2817,7 +2865,7 @@ export function SettingsView() {
                   </FormItem>
                 )}
               />
-              
+
               <div className="flex gap-3 pt-4">
                 <Button
                   type="button"
@@ -2866,18 +2914,18 @@ export function SettingsView() {
 }
 
 // Staff Form Modal Component
-function StaffFormModal({ 
-  isOpen, 
-  onClose, 
-  staff, 
-  onSubmit, 
-  isLoading 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  staff: (StaffProfile & { user?: User }) | null; 
-  onSubmit: (data: any) => void; 
-  isLoading: boolean; 
+function StaffFormModal({
+  isOpen,
+  onClose,
+  staff,
+  onSubmit,
+  isLoading
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  staff: (StaffProfile & { user?: User }) | null;
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
 }) {
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
@@ -2940,7 +2988,7 @@ function StaffFormModal({
             {staff ? "Update staff member information" : "Add a new staff member from approved users"}
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -2951,10 +2999,10 @@ function StaffFormModal({
                   render={({ field }) => (
                     <FormItem className="lg:col-span-2">
                       <FormLabel>Staff Member Name *</FormLabel>
-                      <Input 
+                      <Input
                         value={field.value || ""}
                         onChange={(e) => field.onChange(e.target.value)}
-                        placeholder="Enter staff member name (e.g., Dr. John Smith)" 
+                        placeholder="Enter staff member name (e.g., Dr. John Smith)"
                         data-testid="input-staff-name"
                       />
                       <FormDescription>
@@ -2994,9 +3042,9 @@ function StaffFormModal({
                   <FormItem className="lg:col-span-2">
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="e.g., +234 123 456 7890" 
-                        {...field} 
+                      <Input
+                        placeholder="e.g., +234 123 456 7890"
+                        {...field}
                         data-testid="input-staff-phone"
                       />
                     </FormControl>
@@ -3004,7 +3052,7 @@ function StaffFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="title"
@@ -3018,7 +3066,7 @@ function StaffFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="department"
@@ -3032,7 +3080,7 @@ function StaffFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="specializations"
@@ -3047,7 +3095,7 @@ function StaffFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="office"
@@ -3061,7 +3109,7 @@ function StaffFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="experience"
@@ -3075,7 +3123,7 @@ function StaffFormModal({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="publications"
@@ -3083,12 +3131,12 @@ function StaffFormModal({
                   <FormItem>
                     <FormLabel>Number of Publications</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        {...field} 
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        {...field}
                         onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                        data-testid="input-staff-publications" 
+                        data-testid="input-staff-publications"
                       />
                     </FormControl>
                     <FormMessage />
@@ -3096,7 +3144,7 @@ function StaffFormModal({
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="courses"
@@ -3111,7 +3159,7 @@ function StaffFormModal({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="education"
@@ -3126,11 +3174,11 @@ function StaffFormModal({
                 </FormItem>
               )}
             />
-            
+
             {/* Landing Page Display Settings */}
             <div className="border rounded-md p-4 space-y-4">
               <h3 className="text-sm font-medium">Landing Page Display</h3>
-              
+
               <FormField
                 control={form.control}
                 name="showOnLanding"
@@ -3161,9 +3209,9 @@ function StaffFormModal({
                     <FormItem>
                       <FormLabel>Position (for landing page)</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g., President, Vice President" 
-                          {...field} 
+                        <Input
+                          placeholder="e.g., President, Vice President"
+                          {...field}
                           data-testid="input-staff-position"
                         />
                       </FormControl>
@@ -3182,10 +3230,10 @@ function StaffFormModal({
                     <FormItem>
                       <FormLabel>Display Order</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="999" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          placeholder="999"
+                          {...field}
                           onChange={e => field.onChange(parseInt(e.target.value) || 999)}
                           data-testid="input-staff-display-order"
                         />
@@ -3207,10 +3255,10 @@ function StaffFormModal({
                 <FormItem>
                   <FormLabel>Bio</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Brief biography..." 
-                      rows={5} 
-                      {...field} 
+                    <Textarea
+                      placeholder="Brief biography..."
+                      rows={5}
+                      {...field}
                       data-testid="textarea-staff-bio"
                     />
                   </FormControl>
@@ -3218,20 +3266,20 @@ function StaffFormModal({
                 </FormItem>
               )}
             />
-            
+
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
                 className="flex-1 sm:flex-none"
                 data-testid="button-cancel-staff-form"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading} 
+              <Button
+                type="submit"
+                disabled={isLoading}
                 className="flex-1 sm:flex-none"
                 data-testid="button-submit-staff"
               >
@@ -3251,7 +3299,7 @@ export function StaffManagementView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<(StaffProfile & { user?: User }) | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<StaffProfile | null>(null);
-  
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -3268,7 +3316,7 @@ export function StaffManagementView() {
     const departments = staffProfiles
       .map(staff => staff.department)
       .filter((dept): dept is string => !!dept);
-    return [...new Set(departments)].sort();
+    return Array.from(new Set(departments)).sort();
   }, [staffProfiles]);
 
   // Filter staff profiles based on search and filters
@@ -3276,46 +3324,46 @@ export function StaffManagementView() {
     return staffProfiles.filter((staff) => {
       // Search filter - matches name, title, department, or specializations
       const searchLower = searchQuery.toLowerCase().trim();
-      
+
       // Skip filter if search is empty
       if (searchLower === "") {
         // Apply only other filters
-        const matchesDepartment = departmentFilter === "all" || 
+        const matchesDepartment = departmentFilter === "all" ||
           (staff.department && staff.department === departmentFilter);
-        
-        const matchesLanding = showOnLandingFilter === "all" || 
+
+        const matchesLanding = showOnLandingFilter === "all" ||
           (showOnLandingFilter === "yes" && staff.showOnLanding === true) ||
           (showOnLandingFilter === "no" && !staff.showOnLanding);
-        
+
         return matchesDepartment && matchesLanding;
       }
-      
+
       // Build searchable text from staff data
       const staffName = (staff.customName || `${staff.user?.firstName || ''} ${staff.user?.lastName || ''}`).toLowerCase();
       const title = (staff.title || '').toLowerCase();
       const department = (staff.department || '').toLowerCase();
-      
+
       // Check if specializations is an array and search through it
       const specializationsArray = Array.isArray(staff.specializations) ? staff.specializations : [];
-      const specializationsMatch = specializationsArray.some(spec => 
+      const specializationsMatch = specializationsArray.some(spec =>
         typeof spec === 'string' && spec.toLowerCase().includes(searchLower)
       );
-      
-      const matchesSearch = 
+
+      const matchesSearch =
         staffName.includes(searchLower) ||
         title.includes(searchLower) ||
         department.includes(searchLower) ||
         specializationsMatch;
-      
+
       // Department filter
-      const matchesDepartment = departmentFilter === "all" || 
+      const matchesDepartment = departmentFilter === "all" ||
         (staff.department && staff.department === departmentFilter);
-      
+
       // Show on landing filter
-      const matchesLanding = showOnLandingFilter === "all" || 
+      const matchesLanding = showOnLandingFilter === "all" ||
         (showOnLandingFilter === "yes" && staff.showOnLanding === true) ||
         (showOnLandingFilter === "no" && !staff.showOnLanding);
-      
+
       return matchesSearch && matchesDepartment && matchesLanding;
     });
   }, [staffProfiles, searchQuery, departmentFilter, showOnLandingFilter]);
@@ -3408,7 +3456,7 @@ export function StaffManagementView() {
           <h2 className="text-2xl font-bold">Staff Management</h2>
           <p className="text-gray-600 dark:text-gray-400">Manage faculty and staff profiles</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateModalOpen(true)}
           className="w-full sm:w-auto"
           data-testid="button-create-staff"
@@ -3453,8 +3501,8 @@ export function StaffManagementView() {
             </SelectContent>
           </Select>
           {hasActiveFilters && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={clearFilters}
               className="w-full sm:w-auto"
               data-testid="button-clear-staff-filters"
@@ -3488,8 +3536,8 @@ export function StaffManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Add your first staff member to get started.
                 </p>
-                <Button 
-                  onClick={() => setIsCreateModalOpen(true)} 
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
                   data-testid="button-create-first-staff"
                   className="px-6 py-2"
                 >
@@ -3506,8 +3554,8 @@ export function StaffManagementView() {
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   No staff members match your current filters. Try adjusting your search or filter criteria.
                 </p>
-                <Button 
-                  onClick={clearFilters} 
+                <Button
+                  onClick={clearFilters}
                   variant="outline"
                   data-testid="button-clear-staff-filters-empty"
                 >
@@ -3530,13 +3578,13 @@ export function StaffManagementView() {
                           <Badge variant="secondary" className="text-xs">On Landing</Badge>
                         )}
                       </div>
-                      
+
                       <p className="text-gray-600 dark:text-gray-400 font-medium">{staffProfile.title}</p>
-                      
+
                       {staffProfile.bio && (
                         <p className="text-gray-600 dark:text-gray-400 line-clamp-2">{staffProfile.bio}</p>
                       )}
-                      
+
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                         {staffProfile.office && (
                           <span className="flex items-center gap-1">
@@ -3553,7 +3601,7 @@ export function StaffManagementView() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex lg:flex-col gap-2">
                       <Button
                         variant="outline"
