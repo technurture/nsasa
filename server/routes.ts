@@ -328,6 +328,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
+
+
       // Validate request body against schema
       const validationResult = blogCommentRequestSchema.safeParse(req.body);
       if (!validationResult.success) {
@@ -482,6 +484,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
+
+
       // Validate request body against schema
       const validationResult = eventCommentRequestSchema.safeParse(req.body);
       if (!validationResult.success) {
@@ -531,6 +535,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
       }
+
+
 
       // Validate request body against schema
       const validationResult = resourceCommentRequestSchema.safeParse(req.body);

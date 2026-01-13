@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Award, 
-  Trophy, 
-  Target, 
+import {
+  Award,
+  Trophy,
+  Target,
   BookOpen,
   MessageSquare,
   Download,
@@ -16,13 +16,10 @@ import {
 } from "lucide-react";
 import PollVoter from "./PollVoter";
 
+import type { User } from "@shared/mongoSchema";
+
 interface GamificationDashboardProps {
-  user: {
-    _id: string;
-    firstName?: string;
-    lastName?: string;
-    role?: string;
-  };
+  user: User;
 }
 
 interface UserStats {
@@ -58,22 +55,25 @@ interface LeaderboardMember {
 export default function GamificationDashboard({ user }: GamificationDashboardProps) {
   const { data: userStats, isLoading: statsLoading, error: statsError } = useQuery<UserStats>({
     queryKey: ['/api/gamification/user-stats', user._id],
-    refetchInterval: 30000
+    refetchInterval: 30000,
+    enabled: !!user._id
   });
 
   const { data: leaderboard = [], isLoading: leaderboardLoading, error: leaderboardError } = useQuery<LeaderboardMember[]>({
     queryKey: ['/api/gamification/leaderboard'],
-    refetchInterval: 60000
+    refetchInterval: 60000,
+    enabled: !!user._id
   });
 
   const { data: badges = [], isLoading: badgesLoading, error: badgesError } = useQuery<BadgeItem[]>({
     queryKey: ['/api/gamification/badges', user._id],
-    refetchInterval: 60000
+    refetchInterval: 60000,
+    enabled: !!user._id
   });
 
   const isLoading = statsLoading || leaderboardLoading || badgesLoading;
   const hasError = statsError || leaderboardError || badgesError;
-  
+
   const isUnauthorized = !statsLoading && userStats === null;
 
   if (isUnauthorized) {
@@ -89,8 +89,8 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Please log in again to access your progress dashboard.
           </p>
-          <button 
-            onClick={() => window.location.href = '/login'} 
+          <button
+            onClick={() => window.location.href = '/login'}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
             data-testid="button-login"
           >
@@ -117,8 +117,8 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
             {badgesError ? 'Unable to fetch your badges. ' : ''}
             Please try refreshing the page.
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
             data-testid="button-refresh"
           >
@@ -142,7 +142,7 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
 
   const iconMapping: Record<string, LucideIcon> = {
     "First Comment": MessageSquare,
-    "Resource Explorer": BookOpen, 
+    "Resource Explorer": BookOpen,
     "Active Participant": Users,
     "Popular Contributor": Heart,
     "Streak Master": Target,
@@ -267,18 +267,15 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
                 return (
                   <div
                     key={index}
-                    className={`p-4 rounded-lg border-2 text-center transition-all ${
-                      badge.earned
-                        ? 'border-blue-200 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 bg-gray-50 dark:bg-gray-800 opacity-50'
-                    }`}
+                    className={`p-4 rounded-lg border-2 text-center transition-all ${badge.earned
+                      ? 'border-blue-200 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 bg-gray-50 dark:bg-gray-800 opacity-50'
+                      }`}
                   >
-                    <Icon className={`w-8 h-8 mx-auto mb-2 ${
-                      badge.earned ? 'text-blue-600' : 'text-gray-400'
-                    }`} />
-                    <h4 className={`font-medium text-xs ${
-                      badge.earned ? 'text-blue-800 dark:text-blue-200' : 'text-gray-500'
-                    }`}>
+                    <Icon className={`w-8 h-8 mx-auto mb-2 ${badge.earned ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                    <h4 className={`font-medium text-xs ${badge.earned ? 'text-blue-800 dark:text-blue-200' : 'text-gray-500'
+                      }`}>
                       {badge.name}
                     </h4>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -299,16 +296,14 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
           <CardContent>
             <div className="space-y-4">
               {leaderboard.map((member, index) => (
-                <div key={index} className={`flex items-center space-x-3 p-2 rounded-lg ${
-                  user.firstName && member.name.includes(user.firstName) ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200' : ''
-                }`}>
+                <div key={index} className={`flex items-center space-x-3 p-2 rounded-lg ${user.firstName && member.name.includes(user.firstName) ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200' : ''
+                  }`}>
                   <div className="flex items-center space-x-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      index === 0 ? 'bg-yellow-500 text-white' :
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? 'bg-yellow-500 text-white' :
                       index === 1 ? 'bg-gray-400 text-white' :
-                      index === 2 ? 'bg-orange-500 text-white' :
-                      'bg-gray-200 text-gray-700'
-                    }`}>
+                        index === 2 ? 'bg-orange-500 text-white' :
+                          'bg-gray-200 text-gray-700'
+                      }`}>
                       {index + 1}
                     </div>
                     <Avatar className="w-8 h-8">
@@ -322,11 +317,10 @@ export default function GamificationDashboard({ user }: GamificationDashboardPro
                     </p>
                   </div>
                   {index < 3 && (
-                    <Trophy className={`w-4 h-4 ${
-                      index === 0 ? 'text-yellow-500' :
+                    <Trophy className={`w-4 h-4 ${index === 0 ? 'text-yellow-500' :
                       index === 1 ? 'text-gray-400' :
-                      'text-orange-500'
-                    }`} />
+                        'text-orange-500'
+                      }`} />
                   )}
                 </div>
               ))}

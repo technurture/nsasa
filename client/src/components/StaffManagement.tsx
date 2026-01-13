@@ -131,14 +131,14 @@ export function StaffManagement() {
     const positions = staffList
       .map(staff => staff.position)
       .filter((position): position is string => Boolean(position));
-    return [...new Set(positions)].sort();
+    return Array.from(new Set(positions)).sort();
   }, [staffList]);
 
   // Filter staff based on search term and position filter
   const filteredStaff = useMemo(() => {
     return staffList.filter(staff => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         staff.name?.toLowerCase().includes(searchLower) ||
         staff.customName?.toLowerCase().includes(searchLower) ||
         staff.position?.toLowerCase().includes(searchLower);
@@ -177,14 +177,14 @@ export function StaffManagement() {
   const createStaffMutation = useMutation({
     mutationFn: async (data: StaffFormData) => {
       const { specializations, courses, education, ...rest } = data;
-      
+
       const staffData = {
         ...rest,
         specializations: specializations ? specializations.split(',').map(s => s.trim()) : [],
         courses: courses ? courses.split(',').map(c => c.trim()) : [],
         education: education ? education.split(',').map(e => e.trim()) : [],
       };
-      
+
       return apiRequest('POST', '/api/staff', staffData);
     },
     onSuccess: () => {
@@ -209,14 +209,14 @@ export function StaffManagement() {
   const updateStaffMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<StaffFormData> }) => {
       const { specializations, courses, education, userId, ...rest } = data;
-      
+
       const staffData = {
         ...rest,
         specializations: specializations ? (typeof specializations === 'string' ? specializations.split(',').map(s => s.trim()) : specializations) : undefined,
         courses: courses ? (typeof courses === 'string' ? courses.split(',').map(c => c.trim()) : courses) : undefined,
         education: education ? (typeof education === 'string' ? education.split(',').map(e => e.trim()) : education) : undefined,
       };
-      
+
       return apiRequest('PUT', `/api/staff/${id}`, staffData);
     },
     onSuccess: () => {
@@ -315,8 +315,8 @@ export function StaffManagement() {
 
   // Get the selected user's display name
   const selectedUser = users.find(u => u._id === selectedUserId);
-  const displayValue = selectedUser 
-    ? `${selectedUser.firstName} ${selectedUser.lastName}` 
+  const displayValue = selectedUser
+    ? `${selectedUser.firstName} ${selectedUser.lastName}`
     : customName || "Select user or enter custom name";
 
   return (
@@ -326,7 +326,7 @@ export function StaffManagement() {
           <h2 className="text-2xl font-bold" data-testid="heading-staff-management">Staff Management</h2>
           <p className="text-muted-foreground">Manage faculty and staff profiles</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsCreateDialogOpen(true)}
           className="w-full sm:w-auto"
           data-testid="button-add-staff"
@@ -355,8 +355,8 @@ export function StaffManagement() {
           <SelectContent data-testid="select-position-content">
             <SelectItem value="all" data-testid="option-position-all">All Positions</SelectItem>
             {uniquePositions.map((position) => (
-              <SelectItem 
-                key={position} 
+              <SelectItem
+                key={position}
                 value={position}
                 data-testid={`option-position-${position.toLowerCase().replace(/\s+/g, '-')}`}
               >
@@ -469,7 +469,7 @@ export function StaffManagement() {
               {editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}
             </DialogTitle>
             <DialogDescription>
-              {editingStaff 
+              {editingStaff
                 ? 'Update the staff member details below.'
                 : 'Select an existing user or enter custom details to add a new staff member.'}
             </DialogDescription>
@@ -504,8 +504,8 @@ export function StaffManagement() {
                         </PopoverTrigger>
                         <PopoverContent className="w-[400px] p-0">
                           <Command>
-                            <CommandInput 
-                              placeholder="Search user or type custom name..." 
+                            <CommandInput
+                              placeholder="Search user or type custom name..."
                               value={searchValue}
                               onValueChange={handleCustomNameChange}
                               data-testid="input-search-user"
@@ -594,9 +594,9 @@ export function StaffManagement() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="e.g., +234 123 456 7890" 
-                        {...field} 
+                      <Input
+                        placeholder="e.g., +234 123 456 7890"
+                        {...field}
                         data-testid="input-phone"
                       />
                     </FormControl>
@@ -656,9 +656,9 @@ export function StaffManagement() {
                   <FormItem>
                     <FormLabel>Bio</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Brief biography" 
-                        {...field} 
+                      <Textarea
+                        placeholder="Brief biography"
+                        {...field}
                         data-testid="input-bio"
                         className="min-h-24"
                       />
@@ -705,9 +705,9 @@ export function StaffManagement() {
                   <FormItem>
                     <FormLabel>Specializations</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="e.g., Social Theory, Research Methods (comma-separated)" 
-                        {...field} 
+                      <Input
+                        placeholder="e.g., Social Theory, Research Methods (comma-separated)"
+                        {...field}
                         data-testid="input-specializations"
                       />
                     </FormControl>
@@ -726,9 +726,9 @@ export function StaffManagement() {
                   <FormItem>
                     <FormLabel>Courses</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="e.g., SOC 101, SOC 201 (comma-separated)" 
-                        {...field} 
+                      <Input
+                        placeholder="e.g., SOC 101, SOC 201 (comma-separated)"
+                        {...field}
                         data-testid="input-courses"
                       />
                     </FormControl>
@@ -747,9 +747,9 @@ export function StaffManagement() {
                   <FormItem>
                     <FormLabel>Education</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="e.g., PhD in Sociology, MA in Social Work (comma-separated)" 
-                        {...field} 
+                      <Input
+                        placeholder="e.g., PhD in Sociology, MA in Social Work (comma-separated)"
+                        {...field}
                         data-testid="input-education"
                       />
                     </FormControl>
@@ -799,9 +799,9 @@ export function StaffManagement() {
                         <FormItem>
                           <FormLabel>Position/Role</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="e.g., President, V.President, Financial Secretary" 
-                              {...field} 
+                            <Input
+                              placeholder="e.g., President, V.President, Financial Secretary"
+                              {...field}
                               data-testid="input-position"
                             />
                           </FormControl>
@@ -820,10 +820,10 @@ export function StaffManagement() {
                         <FormItem>
                           <FormLabel>Display Order</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="999" 
-                              {...field} 
+                            <Input
+                              type="number"
+                              placeholder="999"
+                              {...field}
                               data-testid="input-display-order"
                             />
                           </FormControl>

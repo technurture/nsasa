@@ -148,10 +148,10 @@ export default function ForgotPassword() {
 
             <div className="text-center">
               <Link href="/login">
-                <Button variant="link" className="text-sm" data-testid="link-back-to-login">
+                <a className="text-sm font-medium text-primary hover:underline inline-flex items-center">
                   <ArrowLeft className="h-3 w-3 mr-1" />
                   Back to Login
-                </Button>
+                </a>
               </Link>
             </div>
           </form>
