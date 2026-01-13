@@ -7,8 +7,9 @@ export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
-    staleTime: 30000, // 30 seconds
+    staleTime: 0, // Always check for fresh data on navigation
     refetchOnMount: true,
+    refetchInterval: 10000, // Poll every 10 seconds to detect role changes "instantly"
   });
 
   // Only consider user authenticated if we have user data
@@ -44,10 +45,10 @@ export function useLogin() {
     onSuccess: async (data) => {
       // Update the user data in cache
       queryClient.setQueryData(["/api/auth/user"], data.user);
-      
+
       // Verify the cookie is set by refetching
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      
+
       toast({
         title: "Success",
         description: "Logged in successfully",
@@ -116,10 +117,10 @@ export function useLogout() {
         title: "Logged Out",
         description: "You have been logged out successfully",
       });
-      
+
       queryClient.clear();
       queryClient.removeQueries();
-      
+
       setTimeout(() => {
         window.location.href = '/';
       }, 100);
@@ -127,7 +128,7 @@ export function useLogout() {
     onError: () => {
       queryClient.clear();
       queryClient.removeQueries();
-      
+
       setTimeout(() => {
         window.location.href = '/';
       }, 100);

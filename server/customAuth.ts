@@ -44,13 +44,13 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 async function verifyToken(token: string) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
+
     // Verify user still exists and is approved
     const user = await mongoStorage.getUser(decoded.userId);
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     if (user.approvalStatus !== 'approved') {
       throw new Error('User not approved');
     }
@@ -58,7 +58,7 @@ async function verifyToken(token: string) {
     return {
       userId: decoded.userId,
       email: decoded.email,
-      role: decoded.role
+      role: user.role // Always use fresh role from DB
     };
   } catch (error) {
     throw new Error('Invalid token');
@@ -120,7 +120,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (token) {
       req.user = await verifyToken(token);
     } else {
@@ -132,6 +132,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   } catch (error) {
     // Continue without authentication for optional auth
   }
-  
+
   next();
 };
