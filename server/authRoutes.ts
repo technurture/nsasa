@@ -44,7 +44,8 @@ router.post('/register', async (req, res) => {
     // Send pending registration email
     try {
       if (newUser.email && newUser.firstName) {
-        await sendRegistrationPendingEmail(newUser.email, newUser.firstName);
+        const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+        await sendRegistrationPendingEmail(newUser.email, newUser.firstName, origin);
         console.log(`Registration pending email sent to ${newUser.email}`);
       }
     } catch (emailError: any) {
@@ -246,19 +247,21 @@ router.put('/admin/users/:id/approval', authenticateToken, async (req, res) => {
     const updatedUser = await mongoStorage.updateUserApprovalStatus(id, status);
 
     // Send approval/rejection email
-    try {
-      if (updatedUser.email && updatedUser.firstName && updatedUser.lastName) {
+    if (updatedUser.email) {
+      try {
+        const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
         await sendApprovalEmail(
           updatedUser.email,
-          updatedUser.firstName,
-          updatedUser.lastName,
-          status === 'approved'
+          updatedUser.firstName || 'Student',
+          updatedUser.lastName || '',
+          status === 'approved',
+          origin
         );
         console.log(`${status} email sent to ${updatedUser.email}`);
+      } catch (emailError: any) {
+        console.error('Failed to send approval email:', emailError);
+        // Don't fail the request if email fails
       }
-    } catch (emailError: any) {
-      console.error('Failed to send approval email:', emailError);
-      // Don't fail the request if email fails
     }
 
     // Remove password hash from response
@@ -292,15 +295,16 @@ router.put('/admin/users/:id/role', authenticateToken, async (req, res) => {
 
     const updatedUser = await mongoStorage.updateUserRole(id, role);
 
-    // Send role update email
-    try {
-      if (updatedUser.email && updatedUser.firstName) {
-        await sendRoleChangeEmail(updatedUser.email, updatedUser.firstName, role);
+    // Send email notification
+    if (updatedUser.email) {
+      try {
+        const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+        await sendRoleChangeEmail(updatedUser.email, updatedUser.firstName || 'User', role, origin);
         console.log(`Role update email sent to ${updatedUser.email}`);
+      } catch (emailError: any) {
+        console.error('Failed to send role update email:', emailError);
+        // Don't fail the request if email fails
       }
-    } catch (emailError: any) {
-      console.error('Failed to send role update email:', emailError);
-      // Don't fail the request if email fails
     }
 
     // Remove password hash from response
@@ -333,7 +337,9 @@ router.post('/forgot-password', async (req, res) => {
     if (!user) {
       // Send "Account Not Found" email to prompt registration
       try {
-        await sendAccountNotFoundEmail(email);
+        // Use request origin (frontend URL) or fallback to configured URL
+        const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+        await sendAccountNotFoundEmail(email, origin);
         console.log(`Account not found email sent to ${email}`);
       } catch (emailError: any) {
         console.error('Failed to send account not found email:', emailError);
@@ -352,13 +358,18 @@ router.post('/forgot-password', async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    // Create reset URL using frontend URL from config
-    const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
+    // Use request origin (frontend URL) or fallback to configured URL
+    const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+    const base = origin; // Or config.frontendUrl if origin is missing/reliable
+
+    // Create reset URL using dynamic base URL
+    const resetUrl = `${base}/reset-password?token=${resetToken}`;
 
     // Send password reset email
     try {
       if (user.email && user.firstName) {
-        await sendPasswordResetEmail(user.email, resetUrl, user.firstName);
+        // Pass "1 hour" explicitly matching the token expiry
+        await sendPasswordResetEmail(user.email, resetUrl, user.firstName, "1 hour");
         console.log(`Password reset email sent to ${user.email}`);
       }
     } catch (emailError: any) {

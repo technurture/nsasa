@@ -84,7 +84,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   }
 }
 
-export function generatePasswordResetEmail(resetUrl: string, firstName: string): string {
+export function generatePasswordResetEmail(resetUrl: string, firstName: string, expiryTime: string = "1 hour"): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -184,7 +184,7 @@ export function generatePasswordResetEmail(resetUrl: string, firstName: string):
         <p class="link">${resetUrl}</p>
         
         <div class="warning">
-          <strong>⚠️ Important:</strong> This password reset link will expire in 1 hour for security reasons.
+          <strong>⚠️ Important:</strong> This password reset link will expire in ${expiryTime} for security reasons.
         </div>
         
         <p>If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
@@ -199,10 +199,11 @@ export function generatePasswordResetEmail(resetUrl: string, firstName: string):
   `;
 }
 
-export function generateApprovalEmail(firstName: string, lastName: string, approved: boolean): string {
+export function generateApprovalEmail(firstName: string, lastName: string, approved: boolean, baseUrl?: string): string {
   const status = approved ? 'Approved' : 'Rejected';
   const statusColor = approved ? '#10b981' : '#ef4444';
-  const loginUrl = `${config.frontendUrl}/login`;
+  const base = baseUrl || config.frontendUrl;
+  const loginUrl = `${base}/login`;
 
   return `
     <!DOCTYPE html>
@@ -344,12 +345,13 @@ export function generateApprovalEmail(firstName: string, lastName: string, appro
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string,
-  firstName: string
+  firstName: string,
+  expiryTime: string = "1 hour"
 ): Promise<void> {
   await sendEmail({
     to,
     subject: 'Reset Your Password - Nsasa',
-    html: generatePasswordResetEmail(resetUrl, firstName)
+    html: generatePasswordResetEmail(resetUrl, firstName, expiryTime)
   });
 }
 
@@ -357,7 +359,8 @@ export async function sendApprovalEmail(
   to: string,
   firstName: string,
   lastName: string,
-  approved: boolean
+  approved: boolean,
+  baseUrl?: string
 ): Promise<void> {
   const subject = approved
     ? 'Your Account Has Been Approved - Nsasa'
@@ -366,12 +369,13 @@ export async function sendApprovalEmail(
   await sendEmail({
     to,
     subject,
-    html: generateApprovalEmail(firstName, lastName, approved)
+    html: generateApprovalEmail(firstName, lastName, approved, baseUrl)
   });
 }
 
-export function generateRegistrationPendingEmail(firstName: string): string {
-  const loginUrl = `${config.frontendUrl}/login`;
+export function generateRegistrationPendingEmail(firstName: string, baseUrl?: string): string {
+  const base = baseUrl || config.frontendUrl;
+  const loginUrl = `${base}/login`;
 
   return `
     <!DOCTYPE html>
@@ -464,8 +468,9 @@ export function generateRegistrationPendingEmail(firstName: string): string {
   `;
 }
 
-export function generateRoleChangeEmail(firstName: string, newRole: string): string {
-  const loginUrl = `${config.frontendUrl}/login`;
+export function generateRoleChangeEmail(firstName: string, newRole: string, baseUrl?: string): string {
+  const base = baseUrl || config.frontendUrl;
+  const loginUrl = `${base}/login`;
   const roleDisplay = newRole === 'super_admin' ? 'Super Admin' : newRole.charAt(0).toUpperCase() + newRole.slice(1);
 
   return `
@@ -566,29 +571,32 @@ export function generateRoleChangeEmail(firstName: string, newRole: string): str
 
 export async function sendRegistrationPendingEmail(
   to: string,
-  firstName: string
+  firstName: string,
+  baseUrl?: string
 ): Promise<void> {
   await sendEmail({
     to,
     subject: 'Registration Pending Approval - Nsasa',
-    html: generateRegistrationPendingEmail(firstName)
+    html: generateRegistrationPendingEmail(firstName, baseUrl)
   });
 }
 
 export async function sendRoleChangeEmail(
   to: string,
   firstName: string,
-  newRole: string
+  newRole: string,
+  baseUrl?: string
 ): Promise<void> {
   await sendEmail({
     to,
     subject: 'Account Role Updated - Nsasa',
-    html: generateRoleChangeEmail(firstName, newRole)
+    html: generateRoleChangeEmail(firstName, newRole, baseUrl)
   });
 }
 
-export function generateAccountNotFoundEmail(): string {
-  const registerUrl = `${config.frontendUrl}/register`;
+export function generateAccountNotFoundEmail(baseUrl?: string): string {
+  const base = baseUrl || config.frontendUrl;
+  const registerUrl = `${base}/register`;
 
   return `
     <!DOCTYPE html>
@@ -688,10 +696,13 @@ export function generateAccountNotFoundEmail(): string {
   `;
 }
 
-export async function sendAccountNotFoundEmail(to: string): Promise<void> {
+export async function sendAccountNotFoundEmail(
+  to: string,
+  baseUrl?: string
+): Promise<void> {
   await sendEmail({
     to,
     subject: 'Account Not Found - Nsasa',
-    html: generateAccountNotFoundEmail()
+    html: generateAccountNotFoundEmail(baseUrl)
   });
 }
