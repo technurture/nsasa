@@ -137,7 +137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
-      const blogs = await mongoStorage.getBlogPosts(limit, offset);
+      const search = req.query.search as string;
+      const blogs = await mongoStorage.getBlogPosts(limit, offset, search);
 
       // Add isLikedByUser field to each blog
       const userId = req.user?.userId;
@@ -157,7 +158,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user's own blog posts
+  app.get('/api/user/blogs', authenticateToken, async (req, res) => {
+    console.log('🔍 DEBUG: Hit /api/user/blogs route');
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const blogs = await mongoStorage.getBlogPostsByAuthor(req.user.userId);
+      res.json(blogs);
+    } catch (error: any) {
+      console.error('Get user blogs error:', error);
+      res.status(500).json({ message: 'Failed to fetch your blogs', error: error.message });
+    }
+  });
+
+
   app.get('/api/blogs/:id', optionalAuth, async (req, res) => {
+    console.log(`🔍 DEBUG: Hit /api/blogs/:id route with id=${req.params.id}`);
     try {
       const blog = await mongoStorage.getBlogPost(req.params.id);
       if (!blog) {
@@ -256,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/blogs/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+  app.put('/api/blogs/:id', authenticateToken, async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });
@@ -282,7 +301,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Permission denied' });
       }
 
-      const blog = await mongoStorage.updateBlogPost(req.params.id, validationResult.data);
+      const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
+
+      const updateData: any = {
+        ...validationResult.data,
+        // If not admin, force status to pending and unpublished on update
+        ...(!isAdmin ? { approvalStatus: 'pending', published: false } : {})
+      };
+
+      const blog = await mongoStorage.updateBlogPost(req.params.id, updateData);
       res.json(blog);
     } catch (error: any) {
       console.error('Update blog error:', error);
@@ -290,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/blogs/:id', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+  app.delete('/api/blogs/:id', authenticateToken, async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Authentication required' });

@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import {  ArrowLeft, Calendar, Clock, Eye, Heart, MessageCircle, Share2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Eye, Heart, MessageCircle, Share2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -103,6 +103,23 @@ export default function BlogDetailPage() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const url = `${window.location.origin}/blogs/${blogId}`;
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link Copied",
+        description: "Blog post link copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -142,34 +159,34 @@ export default function BlogDetailPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
   const displayImage = blog.imageUrl || (blog.imageUrls && blog.imageUrls.length > 0 ? blog.imageUrls[0] : undefined);
-  
-  const galleryImages = blog.imageUrl 
+
+  const galleryImages = blog.imageUrl
     ? (blog.imageUrls || [])
     : (blog.imageUrls && blog.imageUrls.length > 1 ? blog.imageUrls.slice(1) : []);
-  
+
   const allImages = [displayImage, ...galleryImages].filter(Boolean);
-  
+
   const openImageModal = (index: number) => {
     setSelectedImageIndex(index);
     setIsImageModalOpen(true);
   };
-  
+
   const closeImageModal = () => {
     setIsImageModalOpen(false);
     setSelectedImageIndex(null);
   };
-  
+
   const navigateImage = (direction: 'prev' | 'next') => {
     if (selectedImageIndex === null) return;
-    
+
     if (direction === 'prev') {
       setSelectedImageIndex((selectedImageIndex - 1 + allImages.length) % allImages.length);
     } else {
@@ -194,18 +211,33 @@ export default function BlogDetailPage() {
         {/* Blog Header */}
         <article>
           {/* Featured Image */}
+          {/* Featured Image or Video */}
           {displayImage && (
-            <div 
-              className="aspect-video w-full overflow-hidden rounded-md mb-8 cursor-pointer hover-elevate"
+            <div
+              className="aspect-video w-full overflow-hidden rounded-md mb-8 cursor-pointer hover-elevate bg-black/5"
               onClick={() => openImageModal(0)}
               data-testid="img-featured-container"
             >
-              <img 
-                src={displayImage} 
-                alt={blog.title}
-                className="w-full h-full object-cover"
-                data-testid="img-featured"
-              />
+              {(displayImage.match(/\.(mp4|avi|mov|wmv)$/i) || displayImage.includes('/video/')) ? (
+                <div className="relative w-full h-full flex items-center justify-center group">
+                  <video
+                    src={displayImage}
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                    <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-2 border-white/50">
+                      <div className="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-white border-b-[10px] border-b-transparent ml-1" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={displayImage}
+                  alt={blog.title}
+                  className="w-full h-full object-cover"
+                  data-testid="img-featured"
+                />
+              )}
             </div>
           )}
 
@@ -278,7 +310,7 @@ export default function BlogDetailPage() {
           )}
 
           {/* Content */}
-          <div 
+          <div
             className="prose prose-lg dark:prose-invert max-w-none mb-12"
             data-testid="content-body"
             dangerouslySetInnerHTML={{ __html: blog.content }}
@@ -298,29 +330,44 @@ export default function BlogDetailPage() {
                 <CarouselContent className="-ml-2 md:-ml-4">
                   {galleryImages.map((imageUrl: string, index: number) => (
                     <CarouselItem key={index} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
-                      <Card 
+                      <Card
                         className="overflow-hidden hover-elevate transition-all cursor-pointer border-0"
                         onClick={() => openImageModal(index + 1)}
                         data-testid={`img-gallery-slide-${index}`}
                       >
-                        <div className="aspect-video w-full overflow-hidden bg-muted">
-                          <img 
-                            src={imageUrl} 
-                            alt={`${blog.title} - Image ${index + 2}`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
+                        <div className="aspect-video w-full overflow-hidden bg-muted relative group">
+                          {(imageUrl.match(/\.(mp4|avi|mov|wmv)$/i) || imageUrl.includes('/video/')) ? (
+                            <div className="w-full h-full flex items-center justify-center bg-black/10">
+                              <video
+                                src={imageUrl}
+                                className="w-full h-full object-cover opacity-80"
+                                muted
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/50">
+                                  <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1" />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={imageUrl}
+                              alt={`${blog.title} - Image ${index + 2}`}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          )}
                         </div>
                       </Card>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious 
-                  className="hidden sm:flex -left-12" 
+                <CarouselPrevious
+                  className="hidden sm:flex -left-12"
                   data-testid="button-gallery-prev"
                 />
-                <CarouselNext 
-                  className="hidden sm:flex -right-12" 
+                <CarouselNext
+                  className="hidden sm:flex -right-12"
                   data-testid="button-gallery-next"
                 />
               </Carousel>
@@ -367,6 +414,7 @@ export default function BlogDetailPage() {
               variant="ghost"
               size="sm"
               className="gap-2"
+              onClick={handleShare}
               data-testid="button-share"
             >
               <Share2 className="h-5 w-5" />
@@ -380,7 +428,7 @@ export default function BlogDetailPage() {
           </div>
         </article>
       </div>
-      
+
       {/* Full Screen Image Modal */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
@@ -395,7 +443,7 @@ export default function BlogDetailPage() {
             >
               <X className="h-6 w-6" />
             </Button>
-            
+
             {/* Navigation Buttons */}
             {allImages.length > 1 && (
               <>
@@ -408,7 +456,7 @@ export default function BlogDetailPage() {
                 >
                   <ChevronLeft className="h-8 w-8" />
                 </Button>
-                
+
                 <Button
                   variant="ghost"
                   size="icon"
@@ -420,19 +468,31 @@ export default function BlogDetailPage() {
                 </Button>
               </>
             )}
-            
+
             {/* Image Display */}
+            {/* Image/Video Display */}
             {selectedImageIndex !== null && allImages[selectedImageIndex] && (
-              <div className="w-full h-full flex items-center justify-center p-12">
-                <img
-                  src={allImages[selectedImageIndex]}
-                  alt={`${blog.title} - Full size`}
-                  className="max-w-full max-h-full object-contain"
-                  data-testid="img-modal-display"
-                />
+              <div className="w-full h-full flex items-center justify-center p-4 md:p-12">
+                {(allImages[selectedImageIndex].match(/\.(mp4|avi|mov|wmv)$/i) || allImages[selectedImageIndex].includes('/video/')) ? (
+                  <video
+                    src={allImages[selectedImageIndex]}
+                    className="max-w-full max-h-full"
+                    controls
+                    autoPlay
+                    playsInline
+                    data-testid="video-modal-display"
+                  />
+                ) : (
+                  <img
+                    src={allImages[selectedImageIndex]}
+                    alt={`${blog.title} - Full size`}
+                    className="max-w-full max-h-full object-contain"
+                    data-testid="img-modal-display"
+                  />
+                )}
               </div>
             )}
-            
+
             {/* Image Counter */}
             {allImages.length > 1 && selectedImageIndex !== null && (
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-md">
@@ -444,14 +504,14 @@ export default function BlogDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       <BlogEngagementDialog
         open={showLikesDialog}
         onOpenChange={setShowLikesDialog}
         blogId={blogId!}
         type="likes"
       />
-      
+
       <BlogEngagementDialog
         open={showViewsDialog}
         onOpenChange={setShowViewsDialog}

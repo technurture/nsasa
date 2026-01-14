@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
 
         {/* Tabs for different user statuses */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Pending Approval
@@ -327,18 +327,6 @@ export default function AdminDashboard() {
             <TabsTrigger value="rejected" className="flex items-center gap-2">
               <UserX className="h-4 w-4" />
               Rejected Users
-            </TabsTrigger>
-            <TabsTrigger value="polls" className="flex items-center gap-2" data-testid="tab-polls">
-              <BarChart3 className="h-4 w-4" />
-              Polls
-            </TabsTrigger>
-            <TabsTrigger value="gamification" className="flex items-center gap-2" data-testid="tab-gamification">
-              <Trophy className="h-4 w-4" />
-              Leaderboard
-            </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center gap-2" data-testid="tab-content">
-              <FileText className="h-4 w-4" />
-              Content
             </TabsTrigger>
           </TabsList>
 
@@ -376,18 +364,6 @@ export default function AdminDashboard() {
               filters={rejectedFilters}
               onFiltersChange={setRejectedFilters}
             />
-          </TabsContent>
-
-          <TabsContent value="polls" className="space-y-6">
-            <PollManagement />
-          </TabsContent>
-
-          <TabsContent value="gamification" className="space-y-6">
-            <LeaderboardContent />
-          </TabsContent>
-
-          <TabsContent value="content" className="space-y-6">
-            <BlogModerationContent />
           </TabsContent>
         </Tabs>
       </div>
@@ -1218,7 +1194,7 @@ function UsersListContent({
   );
 }
 
-function LeaderboardContent() {
+export function LeaderboardContent() {
   const { data: leaderboard = [], isLoading } = useQuery({
     queryKey: ['/api/admin/gamification/leaderboard'],
     queryFn: async () => {
@@ -1228,6 +1204,20 @@ function LeaderboardContent() {
       if (!response.ok) throw new Error('Failed to fetch leaderboard');
       return response.json();
     },
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
+
+  const filteredLeaderboard = leaderboard.filter((student: any) => {
+    const matchesSearch =
+      (student.firstName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (student.lastName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (student.matricNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+    const matchesLevel = levelFilter === 'all' || student.level === levelFilter;
+
+    return matchesSearch && matchesLevel;
   });
 
   if (isLoading) {
@@ -1260,68 +1250,139 @@ function LeaderboardContent() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">Rank</TableHead>
-              <TableHead>Student</TableHead>
-              <TableHead>Level</TableHead>
-              <TableHead className="text-right">Points</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leaderboard.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  No active students to display.
-                </TableCell>
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or matric number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              {['100', '200', '300', '400', '500'].map((level) => (
+                <SelectItem key={level} value={level}>{level} Level</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-6">
+          {/* Top 3 Podium */}
+          {filteredLeaderboard.length >= 3 && (
+            <div className="flex justify-center items-end gap-4 mb-8 min-h-[220px]">
+              {/* 2nd Place */}
+              <div className="flex flex-col items-center gap-2 order-1">
+                <div className="relative">
+                  <Avatar className="h-16 w-16 border-4 border-gray-300 shadow-xl">
+                    <AvatarFallback className="bg-gray-100 text-gray-700 font-bold text-xl">{filteredLeaderboard[1].firstName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-gray-400 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">2nd</div>
+                </div>
+                <div className="h-24 w-20 bg-gradient-to-t from-gray-200 to-gray-50/50 rounded-t-lg border-x border-t border-gray-200 flex flex-col items-center justify-end pb-2">
+                  <span className="font-bold text-sm text-center px-1 line-clamp-1">{filteredLeaderboard[1].firstName}</span>
+                  <span className="font-bold text-xs text-muted-foreground">{Math.floor((filteredLeaderboard[1].profileCompletion || 0) * 10) + (parseInt(filteredLeaderboard[1].level || '0') * 5)} pts</span>
+                </div>
+              </div>
+
+              {/* 1st Place */}
+              <div className="flex flex-col items-center gap-2 order-2 z-10 -mt-8">
+                <div className="relative">
+                  <Medal className="h-8 w-8 text-yellow-500 absolute -top-8 left-1/2 -translate-x-1/2 animate-bounce" />
+                  <Avatar className="h-24 w-24 border-4 border-yellow-400 shadow-2xl ring-4 ring-yellow-400/20">
+                    <AvatarFallback className="bg-yellow-50 text-yellow-700 font-bold text-2xl">{filteredLeaderboard[0].firstName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">1st</div>
+                </div>
+                <div className="h-32 w-24 bg-gradient-to-t from-yellow-100 to-yellow-50/50 rounded-t-lg border-x border-t border-yellow-200 flex flex-col items-center justify-end pb-4">
+                  <span className="font-bold text-base text-center px-1 line-clamp-1">{filteredLeaderboard[0].firstName}</span>
+                  <span className="font-bold text-sm text-yellow-700">{Math.floor((filteredLeaderboard[0].profileCompletion || 0) * 10) + (parseInt(filteredLeaderboard[0].level || '0') * 5)} pts</span>
+                </div>
+              </div>
+
+              {/* 3rd Place */}
+              <div className="flex flex-col items-center gap-2 order-3">
+                <div className="relative">
+                  <Avatar className="h-16 w-16 border-4 border-amber-600 shadow-xl">
+                    <AvatarFallback className="bg-amber-50 text-amber-800 font-bold text-xl">{filteredLeaderboard[2].firstName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-amber-700 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">3rd</div>
+                </div>
+                <div className="h-20 w-20 bg-gradient-to-t from-amber-100 to-amber-50/50 rounded-t-lg border-x border-t border-amber-200 flex flex-col items-center justify-end pb-2">
+                  <span className="font-bold text-sm text-center px-1 line-clamp-1">{filteredLeaderboard[2].firstName}</span>
+                  <span className="font-bold text-xs text-muted-foreground">{Math.floor((filteredLeaderboard[2].profileCompletion || 0) * 10) + (parseInt(filteredLeaderboard[2].level || '0') * 5)} pts</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[80px]">Rank</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Level</TableHead>
+                <TableHead className="text-right">Total Points</TableHead>
               </TableRow>
-            ) : (
-              leaderboard.map((student: any, index: number) => (
-                <TableRow key={student._id}>
-                  <TableCell className="font-medium">
-                    {index < 3 ? (
-                      <div className="flex items-center gap-1">
-                        {index === 0 && <Trophy className="h-4 w-4 text-yellow-500" />}
-                        {index === 1 && <Medal className="h-4 w-4 text-gray-400" />}
-                        {index === 2 && <Medal className="h-4 w-4 text-amber-600" />}
-                        <span className="ml-1">#{index + 1}</span>
-                      </div>
-                    ) : (
-                      <span className="ml-5">#{index + 1}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {student.firstName?.[0]}{student.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{student.firstName} {student.lastName}</span>
-                        <span className="text-xs text-muted-foreground">{student.matricNumber || 'No Matric'}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{student.level || 'N/A'}</TableCell>
-                  <TableCell className="text-right font-bold">
-                    {/* Placeholder for points logic - using completion as proxy for now */}
-                    {Math.floor((student.profileCompletion || 0) * 10) + (parseInt(student.level || '0') * 5)} pts
+            </TableHeader>
+            <TableBody>
+              {filteredLeaderboard.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No students found matching your filters
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              ) : (
+                (filteredLeaderboard.length >= 3 ? filteredLeaderboard.slice(3) : filteredLeaderboard).map((student: any, index: number) => {
+                  const rank = (filteredLeaderboard.length >= 3 ? 3 : 0) + index + 1;
+                  return (
+                    <TableRow key={student._id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted font-bold text-xs text-muted-foreground">
+                          #{rank}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {student.firstName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{student.firstName} {student.lastName}</span>
+                            <span className="text-xs text-muted-foreground">{student.matricNumber || 'No Matric'}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-normal text-xs">{student.level || 'N/A'}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-primary">
+                        {Math.floor((student.profileCompletion || 0) * 10) + (parseInt(student.level || '0') * 5)} pts
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent >
+    </Card >
   );
 }
 
-function BlogModerationContent() {
+export function BlogModerationContent() {
   const { toast } = useToast();
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch blogs
   const { data: blogs = [], isLoading, refetch } = useQuery({
@@ -1333,6 +1394,11 @@ function BlogModerationContent() {
       if (!response.ok) throw new Error('Failed to fetch blogs');
       return response.json();
     },
+  });
+
+  const filteredBlogs = blogs.filter((blog: any) => {
+    return (blog.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (blog.authorName?.toLowerCase() || '').includes(searchTerm.toLowerCase());
   });
 
   // Approval mutation
@@ -1384,27 +1450,35 @@ function BlogModerationContent() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              Blog Content Moderation
-            </CardTitle>
+            <CardTitle>Blog Moderation</CardTitle>
             <CardDescription>
               Review and manage student blog posts
             </CardDescription>
           </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Posts</SelectItem>
-              <SelectItem value="pending">Pending Approval</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search posts or authors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Posts</SelectItem>
+                <SelectItem value="pending">Pending Approval</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -1419,14 +1493,23 @@ function BlogModerationContent() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {blogs.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+                    Loading blogs...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredBlogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No blog posts found.
+                  No blog posts found matching your criteria.
                 </TableCell>
               </TableRow>
             ) : (
-              blogs.map((blog: any) => (
+              filteredBlogs.map((blog: any) => (
                 <TableRow key={blog._id}>
                   <TableCell className="font-medium max-w-[200px]">
                     <div className="break-words line-clamp-2" title={blog.title}>
@@ -1434,22 +1517,34 @@ function BlogModerationContent() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-xs">
-                          {blog.author?.name?.charAt(0) || '?'}
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border-2 border-primary/10">
+                        {blog.authorAvatar ? (
+                          <AvatarImage src={blog.authorAvatar} alt={blog.authorName} className="object-cover" />
+                        ) : null}
+                        <AvatarFallback className="text-xs font-bold bg-primary/5">
+                          {blog.authorName?.charAt(0) || '?'}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{blog.author?.name || 'Unknown'}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold">{blog.authorName || 'Unknown Author'}</span>
+                        <span className="text-xs text-muted-foreground">{blog.authorId ? 'Student' : 'Unknown'}</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     {new Date(blog.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {blog.approvalStatus === 'pending' && <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pending</Badge>}
-                    {blog.approvalStatus === 'approved' && <Badge variant="outline" className="text-green-600 border-green-600">Approved</Badge>}
-                    {blog.approvalStatus === 'rejected' && <Badge variant="outline" className="text-red-600 border-red-600">Rejected</Badge>}
+                    <div className="flex items-center">
+                      {!blog.approvalStatus || blog.approvalStatus === 'pending' ? (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 hover:bg-yellow-500/20">Pending</Badge>
+                      ) : blog.approvalStatus === 'approved' ? (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20">Approved</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20">Rejected</Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

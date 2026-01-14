@@ -7,7 +7,8 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { MultipleImageUpload } from "@/components/ui/multiple-image-upload";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import GamificationDashboard from "./GamificationDashboard";
-import AdminDashboard from "./AdminDashboard";
+import AdminDashboard, { LeaderboardContent, BlogModerationContent } from "./AdminDashboard";
+import PollManagement from "./PollManagement";
 import StudentDashboard from "./StudentDashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -329,6 +330,8 @@ function BlogFormModal({
                           <SelectItem value="Sociology">Sociology</SelectItem>
                           <SelectItem value="News">News</SelectItem>
                           <SelectItem value="Tutorial">Tutorial</SelectItem>
+                          <SelectItem value="Entertainment">Entertainment</SelectItem>
+                          <SelectItem value="Others">Others</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -1030,6 +1033,8 @@ export function BlogManagementView() {
               <SelectItem value="Sociology">Sociology</SelectItem>
               <SelectItem value="News">News</SelectItem>
               <SelectItem value="Tutorial">Tutorial</SelectItem>
+              <SelectItem value="Entertainment">Entertainment</SelectItem>
+              <SelectItem value="Others">Others</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -2419,7 +2424,7 @@ export function SettingsView() {
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: (profileData: any) => apiRequest('PUT', '/api/user/profile', profileData),
+    mutationFn: (profileData: any) => apiRequest('PUT', '/api/auth/profile', profileData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       toast({
@@ -3676,4 +3681,49 @@ export function StaffManagementView() {
       </AlertDialog>
     </div>
   );
+}
+
+export function PollsView() {
+  const { user } = useAuth();
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You don't have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+  return <PollManagement />;
+}
+
+export function LeaderboardView() {
+  const { user } = useAuth();
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You don't have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+  return <LeaderboardContent />;
+}
+
+export function ContentModerationView() {
+  const { user } = useAuth();
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-gray-600 dark:text-gray-400">You don't have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+  return <BlogModerationContent />;
 }

@@ -4,15 +4,23 @@ import { useAuth, useLogout } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  BarChart3, 
-  Users, 
-  FileText, 
-  Calendar, 
-  BookOpen, 
-  Settings, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  BarChart3,
+  Users,
+  FileText,
+  Calendar,
+  BookOpen,
+  Settings,
   Home,
   UserCheck,
   MessageSquare,
@@ -27,7 +35,8 @@ import {
   UserCog,
   Menu,
   X,
-  GraduationCap
+  GraduationCap,
+  Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +45,9 @@ const DASHBOARD_BASE = "/dashboard";
 const sidebarItems = [
   { icon: Home, label: "Dashboard", path: "/", roles: ["student", "admin", "super_admin"] },
   { icon: Users, label: "User Management", path: "/users", roles: ["admin", "super_admin"] },
+  { icon: BarChart3, label: "Polls", path: "/polls", roles: ["admin", "super_admin"] },
+  { icon: Trophy, label: "Leaderboard", path: "/leaderboard", roles: ["admin", "super_admin"] },
+  { icon: FileText, label: "Content Moderation", path: "/content", roles: ["admin", "super_admin"] },
   { icon: FileText, label: "Blog Management", path: "/blogs", roles: ["admin", "super_admin"] },
   { icon: Calendar, label: "Events", path: "/events", roles: ["admin", "super_admin"] },
   { icon: BookOpen, label: "Learning Resources", path: "/resources", roles: ["admin", "super_admin"] },
@@ -87,7 +99,7 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
     );
   }
 
-  const filteredSidebarItems = sidebarItems.filter(item => 
+  const filteredSidebarItems = sidebarItems.filter(item =>
     item.roles.includes(user.role as any)
   );
 
@@ -99,7 +111,7 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -113,9 +125,9 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         {/* Logo/Header */}
-        <div 
+        <div
           onClick={() => window.location.href = '/'}
-          className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors" 
+          className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-800 transition-colors"
           data-testid="link-logo"
         >
           <div className="flex items-center space-x-3">
@@ -137,7 +149,7 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
             const Icon = item.icon;
             const fullPath = item.path === "/" ? DASHBOARD_BASE : `${DASHBOARD_BASE}${item.path}`;
             const isActive = location === fullPath;
-            
+
             return (
               <Link key={item.path} href={fullPath}>
                 <Button
@@ -200,16 +212,16 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
               </Button>
               <div className="hidden sm:block">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-                  {user.role === 'super_admin' ? 'Super Admin Dashboard' : 
-                   user.role === 'admin' ? 'Admin Dashboard' : 
-                   'Student Dashboard'}
+                  {user.role === 'super_admin' ? 'Super Admin Dashboard' :
+                    user.role === 'admin' ? 'Admin Dashboard' :
+                      'Student Dashboard'}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   Welcome back, {user.firstName || 'User'}!
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2 sm:space-x-4">
               {user.role === 'super_admin' && (
                 <Select onValueChange={(value) => {
@@ -235,33 +247,51 @@ export default function ModernDashboard({ children }: ModernDashboardProps) {
               <Button variant="ghost" size="sm" data-testid="button-notifications">
                 <Bell className="w-5 h-5" />
               </Button>
-              
+
               {/* User Profile with Badge */}
-              <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-blue-600 text-white">
-                      {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="hidden lg:block">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user.email
-                        }
-                      </p>
-                      {user.role !== 'student' && (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                          {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-                        </Badge>
-                      )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80 transition-opacity">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={user.profileImageUrl} alt="Profile" />
+                        <AvatarFallback className="bg-blue-600 text-white">
+                          {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="hidden lg:block">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user.email
+                            }
+                          </p>
+                          {user.role !== 'student' && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                              {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">{user.role}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">{user.role}</p>
                   </div>
-                </div>
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation('/dashboard/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>

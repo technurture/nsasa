@@ -33,6 +33,7 @@ import AboutSection from "@/components/AboutSection";
 import CommentsSection from "@/components/CommentsSection";
 import ThemeToggle from "@/components/ThemeToggle";
 import ModernDashboard from "@/components/ModernDashboard";
+import { StudentBlogPostsView } from "@/components/StudentBlogPostsView";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import MainDashboardView, {
   UserManagementView,
@@ -42,7 +43,10 @@ import MainDashboardView, {
   EventManagementView,
   ResourceManagementView,
   StaffManagementView,
-  SettingsView
+  SettingsView,
+  PollsView,
+  LeaderboardView,
+  ContentModerationView
 } from "@/components/MainDashboardView";
 
 // Pages
@@ -671,6 +675,15 @@ function DashboardRouter() {
           <Route path="/dashboard/users">
             <AdminOnlyRoute><UserManagementView /></AdminOnlyRoute>
           </Route>
+          <Route path="/dashboard/polls">
+            <AdminOnlyRoute><PollsView /></AdminOnlyRoute>
+          </Route>
+          <Route path="/dashboard/leaderboard">
+            <AdminOnlyRoute><LeaderboardView /></AdminOnlyRoute>
+          </Route>
+          <Route path="/dashboard/content">
+            <AdminOnlyRoute><ContentModerationView /></AdminOnlyRoute>
+          </Route>
           <Route path="/dashboard/blogs">
             <AdminOnlyRoute><BlogManagementView /></AdminOnlyRoute>
           </Route>
@@ -692,7 +705,7 @@ function DashboardRouter() {
 
           {/* Student-specific routes */}
           <Route path="/dashboard/gamification" component={StudentGamificationView} />
-          <Route path="/dashboard/my-posts" component={StudentGamificationView} />
+          <Route path="/dashboard/my-posts" component={StudentBlogPostsView} />
 
           {/* Default fallback */}
           <Route component={MainDashboardView} />

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { uploadMultipleToCloudinary, validateFile, type CloudinaryUploadResult } from '@/lib/cloudinary';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Video, FileText, File } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MultipleImageUploadProps {
@@ -19,7 +19,38 @@ interface MultipleImageUploadProps {
   label?: string;
   description?: string;
   disabled?: boolean;
+  acceptedFormats?: 'image' | 'document' | 'video' | 'all';
 }
+
+const getAcceptedFileTypes = (acceptedFormats: 'image' | 'document' | 'video' | 'all') => {
+  switch (acceptedFormats) {
+    case 'image':
+      return {
+        accept: 'image/*',
+        types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+      };
+    case 'document':
+      return {
+        accept: '.pdf,.doc,.docx,.txt,.rtf',
+        types: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+        extensions: ['.pdf', '.doc', '.docx', '.txt', '.rtf']
+      };
+    case 'video':
+      return {
+        accept: 'video/*',
+        types: ['video/mp4', 'video/avi', 'video/mov', 'video/wmv'],
+        extensions: ['.mp4', '.avi', '.mov', '.wmv']
+      };
+    case 'all':
+    default:
+      return {
+        accept: 'image/*,.pdf,.doc,.docx,.txt,.rtf,video/*',
+        types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'video/mp4', 'video/avi', 'video/mov', 'video/wmv'],
+        extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.rtf', '.mp4', '.avi', '.mov', '.wmv']
+      };
+  }
+};
 
 export function MultipleImageUpload({
   value = [],
@@ -32,15 +63,18 @@ export function MultipleImageUpload({
   label = 'Upload Images',
   description,
   disabled = false,
+  acceptedFormats = 'image',
 }: MultipleImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [previews, setPreviews] = useState<string[]>(value);
-  
+
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fileConfig = getAcceptedFileTypes(acceptedFormats);
 
   useEffect(() => {
     return () => {
@@ -57,7 +91,7 @@ export function MultipleImageUpload({
     setError(null);
 
     if (value.length + files.length > maxFiles) {
-      const errorMsg = `You can only upload up to ${maxFiles} images. Currently: ${value.length}, trying to add: ${files.length}`;
+      const errorMsg = `You can only upload up to ${maxFiles} files. Currently: ${value.length}, trying to add: ${files.length}`;
       setError(errorMsg);
       onError?.(errorMsg);
       return;
@@ -69,8 +103,8 @@ export function MultipleImageUpload({
     for (const file of files) {
       const validation = validateFile(file, {
         maxSize,
-        allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-        allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        allowedTypes: fileConfig.types,
+        allowedExtensions: fileConfig.extensions
       });
 
       if (!validation.isValid) {
@@ -92,7 +126,7 @@ export function MultipleImageUpload({
     }
 
     setSelectedFiles(prev => [...prev, ...validFiles]);
-  }, [maxSize, maxFiles, value.length, onError]);
+  }, [maxSize, maxFiles, value.length, onError, fileConfig]);
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length === 0) {
@@ -113,11 +147,11 @@ export function MultipleImageUpload({
       console.log('📤 Calling uploadMultipleToCloudinary...');
       const results: CloudinaryUploadResult[] = await uploadMultipleToCloudinary(selectedFiles, {
         folder,
-        resourceType: 'image'
+        resourceType: 'auto'
       });
 
       console.log('✅ Upload complete! Results:', results.length);
-      
+
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -131,7 +165,7 @@ export function MultipleImageUpload({
         const uploadedCount = selectedFiles.length;
         return [...prev.slice(0, -uploadedCount), ...urls];
       });
-      
+
       setSelectedFiles([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -192,7 +226,7 @@ export function MultipleImageUpload({
             ref={fileInputRef}
             id="multiple-file-upload"
             type="file"
-            accept="image/*"
+            accept={fileConfig.accept}
             multiple
             onChange={handleFileSelect}
             disabled={disabled || isUploading || value.length >= maxFiles}
@@ -227,12 +261,38 @@ export function MultipleImageUpload({
               const isUploaded = index < value.length;
               return (
                 <div key={index} className="relative group">
-                  <div className="relative border rounded-lg overflow-hidden bg-muted/50 aspect-square">
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="relative border rounded-lg overflow-hidden bg-muted/50 aspect-square flex items-center justify-center">
+                    {(() => {
+                      const isVideo = preview.match(/\.(mp4|avi|mov|wmv)$/i) || preview.startsWith('data:video/');
+                      const isPdf = preview.match(/\.pdf$/i) || preview.startsWith('data:application/pdf');
+                      const isDoc = preview.match(/\.(doc|docx|txt|rtf)$/i) || preview.startsWith('data:application/') || preview.startsWith('data:text/');
+
+                      if (isVideo) {
+                        return (
+                          <div className="flex flex-col items-center justify-center text-muted-foreground w-full h-full bg-black/5">
+                            <Video className="w-10 h-10 mb-2" />
+                            <span className="text-xs max-w-[90%] truncate px-2">{isUploaded ? 'Video Uploaded' : 'Video Preview'}</span>
+                          </div>
+                        );
+                      } else if (isPdf || isDoc) {
+                        return (
+                          <div className="flex flex-col items-center justify-center text-muted-foreground w-full h-full bg-black/5">
+                            <FileText className="w-10 h-10 mb-2" />
+                            <span className="text-xs max-w-[90%] truncate px-2">Document</span>
+                          </div>
+                        );
+                      } else {
+                        // Default to image
+                        return (
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        );
+                      }
+                    })()}
+
                     {!isUploaded && (
                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                         <span className="text-white text-xs font-medium bg-black/50 px-2 py-1 rounded">
@@ -258,8 +318,8 @@ export function MultipleImageUpload({
         )}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Supported formats: JPG, PNG, GIF, WebP • Max size: {(maxSize / 1024 / 1024).toFixed(0)}MB per image</span>
-          <span>{value.length}/{maxFiles} images</span>
+          <span>Supported formats: {fileConfig.extensions.join(', ').toUpperCase()} • Max size: {(maxSize / 1024 / 1024).toFixed(0)}MB per file</span>
+          <span>{value.length}/{maxFiles} files</span>
         </div>
       </div>
     </div>
