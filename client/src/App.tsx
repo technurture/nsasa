@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import LeadershipMarquee from "@/components/LeadershipMarquee";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -105,77 +106,10 @@ function FeaturedStaffSection() {
           Meet the dedicated team leading our department
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-        {featuredStaff.map((staff) => {
-          const staffName = staff.customName || staff.name || 'Unknown';
-          const initials = staffName.split(' ').map((n: string) => n[0]).join('').toUpperCase();
-
-          return (
-            <Card
-              key={staff._id}
-              className="group overflow-hidden hover-elevate transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-xl"
-              data-testid={`staff-card-${staff._id}`}
-              onClick={() => setLocation(`/staff/${staff._id}`)}
-            >
-              <CardContent className="p-8 text-center space-y-6">
-                <div className="flex justify-center relative">
-                  <div className="relative">
-                    <Avatar className="h-48 w-48 border-4 border-primary/20 shadow-2xl group-hover:border-primary/50 transition-all duration-300 ring-8 ring-primary/5">
-                      {staff.avatar ? (
-                        <AvatarImage
-                          src={staff.avatar}
-                          alt={staffName}
-                          className="object-cover"
-                        />
-                      ) : null}
-                      <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-primary/20 to-primary/10">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-3 shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-bold text-2xl group-hover:text-primary transition-colors duration-300" data-testid={`text-name-${staff._id}`}>
-                    {staffName}
-                  </h3>
-                  {staff.position && (
-                    <div className="inline-block max-w-full">
-                      <Badge
-                        variant="secondary"
-                        className="text-sm font-semibold px-4 py-2 whitespace-normal text-center leading-tight"
-                        data-testid={`text-position-${staff._id}`}
-                      >
-                        {staff.position}
-                      </Badge>
-                    </div>
-                  )}
-                  {staff.title && (
-                    <p className="text-base text-muted-foreground line-clamp-2 mt-2">
-                      {staff.title}
-                    </p>
-                  )}
-                </div>
-
-                {staff.bio && (
-                  <p className="text-sm text-muted-foreground line-clamp-4 leading-relaxed">
-                    {staff.bio}
-                  </p>
-                )}
-
-                <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p className="text-xs text-primary font-semibold">Click to view full profile →</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="max-w-full overflow-hidden">
+        <LeadershipMarquee staffs={featuredStaff} />
       </div>
+
       <div className="text-center mt-10">
         <Button
           variant="outline"
@@ -189,7 +123,7 @@ function FeaturedStaffSection() {
           </svg>
         </Button>
       </div>
-    </section>
+    </section >
   );
 }
 

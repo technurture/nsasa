@@ -56,13 +56,22 @@ export default function StaffProfileCard({ staff, onContact, onViewProfile }: St
       data-testid={`card-staff-${staff.id}`}
     >
       {/* Profile Image Header */}
-      <div className="relative w-full h-56 overflow-hidden bg-muted">
+      <div className="relative w-full h-64 overflow-hidden bg-muted/30">
         {staff.avatar ? (
-          <img
-            src={staff.avatar}
-            alt={staff.name}
-            className="w-full h-full object-cover"
-          />
+          <>
+            {/* Blurred Background Layer - Ensures nice fill */}
+            <div
+              className="absolute inset-0 bg-cover bg-center blur-sm opacity-50 scale-110"
+              style={{ backgroundImage: `url(${staff.avatar})` }}
+            />
+
+            {/* Main Image Layer - Ensures nothing is cut off */}
+            <img
+              src={staff.avatar}
+              alt={staff.name}
+              className="relative w-full h-full object-contain z-10 transition-transform duration-300 group-hover:scale-105"
+            />
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
             <span className="text-6xl font-bold text-muted-foreground">
