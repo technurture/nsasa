@@ -213,6 +213,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoints for blogs
+  app.get('/api/admin/blogs', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const blogs = await mongoStorage.getAdminBlogPosts(status, limit, offset);
+      res.json(blogs);
+    } catch (error: any) {
+      console.error('Get admin blogs error:', error);
+      res.status(500).json({ message: 'Failed to get blogs', error: error.message });
+    }
+  });
+
   // Admin approval endpoint
   app.put('/api/admin/blogs/:id/approval', authenticateToken, requireRole(['admin', 'super_admin']), async (req, res) => {
     try {

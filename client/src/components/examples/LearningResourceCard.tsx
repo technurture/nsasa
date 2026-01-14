@@ -16,7 +16,9 @@ export default function LearningResourceCardExample() {
     tags: ["statistics", "research", "SPSS", "analysis", "methodology"],
     difficulty: '400l' as const,
     thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop",
-    previewAvailable: true
+    previewAvailable: true,
+    fileUrl: "https://example.com/file.pdf",
+    fileName: "advanced_statistics.pdf"
   };
 
   const handleDownload = (id: string) => {
@@ -37,7 +39,7 @@ export default function LearningResourceCardExample() {
 
   return (
     <div className="max-w-sm p-4">
-      <LearningResourceCard 
+      <LearningResourceCard
         resource={mockResource}
         onDownload={handleDownload}
         onPreview={handlePreview}

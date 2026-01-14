@@ -47,6 +47,7 @@ export interface IMongoStorage {
   // Blog operations
   createBlogPost(authorId: string, post: InsertBlogPost): Promise<BlogPost>;
   getBlogPosts(limit?: number, offset?: number): Promise<BlogPost[]>;
+  getAdminBlogPosts(status?: string, limit?: number, offset?: number): Promise<BlogPost[]>;
   getBlogPost(id: string): Promise<BlogPost | undefined>;
   updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost>;
   deleteBlogPost(id: string): Promise<void>;
@@ -413,6 +414,67 @@ export class MongoStorage implements IMongoStorage {
           createdAt: 1,
           updatedAt: 1,
           commentCount: 1,
+          authorName: {
+            $cond: {
+              if: "$authorData",
+              then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+              else: "Unknown Author"
+            }
+          },
+          authorAvatar: "$authorData.profileImageUrl"
+        }
+      }
+    ]).toArray();
+
+    return posts as BlogPost[];
+  }
+
+  async getAdminBlogPosts(status?: string, limit = 20, offset = 0): Promise<BlogPost[]> {
+    const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
+
+    // Build query based on status
+    const query: any = {};
+    if (status && status !== 'all') {
+      // If status is specific (pending, approved, rejected), filter by it
+      // Note: 'approvalStatus' might effectively be the single source of truth, 
+      // but 'published' boolean is also used. 
+      // Standardizing on approvalStatus for admin view.
+      query.approvalStatus = status;
+    }
+
+    const posts = await blogPostsCollection.aggregate([
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      { $skip: offset },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: COLLECTIONS.USERS,
+          let: { authorId: "$authorId" },
+          pipeline: [
+            { $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$authorId"] } } }
+          ],
+          as: "authorData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$authorData",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: { $toString: "$_id" },
+          authorId: 1,
+          title: 1,
+          content: 1,
+          category: 1,
+          tags: 1,
+          imageUrl: 1,
+          published: 1,
+          approvalStatus: 1, // Important for admin
+          createdAt: 1,
           authorName: {
             $cond: {
               if: "$authorData",

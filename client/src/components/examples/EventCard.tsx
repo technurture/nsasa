@@ -13,7 +13,7 @@ export default function EventCardExample() {
     capacity: 150,
     registered: 127,
     price: 25,
-    image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=300&fit=crop",
+    imageUrl: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=300&fit=crop",
     organizer: "Department of Sociology",
     tags: ["innovation", "research", "networking", "community"]
   };
@@ -32,11 +32,10 @@ export default function EventCardExample() {
 
   return (
     <div className="max-w-md">
-      <EventCard 
+      <EventCard
         event={mockEvent}
         onRegister={handleRegister}
-        onShare={handleShare}
-        onViewDetails={handleViewDetails}
+        onReadMore={handleViewDetails}
       />
     </div>
   );
