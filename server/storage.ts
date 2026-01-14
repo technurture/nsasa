@@ -37,14 +37,14 @@ export interface IStorage {
   // User operations (IMPORTANT) these are mandatory for Replit Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Additional user operations
   getUserByMatricNumber(matricNumber: string): Promise<User | undefined>;
   getUsersByApprovalStatus(status: string): Promise<User[]>;
   updateUserApprovalStatus(id: string, status: string): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
   completeUserProfile(id: string, profileData: Partial<User>): Promise<User>;
-  
+
   // Blog operations
   createBlogPost(authorId: string, post: InsertBlogPost): Promise<BlogPost>;
   getBlogPosts(limit?: number, offset?: number): Promise<BlogPost[]>;
@@ -53,12 +53,12 @@ export interface IStorage {
   deleteBlogPost(id: string): Promise<void>;
   getBlogPostsByAuthor(authorId: string): Promise<BlogPost[]>;
   incrementBlogViews(id: string): Promise<void>;
-  
+
   // Comment operations
   createBlogComment(authorId: string, blogPostId: string, comment: InsertBlogComment): Promise<BlogComment>;
   getBlogComments(blogPostId: string): Promise<BlogComment[]>;
   deleteComment(id: string): Promise<void>;
-  
+
   // Event operations
   createEvent(organizerId: string, event: InsertEvent): Promise<Event>;
   getEvents(limit?: number, offset?: number): Promise<Event[]>;
@@ -68,7 +68,7 @@ export interface IStorage {
   registerForEvent(userId: string, eventId: string): Promise<EventRegistration>;
   getEventRegistrations(eventId: string): Promise<EventRegistration[]>;
   getUserEventRegistrations(userId: string): Promise<EventRegistration[]>;
-  
+
   // Learning resource operations
   createLearningResource(uploadedById: string, resource: InsertLearningResource & { fileUrl: string; fileName: string; fileSize: string }): Promise<LearningResource>;
   getLearningResources(limit?: number, offset?: number): Promise<LearningResource[]>;
@@ -77,18 +77,18 @@ export interface IStorage {
   deleteLearningResource(id: string): Promise<void>;
   recordResourceDownload(userId: string, resourceId: string): Promise<void>;
   rateResource(userId: string, resourceId: string, rating: number): Promise<void>;
-  
+
   // Staff operations
   createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile>;
   getStaffProfiles(): Promise<StaffProfile[]>;
   getStaffProfile(userId: string): Promise<StaffProfile | undefined>;
   updateStaffProfile(userId: string, profile: Partial<InsertStaffProfile>): Promise<StaffProfile>;
-  
+
   // Contact operations
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
   getContactSubmissions(status?: string): Promise<ContactSubmission[]>;
   updateContactSubmissionStatus(id: string, status: string): Promise<ContactSubmission>;
-  
+
   // Newsletter operations
   subscribeNewsletter(email: string): Promise<void>;
   unsubscribeNewsletter(email: string): Promise<void>;
@@ -147,10 +147,10 @@ export class DatabaseStorage implements IStorage {
   async completeUserProfile(id: string, profileData: Partial<User>): Promise<User> {
     const [user] = await db
       .update(users)
-      .set({ 
-        ...profileData, 
+      .set({
+        ...profileData,
         profileCompletion: this.calculateProfileCompletion(profileData),
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(users.id, id))
       .returning();
@@ -167,7 +167,7 @@ export class DatabaseStorage implements IStorage {
   async createBlogPost(authorId: string, post: InsertBlogPost): Promise<BlogPost> {
     const [blogPost] = await db
       .insert(blogPosts)
-      .values({ ...post, authorId, id: randomUUID() })
+      .values({ ...post, authorId, id: randomUUID() } as any)
       .returning();
     return blogPost;
   }
@@ -190,7 +190,7 @@ export class DatabaseStorage implements IStorage {
   async updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost> {
     const [updatedPost] = await db
       .update(blogPosts)
-      .set({ ...post, updatedAt: new Date() })
+      .set({ ...post, updatedAt: new Date() } as any)
       .where(eq(blogPosts.id, id))
       .returning();
     return updatedPost;
@@ -219,8 +219,8 @@ export class DatabaseStorage implements IStorage {
   async createBlogComment(authorId: string, blogPostId: string, comment: InsertBlogComment): Promise<BlogComment> {
     const [blogComment] = await db
       .insert(blogComments)
-      .values({ ...comment, authorId, blogPostId, id: randomUUID() })
-      .returning();
+      .values({ ...comment, authorId, blogPostId, id: randomUUID() } as any)
+      .returning() as any;
     return blogComment;
   }
 
@@ -240,7 +240,7 @@ export class DatabaseStorage implements IStorage {
   async createEvent(organizerId: string, event: InsertEvent): Promise<Event> {
     const [newEvent] = await db
       .insert(events)
-      .values({ ...event, organizerId, id: randomUUID() })
+      .values({ ...event, organizerId, id: randomUUID() } as any)
       .returning();
     return newEvent;
   }
@@ -267,7 +267,7 @@ export class DatabaseStorage implements IStorage {
     );
     const [updatedEvent] = await db
       .update(events)
-      .set(cleanUpdateData)
+      .set(cleanUpdateData as any)
       .where(eq(events.id, id))
       .returning();
     return updatedEvent;
@@ -303,7 +303,7 @@ export class DatabaseStorage implements IStorage {
   async createLearningResource(uploadedById: string, resource: InsertLearningResource & { fileUrl: string; fileName: string; fileSize: string }): Promise<LearningResource> {
     const [newResource] = await db
       .insert(learningResources)
-      .values({ ...resource, uploadedById, id: randomUUID() })
+      .values({ ...resource, uploadedById, id: randomUUID() } as any)
       .returning();
     return newResource;
   }
@@ -325,7 +325,7 @@ export class DatabaseStorage implements IStorage {
   async updateLearningResource(id: string, resource: Partial<LearningResource>): Promise<LearningResource> {
     const [updatedResource] = await db
       .update(learningResources)
-      .set({ ...resource, updatedAt: new Date() })
+      .set({ ...resource, updatedAt: new Date() } as any)
       .where(eq(learningResources.id, id))
       .returning();
     return updatedResource;
@@ -338,7 +338,7 @@ export class DatabaseStorage implements IStorage {
   async recordResourceDownload(userId: string, resourceId: string): Promise<void> {
     // Record the download
     await db.insert(resourceDownloads).values({ userId, resourceId });
-    
+
     // Increment download count
     await db
       .update(learningResources)
@@ -378,7 +378,7 @@ export class DatabaseStorage implements IStorage {
   async createStaffProfile(userId: string, profile: InsertStaffProfile): Promise<StaffProfile> {
     const [staffProfile] = await db
       .insert(staffProfiles)
-      .values({ ...profile, userId, id: randomUUID() })
+      .values({ ...profile, userId, id: randomUUID() } as any)
       .returning();
     return staffProfile;
   }
@@ -406,7 +406,7 @@ export class DatabaseStorage implements IStorage {
     );
     const [updatedProfile] = await db
       .update(staffProfiles)
-      .set(cleanUpdateData)
+      .set(cleanUpdateData as any)
       .where(eq(staffProfiles.userId, userId))
       .returning();
     return updatedProfile;
@@ -423,11 +423,11 @@ export class DatabaseStorage implements IStorage {
 
   async getContactSubmissions(status?: string): Promise<ContactSubmission[]> {
     const query = db.select().from(contactSubmissions);
-    
+
     if (status) {
       return await query.where(eq(contactSubmissions.status, status)).orderBy(desc(contactSubmissions.createdAt));
     }
-    
+
     return await query.orderBy(desc(contactSubmissions.createdAt));
   }
 

@@ -43,7 +43,8 @@ import {
   Filter,
   X,
   Trophy,
-  Medal
+  Medal,
+  FileText
 } from 'lucide-react';
 import {
   Table,
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
 
   // Mutation for updating user role
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: 'student' | 'admin' }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: 'student' | 'admin' | 'alumnus' }) => {
       const response = await fetch(`/api/auth/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -255,7 +256,7 @@ export default function AdminDashboard() {
   };
 
   const handleRoleChange = (userId: string, newRole: string) => {
-    updateRoleMutation.mutate({ userId, role: newRole as 'student' | 'admin' });
+    updateRoleMutation.mutate({ userId, role: newRole as 'student' | 'admin' | 'alumnus' });
   };
 
   const getStatusBadge = (status: string) => {
@@ -335,6 +336,10 @@ export default function AdminDashboard() {
               <Trophy className="h-4 w-4" />
               Leaderboard
             </TabsTrigger>
+            <TabsTrigger value="content" className="flex items-center gap-2" data-testid="tab-content">
+              <FileText className="h-4 w-4" />
+              Content
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-6">
@@ -379,6 +384,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="gamification" className="space-y-6">
             <LeaderboardContent />
+          </TabsContent>
+
+          <TabsContent value="content" className="space-y-6">
+            <BlogModerationContent />
           </TabsContent>
         </Tabs>
       </div>
@@ -1299,6 +1308,182 @@ function LeaderboardContent() {
                   <TableCell className="text-right font-bold">
                     {/* Placeholder for points logic - using completion as proxy for now */}
                     {Math.floor((student.profileCompletion || 0) * 10) + (parseInt(student.level || '0') * 5)} pts
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BlogModerationContent() {
+  const { toast } = useToast();
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Fetch blogs
+  const { data: blogs = [], isLoading, refetch } = useQuery({
+    queryKey: ['/api/admin/blogs', filterStatus],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/blogs?status=${filterStatus}&limit=100`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch blogs');
+      return response.json();
+    },
+  });
+
+  // Approval mutation
+  const approveMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: 'approved' | 'rejected' }) => {
+      const response = await fetch(`/api/admin/blogs/${id}/approval`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error('Failed to update blog status');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/blogs'] });
+      toast({
+        title: "Success",
+        description: "Blog status updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update blog status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Blog Content Moderation</CardTitle>
+          <CardDescription>Loading blog posts...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-10 bg-muted rounded w-full animate-pulse" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" />
+              Blog Content Moderation
+            </CardTitle>
+            <CardDescription>
+              Review and manage student blog posts
+            </CardDescription>
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Posts</SelectItem>
+              <SelectItem value="pending">Pending Approval</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Author</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {blogs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  No blog posts found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              blogs.map((blog: any) => (
+                <TableRow key={blog._id}>
+                  <TableCell className="font-medium max-w-[200px]">
+                    <div className="break-words line-clamp-2" title={blog.title}>
+                      {blog.title}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-xs">
+                          {blog.author?.name?.charAt(0) || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{blog.author?.name || 'Unknown'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(blog.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {blog.approvalStatus === 'pending' && <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pending</Badge>}
+                    {blog.approvalStatus === 'approved' && <Badge variant="outline" className="text-green-600 border-green-600">Approved</Badge>}
+                    {blog.approvalStatus === 'rejected' && <Badge variant="outline" className="text-red-600 border-red-600">Rejected</Badge>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {blog.approvalStatus === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="h-8 px-2 bg-green-600 hover:bg-green-700"
+                            onClick={() => approveMutation.mutate({ id: blog._id, status: 'approved' })}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-8 px-2"
+                            onClick={() => approveMutation.mutate({ id: blog._id, status: 'rejected' })}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      {(blog.approvalStatus === 'approved' || blog.approvalStatus === 'rejected') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2"
+                          onClick={() => approveMutation.mutate({ id: blog._id, status: blog.approvalStatus === 'approved' ? 'rejected' : 'approved' })}
+                        >
+                          Change Status
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

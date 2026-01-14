@@ -18,7 +18,7 @@ export default function BlogCardExample() {
     likes: 24,
     comments: 12,
     views: 156,
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
+    imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&fit=crop",
     tags: ["psychology", "society", "behavior", "research"]
   };
 
@@ -44,10 +44,9 @@ export default function BlogCardExample() {
 
   return (
     <div className="max-w-md">
-      <BlogCard 
+      <BlogCard
         blog={mockBlog}
         onReadMore={handleReadMore}
-        onLike={handleLike}
         onComment={handleComment}
         onShare={handleShare}
         onBookmark={handleBookmark}
