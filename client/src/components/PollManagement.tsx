@@ -11,7 +11,8 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, X, BarChart3, Lock, CheckCircle2, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, X, BarChart3, Lock, CheckCircle2, Users, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Poll } from "@shared/mongoSchema";
 
 interface PollWithVotes extends Omit<Poll, 'targetLevels'> {
@@ -44,10 +45,18 @@ export default function PollManagement() {
   const [targetLevels, setTargetLevels] = useState<string[]>([]);
   const [pollToDelete, setPollToDelete] = useState<string | null>(null);
   const [expandedPollId, setExpandedPollId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Fetch all polls
-  const { data: polls, isLoading } = useQuery<PollWithVotes[]>({
+  const { data: polls = [], isLoading } = useQuery<PollWithVotes[]>({
     queryKey: ['/api/polls'],
+  });
+
+  const filteredPolls = polls.filter(poll => {
+    const matchesSearch = poll.question.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || poll.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   // Fetch voters for expanded poll
@@ -147,7 +156,7 @@ export default function PollManagement() {
 
   const handleCreatePoll = () => {
     const validOptions = options.filter(opt => opt.trim() !== "");
-    
+
     if (!question.trim()) {
       toast({
         title: "Error",
@@ -156,7 +165,7 @@ export default function PollManagement() {
       });
       return;
     }
-    
+
     if (validOptions.length < 2) {
       toast({
         title: "Error",
@@ -176,9 +185,9 @@ export default function PollManagement() {
   };
 
   const handleLevelToggle = (level: string) => {
-    setTargetLevels(prev => 
-      prev.includes(level) 
-        ? prev.filter(l => l !== level) 
+    setTargetLevels(prev =>
+      prev.includes(level)
+        ? prev.filter(l => l !== level)
         : [...prev, level]
     );
   };
@@ -224,7 +233,7 @@ export default function PollManagement() {
                 Add Option
               </Button>
             </div>
-            
+
             {options.map((option, index) => (
               <div key={index} className="flex gap-2">
                 <Input
@@ -287,8 +296,33 @@ export default function PollManagement() {
 
       {/* Polls List */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">All Polls</h2>
-        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-2xl font-bold">All Polls</h2>
+
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search polls..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="grid gap-4">
             {[1, 2, 3].map((i) => (
@@ -302,9 +336,9 @@ export default function PollManagement() {
               </Card>
             ))}
           </div>
-        ) : polls && polls.length > 0 ? (
+        ) : filteredPolls && filteredPolls.length > 0 ? (
           <div className="grid gap-4">
-            {polls.map((poll) => (
+            {filteredPolls.map((poll) => (
               <Card key={poll._id} data-testid={`poll-card-${poll._id}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
@@ -333,7 +367,7 @@ export default function PollManagement() {
                         )}
                       </CardDescription>
                     </div>
-                    
+
                     <div className="flex gap-2 flex-wrap">
                       {poll.status === 'active' && (
                         <Button
@@ -364,7 +398,7 @@ export default function PollManagement() {
                       option.votes || 0,
                       poll.totalVotes || 0
                     );
-                    
+
                     return (
                       <div key={option.id} className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
@@ -380,16 +414,16 @@ export default function PollManagement() {
                       </div>
                     );
                   })}
-                  
+
                   {/* View Voters Section */}
                   {(poll.totalVotes || 0) > 0 && (
-                    <Collapsible 
+                    <Collapsible
                       open={expandedPollId === poll._id}
                       onOpenChange={(open) => setExpandedPollId(open ? poll._id! : null)}
                     >
                       <CollapsibleTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full mt-4"
                           data-testid={`button-view-voters-${poll._id}`}
                         >
@@ -416,8 +450,8 @@ export default function PollManagement() {
                               <span>Voted For</span>
                             </div>
                             {voters.map((voter, idx) => (
-                              <div 
-                                key={idx} 
+                              <div
+                                key={idx}
                                 className="grid grid-cols-4 gap-2 text-sm py-2 border-b border-muted last:border-b-0"
                                 data-testid={`voter-row-${idx}`}
                               >

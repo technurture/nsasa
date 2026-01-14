@@ -38,7 +38,9 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Search triggered:", searchQuery);
+    if (searchQuery.trim()) {
+      setLocation(`/blogs?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   return (
@@ -57,7 +59,7 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
             {primaryNav.map((item) => {
               const Icon = item.icon;
               const isActive = location === item.path;
-              
+
               return (
                 <Link key={item.path} href={item.path}>
                   <Button
@@ -76,8 +78,8 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
             {/* Discover Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-2"
                   data-testid="nav-discover"
@@ -132,7 +134,7 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
                 <Button variant="ghost" size="icon" data-testid="button-notifications">
                   <Bell className="h-4 w-4" />
                 </Button>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2" data-testid="button-user-menu">
@@ -198,7 +200,7 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
                     <img src={logoUrl} alt="Nsasa" className="h-6 w-6 rounded-md" />
                     <span className="text-lg font-bold">Nsasa</span>
                   </div>
-                  
+
                   {/* Mobile Auth Buttons - Only show when logged out */}
                   {!user && (
                     <div className="flex flex-col gap-2 px-2">
@@ -214,7 +216,7 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
                       </Link>
                     </div>
                   )}
-                  
+
                   {/* Mobile Search */}
                   <form onSubmit={handleSearch} className="px-2">
                     <div className="relative">
@@ -236,7 +238,7 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
                     {primaryNav.map((item) => {
                       const Icon = item.icon;
                       const isActive = location === item.path;
-                      
+
                       return (
                         <Link key={item.path} href={item.path}>
                           <Button
@@ -261,7 +263,7 @@ export default function Header({ user, onAuthAction }: HeaderProps) {
                       {discoverItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location === item.path;
-                        
+
                         return (
                           <Link key={item.path} href={item.path}>
                             <Button

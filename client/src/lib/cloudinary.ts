@@ -54,10 +54,23 @@ export const uploadToCloudinary = async (
   }
 
   // Determine the resource type for the URL
-  const resourceType = options.resourceType || 'image';
+  let resourceType: 'image' | 'video' | 'raw' = 'image';
+
+  if (options.resourceType === 'auto') {
+    // Auto-detect resource type based on file MIME type
+    if (file.type.startsWith('video/')) {
+      resourceType = 'video';
+    } else if (file.type.startsWith('image/')) {
+      resourceType = 'image';
+    } else {
+      resourceType = 'raw'; // For documents and other files
+    }
+  } else {
+    resourceType = (options.resourceType || 'image') as 'image' | 'video' | 'raw';
+  }
 
   try {
-    console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+    console.log(`📤 Uploading to Cloudinary: ${file.name} (${(file.size / 1024).toFixed(2)} KB) as ${resourceType}`);
 
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
@@ -283,15 +296,15 @@ const extractCloudinaryPublicId = (url: string): { publicId: string; resourceTyp
 
     // If version found, public ID is everything after it
     // Otherwise, assume no transformations and whole path is public ID
-    const publicIdParts = versionIndex >= 0 
+    const publicIdParts = versionIndex >= 0
       ? pathParts.slice(versionIndex + 1)
       : pathParts;
 
     const publicId = publicIdParts.join('/');
 
     // Determine resource type from URL
-    const resourceType = url.includes('/image/') ? 'image' : 
-                        url.includes('/video/') ? 'video' : 'raw';
+    const resourceType = url.includes('/image/') ? 'image' :
+      url.includes('/video/') ? 'video' : 'raw';
 
     return { publicId, resourceType };
   } catch (error) {

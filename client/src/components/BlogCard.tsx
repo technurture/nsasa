@@ -2,7 +2,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Share2, Bookmark, Eye } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Eye, Video } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -118,6 +118,29 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
     onBookmark?.(blog.id);
   };
 
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onShare) {
+      onShare(blog.id);
+      return;
+    }
+
+    try {
+      const url = `${window.location.origin}/blogs/${blog.id}`;
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link Copied",
+        description: "Blog post link copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -133,12 +156,36 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
   return (
     <Card className="group overflow-hidden hover-elevate transition-all duration-200">
       {/* Blog Image */}
-      <div className="aspect-video w-full overflow-hidden bg-muted">
-        <img
-          src={displayImage || placeholderImage}
-          alt={blog.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-        />
+      <div className="aspect-video w-full overflow-hidden bg-muted relative group">
+        {(displayImage && (displayImage.match(/\.(mp4|avi|mov|wmv)$/i) || displayImage.includes('/video/'))) ? (
+          <div className="w-full h-full flex items-center justify-center bg-black/10">
+            <video
+              src={displayImage}
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+              onMouseOver={(e) => e.currentTarget.play()}
+              onMouseOut={(e) => {
+                e.currentTarget.pause();
+                e.currentTarget.currentTime = 0;
+              }}
+            />
+            <div className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full pointer-events-none">
+              <Video className="w-4 h-4" />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
+              <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center border border-white/50">
+                <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-white border-b-[8px] border-b-transparent ml-1" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={displayImage || placeholderImage}
+            alt={blog.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+          />
+        )}
       </div>
 
       <CardHeader className="space-y-4">
@@ -269,7 +316,7 @@ export default function BlogCard({ blog, onReadMore, onComment, onShare, onBookm
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onShare?.(blog.id)}
+            onClick={handleShare}
             data-testid={`button-share-${blog.id}`}
           >
             <Share2 className="h-4 w-4" />

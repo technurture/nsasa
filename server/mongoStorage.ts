@@ -349,11 +349,20 @@ export class MongoStorage implements IMongoStorage {
     return { ...newPost, _id: newPost._id.toString() };
   }
 
-  async getBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]> {
+  async getBlogPosts(limit = 20, offset = 0, search?: string): Promise<BlogPost[]> {
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
 
+    const matchStage: any = { published: true };
+    if (search) {
+      matchStage.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ];
+    }
+
     const posts = await blogPostsCollection.aggregate([
-      { $match: { published: true } },
+      { $match: matchStage },
       { $sort: { createdAt: -1 } },
       { $skip: offset },
       { $limit: limit },
@@ -473,12 +482,18 @@ export class MongoStorage implements IMongoStorage {
           tags: 1,
           imageUrl: 1,
           published: 1,
-          approvalStatus: 1, // Important for admin
+          approvalStatus: { $ifNull: ["$approvalStatus", "pending"] },
           createdAt: 1,
           authorName: {
             $cond: {
               if: "$authorData",
-              then: { $concat: ["$authorData.firstName", " ", "$authorData.lastName"] },
+              then: {
+                $concat: [
+                  { $ifNull: ["$authorData.firstName", "User"] },
+                  " ",
+                  { $ifNull: ["$authorData.lastName", ""] }
+                ]
+              },
               else: "Unknown Author"
             }
           },
@@ -491,6 +506,9 @@ export class MongoStorage implements IMongoStorage {
   }
 
   async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    if (!ObjectId.isValid(id)) {
+      return undefined;
+    }
     const blogPostsCollection = await getCollection<BlogPost>(COLLECTIONS.BLOG_POSTS);
     const usersCollection = await getCollection<User>(COLLECTIONS.USERS);
     const commentsCollection = await getCollection<Comment>(COLLECTIONS.COMMENTS);

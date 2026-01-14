@@ -8,10 +8,21 @@ import type { BlogPost } from "@shared/mongoSchema";
 import PageHeader from "@/components/PageHeader";
 
 export default function BlogsPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  // Simple way to get query params since wouter useLocation only returns path
+  const searchParams = new URLSearchParams(window.location.search);
+  const searchQuery = searchParams.get('search');
 
   const { data: blogs, isLoading, error } = useQuery<BlogPost[]>({
-    queryKey: ['/api/blogs'],
+    queryKey: ['/api/blogs', searchQuery],
+    queryFn: async () => {
+      const url = searchQuery
+        ? `/api/blogs?search=${encodeURIComponent(searchQuery)}`
+        : '/api/blogs';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch blogs');
+      return res.json();
+    }
   });
 
   if (error) {
@@ -32,6 +43,16 @@ export default function BlogsPage() {
         title="Blog Posts"
         description="Explore our collection of articles, research insights, and academic discussions"
       />
+
+      {searchQuery && (
+        <div className="container mx-auto px-4 mt-4">
+          <p className="text-muted-foreground">
+            Showing results for <span className="font-semibold">"{searchQuery}"</span>
+            {blogs && <span className="ml-2">({blogs.length} found)</span>}
+          </p>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
 
         {isLoading ? (
